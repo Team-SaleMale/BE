@@ -4,7 +4,6 @@ import com.salemale.domain.user.entity.User;
 import com.salemale.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
@@ -32,8 +31,6 @@ public class ItemTransaction extends BaseEntity {
     @Column(name = "bid_price", nullable = false)
     private Integer bidPrice;
 
-    public ItemTransaction() {
-    }
 
     public ItemTransaction(User buyer, Item item, TransactionState transactionState, Integer bidPrice) {
         this.buyer = buyer;

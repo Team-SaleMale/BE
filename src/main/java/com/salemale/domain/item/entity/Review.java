@@ -4,7 +4,6 @@ import com.salemale.domain.user.entity.User;
 import com.salemale.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
@@ -32,8 +31,6 @@ public class Review extends BaseEntity {
     @Column(name = "content", columnDefinition = "TEXT")
     private String content;
 
-    public Review() {
-    }
 
     public Review(User user, Item item, Rating rating, String content) {
         this.user = user;
