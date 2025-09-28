@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "user_region")
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserRegion extends BaseEntity {
 
@@ -27,9 +26,6 @@ public class UserRegion extends BaseEntity {
 
     @Column(name = "is_primary", nullable = false)
     private Boolean isPrimary = false;
-
-    public UserRegion() {
-    }
 
     public UserRegion(User user, Region region, Boolean isPrimary) {
         this.user = user;

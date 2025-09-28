@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "message")
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Message extends BaseEntity {
 
@@ -43,9 +42,6 @@ public class Message extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)
     private MessageType type;
-
-    public Message() {
-    }
 
     public Message(Chat chat, User sender, String content, LocalDateTime sentAt,
                    Boolean isRead, Boolean isDeleted, MessageType type) {

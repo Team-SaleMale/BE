@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "block_list")
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class BlockList extends BaseEntity {
 
@@ -23,9 +22,6 @@ public class BlockList extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "blocked_id", nullable = false)
     private User blocked;
-
-    public BlockList() {
-    }
 
     public BlockList(User blocker, User blocked) {
         this.blocker = blocker;

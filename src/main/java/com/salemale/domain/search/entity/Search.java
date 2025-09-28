@@ -8,16 +8,12 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "search")
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Search extends BaseEntity {
 
     @Id
     @Column(name = "keyword", nullable = false, length = 30)
     private String keyword;
-
-    public Search() {
-    }
 
     public Search(String keyword) {
         this.keyword = keyword;

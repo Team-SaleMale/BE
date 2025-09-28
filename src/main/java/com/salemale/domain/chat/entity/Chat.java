@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "chat")
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Chat extends BaseEntity {
 
@@ -41,9 +40,6 @@ public class Chat extends BaseEntity {
 
     @Column(name = "buyer_deleted_at")
     private LocalDateTime buyerDeletedAt;
-
-    public Chat() {
-    }
 
     public Chat(User seller, User buyer, Item item, LocalDateTime lastMessageAt,
                 LocalDateTime sellerDeletedAt, LocalDateTime buyerDeletedAt) {

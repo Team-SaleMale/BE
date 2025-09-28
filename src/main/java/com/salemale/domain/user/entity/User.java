@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "user")
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseEntity {
 
@@ -44,9 +43,6 @@ public class User extends BaseEntity {
 
     @Column(name = "social_id")
     private Long socialId;
-
-    public User() {
-    }
 
     public User(String nickname, String email, String loginPw, LoginType loginType) {
         this.nickname = nickname;

@@ -10,7 +10,6 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(name = "region")
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Region extends BaseEntity {
 
@@ -26,9 +25,6 @@ public class Region extends BaseEntity {
 
     @Column(name = "longitude", nullable = false, precision = 18, scale = 10)
     private BigDecimal longitude;
-
-    public Region() {
-    }
 
     public Region(String regionName, BigDecimal latitude, BigDecimal longitude) {
         this.regionName = regionName;

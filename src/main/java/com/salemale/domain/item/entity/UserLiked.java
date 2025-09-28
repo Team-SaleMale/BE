@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "user_liked")
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserLiked extends BaseEntity {
 
@@ -28,9 +27,6 @@ public class UserLiked extends BaseEntity {
 
     @Column(name = "liked", nullable = false)
     private Boolean liked = false;
-
-    public UserLiked() {
-    }
 
     public UserLiked(User user, Item item, Boolean liked) {
         this.user = user;

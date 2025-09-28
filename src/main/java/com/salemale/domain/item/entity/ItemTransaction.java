@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "item_transaction")
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ItemTransaction extends BaseEntity {
 

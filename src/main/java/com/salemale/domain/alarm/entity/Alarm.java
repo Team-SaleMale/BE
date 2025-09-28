@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "alarm")
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Alarm extends BaseEntity {
 
@@ -24,9 +23,6 @@ public class Alarm extends BaseEntity {
 
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
-
-    public Alarm() {
-    }
 
     public Alarm(User user, String content) {
         this.user = user;
