@@ -10,3 +10,6 @@
 | **Database** | PostgreSQL, Redis |
 | **CI / CD** | GitHub Actions |
 
+
+## System Architecture
+<img width="932" height="740" alt="image" src="https://github.com/user-attachments/assets/92773a66-c1e8-4b9e-82ae-9769e62f9993" />
