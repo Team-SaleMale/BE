@@ -6,7 +6,17 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "user")
+@Table(
+    name = "app_user",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_user_email", columnNames = {"email"}),
+        @UniqueConstraint(name = "uk_user_login_type_social_id", columnNames = {"login_type","social_id"})
+    },
+    indexes = {
+        @Index(name = "idx_user_login_type", columnList = "login_type"),
+        @Index(name = "idx_user_social_id", columnList = "social_id")
+    }
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseEntity {
 
@@ -24,7 +34,7 @@ public class User extends BaseEntity {
     @Column(name = "email", nullable = false, length = 30)
     private String email;
 
-    @Column(name = "login_pw", nullable = false, length = 30)
+    @Column(name = "password_hash", nullable = true, length = 255)
     private String loginPw;
 
     @Column(name = "exchange_score", nullable = false)

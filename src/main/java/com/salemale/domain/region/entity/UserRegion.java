@@ -24,15 +24,15 @@ public class UserRegion extends BaseEntity {
     private Region region;
 
     @Column(name = "is_primary", nullable = false)
-    private Boolean isPrimary = false;
+    private boolean isPrimary = false;
 
-    public UserRegion(User user, Region region, Boolean isPrimary) {
+    public UserRegion(User user, Region region, boolean isPrimary) {
         this.user = user;
         this.region = region;
         this.isPrimary = isPrimary;
     }
 
-    public static UserRegion of(User user, Region region, Boolean isPrimary) {
+    public static UserRegion of(User user, Region region, boolean isPrimary) {
         return new UserRegion(user, region, isPrimary);
     }
 
@@ -57,7 +57,7 @@ public class UserRegion extends BaseEntity {
         return region;
     }
 
-    public Boolean getIsPrimary() {
+    public boolean getIsPrimary() {
         return isPrimary;
     }
 
@@ -74,7 +74,7 @@ public class UserRegion extends BaseEntity {
         this.region = region;
     }
 
-    public void setIsPrimary(Boolean isPrimary) {
+    public void setIsPrimary(boolean isPrimary) {
         this.isPrimary = isPrimary;
     }
 }

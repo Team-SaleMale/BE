@@ -25,15 +25,15 @@ public class UserLiked extends BaseEntity {
     private Item item;
 
     @Column(name = "liked", nullable = false)
-    private Boolean liked = false;
+    private boolean liked = false;
 
-    public UserLiked(User user, Item item, Boolean liked) {
+    public UserLiked(User user, Item item, boolean liked) {
         this.user = user;
         this.item = item;
         this.liked = liked;
     }
 
-    public static UserLiked of(User user, Item item, Boolean liked) {
+    public static UserLiked of(User user, Item item, boolean liked) {
         return new UserLiked(user, item, liked);
     }
 
@@ -41,7 +41,7 @@ public class UserLiked extends BaseEntity {
         this.liked = !this.liked;
     }
 
-    public void setLiked(Boolean liked) {
+    public void setLiked(boolean liked) {
         this.liked = liked;
     }
 
@@ -58,7 +58,7 @@ public class UserLiked extends BaseEntity {
         return item;
     }
 
-    public Boolean getLiked() {
+    public boolean getLiked() {
         return liked;
     }
 

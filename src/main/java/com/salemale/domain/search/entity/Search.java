@@ -27,8 +27,4 @@ public class Search extends BaseEntity {
         return keyword;
     }
 
-    // Setter
-    public void setKeyword(String keyword) {
-        this.keyword = keyword;
-    }
 }
