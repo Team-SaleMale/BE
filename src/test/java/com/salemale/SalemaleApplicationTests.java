@@ -1,4 +1,4 @@
-package sanhak.salemale;
+package com.salemale;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
