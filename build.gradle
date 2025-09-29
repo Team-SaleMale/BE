@@ -55,16 +55,10 @@ tasks.named('test') {
 }
 
 // QueryDSL 설정 (파일 끝에 추가)
-def querydslDir = "src/main/generated"
+// build 디렉토리 사용 (권장)
+def querydslDir = "$buildDir/generated/sources/annotationProcessor/java/main"
 
-sourceSets {
-	main.java.srcDirs += [ querydslDir ]
-}
-
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
 	options.annotationProcessorGeneratedSourcesDirectory = file(querydslDir)
 }
-
-clean.doLast {
-	file(querydslDir).deleteDir()
-}
+// sourceSets 설정 불필요, clean hook 불필요

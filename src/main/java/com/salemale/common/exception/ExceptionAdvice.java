@@ -61,7 +61,7 @@ public class ExceptionAdvice extends ResponseEntityExceptionHandler {
         return super.handleExceptionInternal(e, body, null, reason.getHttpStatus(), webRequest);
     }
 
-    // 예외 최종적 처리 핸들러
+    // 예외 최종적 처리 핸들러 (에러 메세지를 출력하는게 보안상 취약할 수 있으므로 추후 변경 예정)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleGenericException(Exception e, WebRequest request) {
         log.error("Unhandled exception occurred", e);
