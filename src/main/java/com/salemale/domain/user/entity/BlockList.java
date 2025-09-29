@@ -3,11 +3,17 @@ package com.salemale.domain.user.entity;
 import com.salemale.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "block_list")
+@Getter
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class BlockList extends BaseEntity {
 
     @Id
@@ -19,41 +25,6 @@ public class BlockList extends BaseEntity {
     private User blocker;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "blocked_id", nullable = false)
+    @JoinColumn(name = "blocked_user_id", nullable = false)
     private User blocked;
-
-    public BlockList(User blocker, User blocked) {
-        this.blocker = blocker;
-        this.blocked = blocked;
-    }
-
-    public static BlockList of(User blocker, User blocked) {
-        return new BlockList(blocker, blocked);
-    }
-
-    // Getter
-    public Long getId() {
-        return id;
-    }
-
-    public User getBlocker() {
-        return blocker;
-    }
-
-    public User getBlocked() {
-        return blocked;
-    }
-
-    // Setter
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public void setBlocker(User blocker) {
-        this.blocker = blocker;
-    }
-
-    public void setBlocked(User blocked) {
-        this.blocked = blocked;
-    }
 }

@@ -4,17 +4,23 @@ import com.salemale.domain.user.entity.User;
 import com.salemale.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "user_liked")
+@Getter
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class UserLiked extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "likes_id")
-    private Long likesId;
+    @Column(name = "liked_id")
+    private Long likedId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -25,53 +31,5 @@ public class UserLiked extends BaseEntity {
     private Item item;
 
     @Column(name = "liked", nullable = false)
-    private boolean liked = false;
-
-    public UserLiked(User user, Item item, boolean liked) {
-        this.user = user;
-        this.item = item;
-        this.liked = liked;
-    }
-
-    public static UserLiked of(User user, Item item, boolean liked) {
-        return new UserLiked(user, item, liked);
-    }
-
-    public void toggleLike() {
-        this.liked = !this.liked;
-    }
-
-    public void setLiked(boolean liked) {
-        this.liked = liked;
-    }
-
-    // Getter
-    public Long getLikesId() {
-        return likesId;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public Item getItem() {
-        return item;
-    }
-
-    public boolean getLiked() {
-        return liked;
-    }
-
-    // Setter
-    public void setLikesId(Long likesId) {
-        this.likesId = likesId;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public void setItem(Item item) {
-        this.item = item;
-    }
+    private Boolean liked;
 }
