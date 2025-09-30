@@ -38,11 +38,13 @@ public class Message extends BaseEntity {
     @Column(name = "sent_at", nullable = false)
     private LocalDateTime sentAt;
 
+    @Builder.Default
     @Column(name = "is_read", nullable = false)
-    private Boolean isRead;
+    private boolean isRead = false;  // primitive type + 기본값
 
+    @Builder.Default
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted;
+    private boolean isDeleted = false;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, columnDefinition = "VARCHAR(20)")

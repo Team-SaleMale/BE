@@ -39,14 +39,15 @@ public class User extends BaseEntity {
     @Column(name = "nickname", nullable = false, length = 15)
     private String nickname;
 
-    @Column(name = "email", nullable = false, length = 30)
+    @Column(name = "email", nullable = false, length = 254)
     private String email;
 
-    @Column(name = "login_pw", length = 30)
+    @Column(name = "login_pw", length = 100)  // BCrypt(60) or Argon2(95) 수용
     private String loginPw;
 
+    @Builder.Default
     @Column(name = "exchange_score", nullable = false)
-    private Integer exchangeScore;
+    private Integer exchangeScore = 50;
 
     @Column(name = "max_range")
     private Integer maxRange;

@@ -29,6 +29,7 @@ public class UserRegion extends BaseEntity {
     @JoinColumn(name = "region_id", nullable = false)
     private Region region;
 
+    @Builder.Default
     @Column(name = "is_primary", nullable = false)
-    private Boolean isPrimary;
+    private boolean isPrimary = false;
 }

@@ -30,6 +30,7 @@ public class UserLiked extends BaseEntity {
     @JoinColumn(name = "item_id", nullable = false)
     private Item item;
 
+    @Builder.Default
     @Column(name = "liked", nullable = false)
-    private Boolean liked;
+    private boolean liked = false;  // 찜하기는 기본 false가 맞음
 }
