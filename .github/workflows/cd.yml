@@ -30,7 +30,7 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           # 프로젝트 디렉토리로 이동
-          cd /home/ubuntu/salemale
+          cd /home/ubuntu/salemale/backend
           
           # Git에서 최신 코드 가져오기 (dev → main 머지 후)
           git pull origin main
