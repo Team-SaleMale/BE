@@ -30,6 +30,7 @@ public class Item extends BaseEntity {
     @JoinColumn(name = "seller_id", nullable = false)
     private User seller;
 
+    // 낙찰자id로 상품이 낙찰되기 전까진 null이다, 유찰되어도 null임
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "winner_id")
     private User winner;

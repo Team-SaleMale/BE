@@ -26,6 +26,7 @@ public class Review extends BaseEntity {
     @JoinColumn(name = "reviewer_id", nullable = false)
     private User reviewer;
 
+    //리뷰의 대상이 되는 사용자를 의미
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "target_id", nullable = false)
     private User target;

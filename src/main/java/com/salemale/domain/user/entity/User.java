@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(
-        name = "app_user",
+        name = "user",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_user_email", columnNames = {"email"}),
                 @UniqueConstraint(name = "uk_user_login_type_social_id", columnNames = {"login_type","social_id"})
@@ -45,20 +45,28 @@ public class User extends BaseEntity {
     @Column(name = "login_pw", length = 100)  // BCrypt(60) or Argon2(95) 수용
     private String loginPw;
 
+    // 경매지수(혹은 매너지수)
     @Builder.Default
-    @Column(name = "exchange_score", nullable = false)
-    private Integer exchangeScore = 50;
+    @Column(name = "manner_score", nullable = false)
+    private Integer mannerScore = 50;
 
-    @Column(name = "max_range")
-    private Integer maxRange;
+    // 반영할 거리 설정(1: 가까움, 2: 조금 먼, 3: 먼)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "range_setting")
+    private rangeSetting rangeSetting;
 
     @Column(name = "profile_image", length = 200)
     private String profileImage;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "alarm_checked", nullable = false, columnDefinition = "VARCHAR(20)")
-    private AlarmChecked alarmChecked;
+    private AlarmChecked alarmChecked = AlarmChecked.NO;
 
     @Column(name = "social_id")
     private String socialId;
+
+    public enum rangeSetting {
+        ONE, TWO, THREE
+    }
 }
