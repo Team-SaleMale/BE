@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  # Spring Boot Application
+  app:
+    image: ${DOCKERHUB_USERNAME}/salemale:latest
+    container_name: salemale-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Database Configuration (RDS)
+      LOCAL_DB_URL: ${LOCAL_DB_URL}
+      LOCAL_DB_USERNAME: ${LOCAL_DB_USERNAME}
+      LOCAL_DB_PASSWORD: ${LOCAL_DB_PASSWORD}
+      
+      # Admin Configuration
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      
+      # Application Configuration
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SERVER_PORT: ${SERVER_PORT}
+      
+      # JWT Configuration
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
