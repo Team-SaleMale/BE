@@ -30,10 +30,13 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           # 프로젝트 디렉토리로 이동
-          cd /home/ubuntu/salemale/backend
+          cd /home/ubuntu/salemale
           
           # Git에서 최신 코드 가져오기 (dev → main 머지 후)
           git pull origin main
+          
+          # BE 폴더로 이동 (Spring Boot 실행)
+          cd BE
           
           # .env 파일 생성 (GitHub Secrets 사용)
           cat > .env << EOF
