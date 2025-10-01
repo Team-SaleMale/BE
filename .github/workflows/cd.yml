@@ -1,0 +1,80 @@
+name: CD
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+      
+    - name: Merge dev to main
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git checkout main
+        git fetch origin dev
+        git merge origin/dev
+        git push origin main
+        
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          set -e
+          # 프로젝트 디렉토리 준비 및 이동 (실제 저장소 경로)
+          mkdir -p /home/ubuntu/salemale/BE
+          cd /home/ubuntu/salemale/BE
+
+          # Git 저장소 준비: 없으면 clone, 있으면 최신 main으로 동기화
+          if [ ! -d .git ]; then
+            git clone https://github.com/Team-SaleMale/BE.git .
+          fi
+          git fetch --all --prune
+          git checkout main || git checkout -b main origin/main
+          git reset --hard origin/main
+          
+          # .env 파일 생성 (GitHub Secrets 사용)
+          cat > .env << EOF
+          LOCAL_DB_URL=${{ secrets.RDS_URL }}
+          LOCAL_DB_USERNAME=${{ secrets.RDS_USERNAME }}
+          LOCAL_DB_PASSWORD=${{ secrets.RDS_PASSWORD }}
+          ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+          SPRING_PROFILES_ACTIVE=prod
+          SERVER_PORT=8080
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_EXPIRATION=86400000
+          DOCKERHUB_USERNAME=${{ secrets.DOCKER_USERNAME }}
+          EOF
+          
+          # Docker Compose 실행 (v2 우선, v1 폴백)
+          if docker compose version >/dev/null 2>&1; then
+            DC="docker compose"
+          else
+            DC="docker-compose"
+          fi
+
+          $DC down --remove-orphans || true
+          $DC pull
+          # v1은 --wait 미지원 → 공통 옵션만 사용
+          $DC up -d --force-recreate --remove-orphans
+          
+          # 배포 상태 확인
+          sleep 10
+          $DC ps
+

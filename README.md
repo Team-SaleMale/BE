@@ -6,7 +6,7 @@
 | **구분** | **기술** |
 | --- | --- |
 | **Language** | Java 17 |
-| **Framework** | Spring Boot 3.3.10 |
+| **Framework** | Spring Boot 3.3.5 |
 | **Database** | PostgreSQL, Redis |
 | **CI / CD** | GitHub Actions |
 
