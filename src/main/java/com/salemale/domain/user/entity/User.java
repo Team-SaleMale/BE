@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(
-        name = "user",
+        name = "users",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_user_email", columnNames = {"email"}),
                 @UniqueConstraint(name = "uk_user_login_type_social_id", columnNames = {"login_type","social_id"})

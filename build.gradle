@@ -30,6 +30,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'org.postgresql:postgresql'
+	testRuntimeOnly 'com.h2database:h2'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -55,11 +56,22 @@ tasks.named('test') {
 	useJUnitPlatform()
 }
 
-// QueryDSL 설정 (파일 끝에 추가)
-// build 디렉토리 사용 (권장)
-def querydslDir = "$buildDir/generated/sources/annotationProcessor/java/main"
+// ===== QueryDSL 설정 시작 =====
+// Q클래스 생성 위치 지정
+def querydslDir = "src/main/generated"
 
+// QueryDSL이 생성한 Q클래스를 소스로 인식하도록 설정
+sourceSets {
+	main.java.srcDirs += [ querydslDir ]
+}
+
+// JavaCompile 시 Q클래스 생성 위치 설정
 tasks.withType(JavaCompile).configureEach {
 	options.annotationProcessorGeneratedSourcesDirectory = file(querydslDir)
 }
-// sourceSets 설정 불필요, clean hook 불필요
+
+// clean 시 생성된 Q클래스도 삭제
+clean {
+	delete file(querydslDir)
+}
+// ===== QueryDSL 설정 끝 =====
