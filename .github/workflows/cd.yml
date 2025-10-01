@@ -35,14 +35,18 @@ jobs:
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          # 프로젝트 디렉토리로 이동
-          cd /home/ubuntu/salemale
-          
-          # Git에서 최신 코드 가져오기 (dev → main 머지 후)
-          git pull origin main
-          
-          # BE 폴더로 이동 (Spring Boot 실행)
-          cd BE
+          set -e
+          # 프로젝트 디렉토리 준비 및 이동 (실제 저장소 경로)
+          mkdir -p /home/ubuntu/salemale/BE
+          cd /home/ubuntu/salemale/BE
+
+          # Git 저장소 준비: 없으면 clone, 있으면 최신 main으로 동기화
+          if [ ! -d .git ]; then
+            git clone https://github.com/Team-SaleMale/BE.git .
+          fi
+          git fetch --all --prune
+          git checkout main || git checkout -b main origin/main
+          git reset --hard origin/main
           
           # .env 파일 생성 (GitHub Secrets 사용)
           cat > .env << EOF
@@ -67,9 +71,10 @@ jobs:
 
           $DC down --remove-orphans || true
           $DC pull
-          $DC up -d --force-recreate --remove-orphans --wait
+          # v1은 --wait 미지원 → 공통 옵션만 사용
+          $DC up -d --force-recreate --remove-orphans
           
           # 배포 상태 확인
           sleep 10
-          docker-compose ps
+          $DC ps
 
