@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -21,7 +24,8 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git checkout main
-        git merge dev
+        git fetch origin dev
+        git merge origin/dev
         git push origin main
         
     - name: Deploy to EC2
@@ -54,11 +58,18 @@ jobs:
           DOCKERHUB_USERNAME=${{ secrets.DOCKER_USERNAME }}
           EOF
           
-          # Docker Compose 실행
-          docker-compose down
-          docker-compose pull
-          docker-compose up -d
+          # Docker Compose 실행 (v2 우선, v1 폴백)
+          if docker compose version >/dev/null 2>&1; then
+            DC="docker compose"
+          else
+            DC="docker-compose"
+          fi
+
+          $DC down --remove-orphans || true
+          $DC pull
+          $DC up -d --force-recreate --remove-orphans --wait
           
           # 배포 상태 확인
           sleep 10
           docker-compose ps
+
