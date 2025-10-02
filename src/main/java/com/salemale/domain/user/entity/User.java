@@ -67,6 +67,6 @@ public class User extends BaseEntity {
     private String socialId;
 
     public enum rangeSetting {
-        ONE, TWO, THREE
+        가까움, 조금먼, 먼
     }
 }
