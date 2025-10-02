@@ -4,11 +4,17 @@ import com.salemale.domain.user.entity.User;
 import com.salemale.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "alarm")
+@Getter
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class Alarm extends BaseEntity {
 
     @Id
@@ -22,43 +28,4 @@ public class Alarm extends BaseEntity {
 
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
-
-    public Alarm(User user, String content) {
-        this.user = user;
-        this.content = content;
-    }
-
-    public static Alarm of(User user, String content) {
-        return new Alarm(user, content);
-    }
-
-    public void updateContent(String content) {
-        this.content = content;
-    }
-
-    // Getter
-    public Long getAlarmId() {
-        return alarmId;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    // Setter
-    public void setAlarmId(Long alarmId) {
-        this.alarmId = alarmId;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
 }

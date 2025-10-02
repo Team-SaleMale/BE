@@ -5,13 +5,19 @@ import com.salemale.domain.user.entity.User;
 import com.salemale.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "chat")
+@Getter
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class Chat extends BaseEntity {
 
     @Id
@@ -39,101 +45,4 @@ public class Chat extends BaseEntity {
 
     @Column(name = "buyer_deleted_at")
     private LocalDateTime buyerDeletedAt;
-
-    public Chat(User seller, User buyer, Item item, LocalDateTime lastMessageAt,
-                LocalDateTime sellerDeletedAt, LocalDateTime buyerDeletedAt) {
-        this.seller = seller;
-        this.buyer = buyer;
-        this.item = item;
-        this.lastMessageAt = lastMessageAt;
-        this.sellerDeletedAt = sellerDeletedAt;
-        this.buyerDeletedAt = buyerDeletedAt;
-    }
-
-    public static Chat of(User seller, User buyer, Item item) {
-        Chat chat = new Chat();
-        chat.seller = seller;
-        chat.buyer = buyer;
-        chat.item = item;
-        chat.lastMessageAt = LocalDateTime.now();
-        return chat;
-    }
-
-    public void updateLastMessageAt(LocalDateTime lastMessageAt) {
-        this.lastMessageAt = lastMessageAt;
-    }
-
-    public void deleteBySeller() {
-        this.sellerDeletedAt = LocalDateTime.now();
-    }
-
-    public void deleteByBuyer() {
-        this.buyerDeletedAt = LocalDateTime.now();
-    }
-
-    public void restoreBySeller() {
-        this.sellerDeletedAt = null;
-    }
-
-    public void restoreByBuyer() {
-        this.buyerDeletedAt = null;
-    }
-
-    // Getter
-    public Long getChatId() {
-        return chatId;
-    }
-
-    public User getSeller() {
-        return seller;
-    }
-
-    public User getBuyer() {
-        return buyer;
-    }
-
-    public Item getItem() {
-        return item;
-    }
-
-    public LocalDateTime getLastMessageAt() {
-        return lastMessageAt;
-    }
-
-    public LocalDateTime getSellerDeletedAt() {
-        return sellerDeletedAt;
-    }
-
-    public LocalDateTime getBuyerDeletedAt() {
-        return buyerDeletedAt;
-    }
-
-    // Setter
-    public void setChatId(Long chatId) {
-        this.chatId = chatId;
-    }
-
-    public void setSeller(User seller) {
-        this.seller = seller;
-    }
-
-    public void setBuyer(User buyer) {
-        this.buyer = buyer;
-    }
-
-    public void setItem(Item item) {
-        this.item = item;
-    }
-
-    public void setLastMessageAt(LocalDateTime lastMessageAt) {
-        this.lastMessageAt = lastMessageAt;
-    }
-
-    public void setSellerDeletedAt(LocalDateTime sellerDeletedAt) {
-        this.sellerDeletedAt = sellerDeletedAt;
-    }
-
-    public void setBuyerDeletedAt(LocalDateTime buyerDeletedAt) {
-        this.buyerDeletedAt = buyerDeletedAt;
-    }
 }

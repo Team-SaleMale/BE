@@ -4,11 +4,17 @@ import com.salemale.domain.user.entity.User;
 import com.salemale.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "user_region")
+@Getter
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class UserRegion extends BaseEntity {
 
     @Id
@@ -23,58 +29,7 @@ public class UserRegion extends BaseEntity {
     @JoinColumn(name = "region_id", nullable = false)
     private Region region;
 
+    @Builder.Default
     @Column(name = "is_primary", nullable = false)
     private boolean isPrimary = false;
-
-    public UserRegion(User user, Region region, boolean isPrimary) {
-        this.user = user;
-        this.region = region;
-        this.isPrimary = isPrimary;
-    }
-
-    public static UserRegion of(User user, Region region, boolean isPrimary) {
-        return new UserRegion(user, region, isPrimary);
-    }
-
-    public void setAsPrimary() {
-        this.isPrimary = true;
-    }
-
-    public void setAsSecondary() {
-        this.isPrimary = false;
-    }
-
-    // Getter
-    public Long getId() {
-        return id;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public Region getRegion() {
-        return region;
-    }
-
-    public boolean getIsPrimary() {
-        return isPrimary;
-    }
-
-    // Setter
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public void setRegion(Region region) {
-        this.region = region;
-    }
-
-    public void setIsPrimary(boolean isPrimary) {
-        this.isPrimary = isPrimary;
-    }
 }
