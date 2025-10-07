@@ -9,7 +9,8 @@ import lombok.*; // 롬복(보일러플레이트 제거)
 @Table(
         name = "user_auth",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_user_auth_provider_user", columnNames = {"provider", "provider_user_id"})
+                @UniqueConstraint(name = "uk_user_auth_provider_user", columnNames = {"provider", "provider_user_id"}),
+                @UniqueConstraint(name = "uk_user_auth_provider_email", columnNames = {"provider", "email_normalized"})
         },
         indexes = {
                 @Index(name = "idx_user_auth_provider_email", columnList = "provider,email_normalized")

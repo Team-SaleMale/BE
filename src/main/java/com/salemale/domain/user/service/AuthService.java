@@ -7,8 +7,11 @@ import com.salemale.domain.user.repository.UserRepository; // User 저장소
 import com.salemale.domain.user.repository.UserAuthRepository; // 인증수단 조회용 리포지토리
 import com.salemale.global.common.enums.LoginType; // 인증 제공자 타입(LOCAL, KAKAO, ...)
 import com.salemale.global.security.jwt.JwtTokenProvider; // 액세스 토큰 생성기
+import com.salemale.common.exception.GeneralException; // 커스텀 예외
+import com.salemale.common.code.status.ErrorStatus; // 에러 코드 집합
 import org.springframework.security.crypto.password.PasswordEncoder; // 비밀번호 해시 검증용
 import org.springframework.stereotype.Service; // 서비스 빈 선언
+import org.springframework.transaction.annotation.Transactional; // 트랜잭션 처리
 
 @Service
 public class AuthService { // 응용 서비스: 컨트롤러와 리포지토리 사이 비즈니스 로직 구현
@@ -40,11 +43,12 @@ public class AuthService { // 응용 서비스: 컨트롤러와 리포지토리 
         return jwtTokenProvider.generateToken(normalized); // 정상 시 JWT 발급(추후 userId/roles 등 클레임 확장 가능)
     }
 
+    @Transactional
     public void registerLocal(SignupRequest request) {
         String normalized = request.getEmail().trim().toLowerCase();
         // 중복 이메일 확인(LOCAL 자격 기준)
         userAuthRepository.findByProviderAndEmailNormalized(LoginType.LOCAL, normalized)
-                .ifPresent(a -> { throw new IllegalArgumentException("Email already registered"); });
+                .ifPresent(a -> { throw new GeneralException(ErrorStatus.USER_EMAIL_ALREADY_EXISTS); });
 
         // 프로필 생성(표시용 이메일은 선택)
         User user = User.builder()

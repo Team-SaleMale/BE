@@ -24,6 +24,10 @@ public class JwtTokenProvider {
             @Value("${jwt.access-token-validity}") long accessValidity,
             @Value("${jwt.refresh-token-validity}") long refreshValidity
     ) {
+        // 최소 32바이트(256비트) 이상 확인 - 부족하면 애플리케이션 시작을 막아 보안을 강제
+        if (secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalArgumentException("JWT secret must be at least 32 bytes (256 bits) for HMAC-SHA");
+        }
         // 비밀키 문자열을 HMAC-SHA 키 객체로 변환. 최소 256bit 권장
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenValidityMs = accessValidity;
