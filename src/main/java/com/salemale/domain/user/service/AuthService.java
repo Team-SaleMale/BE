@@ -31,12 +31,12 @@ public class AuthService { // 응용 서비스: 컨트롤러와 리포지토리 
     public String loginLocal(String email, String rawPassword) {
         String normalized = email.trim().toLowerCase(); // 이메일 정규화(대소문자 이슈 제거)
         UserAuth auth = userAuthRepository.findByProviderAndEmailNormalized(LoginType.LOCAL, normalized)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
+                .orElseThrow(() -> new GeneralException(ErrorStatus.AUTH_INVALID_CREDENTIALS));
         // 존재하지 않으면 인증 실패 처리
 
         String hash = auth.getPasswordHash();
         if (hash == null || !passwordEncoder.matches(rawPassword, hash)) {
-            throw new IllegalArgumentException("Invalid credentials");
+            throw new GeneralException(ErrorStatus.AUTH_INVALID_CREDENTIALS);
         }
         // 비밀번호 불일치 시 실패
 
@@ -66,6 +66,17 @@ public class AuthService { // 응용 서비스: 컨트롤러와 리포지토리 
                 .passwordHash(hash)
                 .build();
         userAuthRepository.save(auth);
+    }
+
+    public boolean existsLocalEmail(String email) {
+        String normalized = email.trim().toLowerCase();
+        // LOCAL 제공자 기준으로 해당 이메일 자격이 이미 등록되어 있는지 검사합니다.
+        return userAuthRepository.existsByProviderAndEmailNormalized(LoginType.LOCAL, normalized);
+    }
+
+    public boolean existsNickname(String nickname) {
+        // 프로필(User) 테이블에서 닉네임 중복 여부를 검사합니다.
+        return userRepository.existsByNickname(nickname);
     }
 }
 

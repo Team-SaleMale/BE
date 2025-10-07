@@ -9,6 +9,7 @@ import java.util.Optional; // Optional 반환으로 존재 여부 명확화
 public interface UserAuthRepository extends JpaRepository<UserAuth, Long> {
     Optional<UserAuth> findByProviderAndEmailNormalized(LoginType provider, String emailNormalized);
     Optional<UserAuth> findByProviderAndProviderUserId(LoginType provider, String providerUserId);
+    boolean existsByProviderAndEmailNormalized(LoginType provider, String emailNormalized);
 }
 
 
