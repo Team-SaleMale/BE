@@ -8,6 +8,10 @@ import jakarta.validation.Valid; // 요청 바디 검증
 import org.springframework.http.ResponseEntity; // HTTP 응답 래퍼
 import org.springframework.web.bind.annotation.PostMapping; // POST 매핑
 import org.springframework.web.bind.annotation.PatchMapping; // PATCH 매핑(로그아웃 등 상태변경용)
+import org.springframework.web.bind.annotation.GetMapping; // GET 매핑(중복 체크/상태 점검)
+import org.springframework.web.bind.annotation.RequestParam; // 쿼리 파라미터 바인딩
+import org.springframework.security.core.annotation.AuthenticationPrincipal; // 인증된 사용자 주입
+import org.springframework.security.core.userdetails.UserDetails; // 인증 주체 표현
 import org.springframework.web.bind.annotation.RequestBody; // 요청 바디 바인딩
 import org.springframework.web.bind.annotation.RequestMapping; // 베이스 경로 매핑
 import org.springframework.web.bind.annotation.RestController; // REST 컨트롤러 선언
@@ -48,6 +52,35 @@ public class AuthController { // 인증 관련 엔드포인트 집합(초심자�
         // 서버 세션을 쓰지 않는 JWT 구조에서는 서버가 무언가 지울 상태가 없습니다.
         // 실서비스에선 "블랙리스트" 저장소를 운용하거나, 클라이언트가 토큰을 삭제하도록 안내합니다.
         return ResponseEntity.ok(ApiResponse.onSuccess());
+    }
+
+    @GetMapping("/check/login-id") // 이메일(로그인 ID) 중복 체크: true/false로 빠르게 응답
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkLoginId(@RequestParam("value") String email) {
+        // 1) 이메일을 소문자 정규화하여 LOCAL 자격 기준으로만 검사합니다.
+        String normalized = email.trim().toLowerCase();
+        boolean exists = authService.existsLocalEmail(normalized);
+        // 2) result에 {"exists": true/false} 형태로 담아 반환합니다.
+        return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("exists", exists)));
+    }
+
+    @GetMapping("/check/nickname") // 닉네임 중복 체크: true/false 응답
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkNickname(@RequestParam("value") String nickname) {
+        // 1) 닉네임은 표시용이므로 그대로 검사(정책에 따라 trim/소문자화 가능)
+        boolean exists = authService.existsNickname(nickname);
+        // 2) {"exists": true/false}
+        return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("exists", exists)));
+    }
+
+    @GetMapping("/me") // 로그인 상태 확인: 토큰이 유효하면 주체(subject: 이메일)를 반환, 아니면 401
+    public ResponseEntity<ApiResponse<Map<String, String>>> me(@AuthenticationPrincipal UserDetails principal) {
+        // 1) JwtAuthenticationFilter가 토큰을 검증하고 SecurityContext에 주체를 세팅합니다.
+        // 2) @AuthenticationPrincipal로 인증된 사용자 정보를 주입받을 수 있습니다.
+        if (principal == null) {
+            // 스프링 시큐리티가 자동으로 401을 보내도록 구성되어 있으나, 명시적으로 실패 응답을 줄 수도 있습니다.
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.onFailure("COMMON401", "인증이 필요합니다.", null));
+        }
+        return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("subject", principal.getUsername())));
     }
 }
 

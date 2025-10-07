@@ -67,6 +67,16 @@ public class AuthService { // 응용 서비스: 컨트롤러와 리포지토리 
                 .build();
         userAuthRepository.save(auth);
     }
+
+    public boolean existsLocalEmail(String normalizedEmail) {
+        // LOCAL 제공자 기준으로 해당 이메일 자격이 이미 등록되어 있는지 검사합니다.
+        return userAuthRepository.existsByProviderAndEmailNormalized(LoginType.LOCAL, normalizedEmail);
+    }
+
+    public boolean existsNickname(String nickname) {
+        // 프로필(User) 테이블에서 닉네임 중복 여부를 검사합니다.
+        return userRepository.existsByNickname(nickname);
+    }
 }
 
 
