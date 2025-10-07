@@ -68,9 +68,10 @@ public class AuthService { // 응용 서비스: 컨트롤러와 리포지토리 
         userAuthRepository.save(auth);
     }
 
-    public boolean existsLocalEmail(String normalizedEmail) {
+    public boolean existsLocalEmail(String email) {
+        String normalized = email.trim().toLowerCase();
         // LOCAL 제공자 기준으로 해당 이메일 자격이 이미 등록되어 있는지 검사합니다.
-        return userAuthRepository.existsByProviderAndEmailNormalized(LoginType.LOCAL, normalizedEmail);
+        return userAuthRepository.existsByProviderAndEmailNormalized(LoginType.LOCAL, normalized);
     }
 
     public boolean existsNickname(String nickname) {

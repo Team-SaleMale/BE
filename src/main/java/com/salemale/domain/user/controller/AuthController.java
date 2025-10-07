@@ -8,7 +8,7 @@ import jakarta.validation.Valid; // 요청 바디 검증
 import org.springframework.http.ResponseEntity; // HTTP 응답 래퍼
 import org.springframework.web.bind.annotation.PostMapping; // POST 매핑
 import org.springframework.web.bind.annotation.PatchMapping; // PATCH 매핑(로그아웃 등 상태변경용)
-import org.springframework.web.bind.annotation.GetMapping; // GET 매핑(중복 체크/상태 점검)
+import org.springframework.web.bind.annotation.GetMapping; // GET 매핑(상태 점검)
 import org.springframework.web.bind.annotation.RequestParam; // 쿼리 파라미터 바인딩
 import org.springframework.security.core.annotation.AuthenticationPrincipal; // 인증된 사용자 주입
 import org.springframework.security.core.userdetails.UserDetails; // 인증 주체 표현
@@ -54,8 +54,8 @@ public class AuthController { // 인증 관련 엔드포인트 집합(초심자�
         return ResponseEntity.ok(ApiResponse.onSuccess());
     }
 
-    @GetMapping("/check/login-id") // 이메일(로그인 ID) 중복 체크: true/false로 빠르게 응답
-    public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkLoginId(@RequestParam("value") String email) {
+    @GetMapping("/check/email") // 이메일(로그인 ID) 중복 체크: true/false로 빠르게 응답
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkEmail(@RequestParam("value") String email) {
         // 1) 이메일을 소문자 정규화하여 LOCAL 자격 기준으로만 검사합니다.
         String normalized = email.trim().toLowerCase();
         boolean exists = authService.existsLocalEmail(normalized);

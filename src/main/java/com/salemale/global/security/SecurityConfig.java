@@ -36,7 +36,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/api-docs/**",
                                 "/actuator/health", // 헬스체크
-                                "/auth/**" // 로그인/회원가입/로그아웃 등 인증 경로는 공개
+                                "/auth/**",
+                                "/api/auth/**" // 로그인/회원가입/로그아웃 등 인증 경로는 공개(과거 프리픽스 호환)
                         ).permitAll()
                         .anyRequest().authenticated() // 그 외는 인증 필요
                 )

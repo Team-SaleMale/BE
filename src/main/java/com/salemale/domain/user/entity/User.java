@@ -13,9 +13,6 @@ import lombok.NoArgsConstructor; // 파라미터 없는 생성자 자동 생성
 @Entity // JPA 엔티티로 매핑됨(테이블 레코드와 1:1 대응)
 @Table(
         name = "users",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_user_email", columnNames = {"email"})
-        },
         indexes = {
                 @Index(name = "idx_user_phone_number", columnList = "phone_number")
         }
