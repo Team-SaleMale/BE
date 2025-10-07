@@ -36,8 +36,5 @@ out/
 ### VS Code ###
 .vscode/
 
-### Environment Variables ###
-.env
-.env.local
-.env.production
-.env.staging
+### QueryDSL generated sources ###
+src/main/generated/

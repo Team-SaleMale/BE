@@ -33,19 +33,17 @@ public class QUser extends EntityPathBase<User> {
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
-    public final StringPath loginPw = createString("loginPw");
-
-    public final EnumPath<com.salemale.global.common.enums.LoginType> loginType = createEnum("loginType", com.salemale.global.common.enums.LoginType.class);
-
     public final NumberPath<Integer> mannerScore = createNumber("mannerScore", Integer.class);
 
     public final StringPath nickname = createString("nickname");
 
+    public final StringPath phoneNumber = createString("phoneNumber");
+
+    public final DateTimePath<java.time.LocalDateTime> phoneVerifiedAt = createDateTime("phoneVerifiedAt", java.time.LocalDateTime.class);
+
     public final StringPath profileImage = createString("profileImage");
 
-    public final EnumPath<User.rangeSetting> rangeSetting = createEnum("rangeSetting", User.rangeSetting.class);
-
-    public final StringPath socialId = createString("socialId");
+    public final EnumPath<User.RangeSetting> rangeSetting = createEnum("rangeSetting", User.RangeSetting.class);
 
     //inherited
     public final DateTimePath<java.time.LocalDateTime> updatedAt = _super.updatedAt;
