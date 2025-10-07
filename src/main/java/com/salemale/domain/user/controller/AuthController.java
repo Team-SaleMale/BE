@@ -56,10 +56,13 @@ public class AuthController { // 인증 관련 엔드포인트 집합(초심자�
 
     @GetMapping("/check/email") // 이메일(로그인 ID) 중복 체크: true/false로 빠르게 응답
     public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkEmail(@RequestParam("value") String email) {
-        // 1) 이메일을 소문자 정규화하여 LOCAL 자격 기준으로만 검사합니다.
-        String normalized = email.trim().toLowerCase();
+        // 보안: 계정 열거(account enumeration) 완화
+        // - 실서비스에선 반드시 IP/디바이스 기준 레이트리밋(예: 분당 N회)을 적용하세요.
+        // - CAPTCHA나 가입 플로우 내부에서만 사용하도록 제한하는 것도 효과적입니다.
+        // - 이 데모는 레이트리밋 미구현 상태이므로, 운영 전 게이트 추가를 권장합니다.
+
+        String normalized = email.trim().toLowerCase(); // 입력 정규화
         boolean exists = authService.existsLocalEmail(normalized);
-        // 2) result에 {"exists": true/false} 형태로 담아 반환합니다.
         return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("exists", exists)));
     }
 
