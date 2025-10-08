@@ -49,6 +49,22 @@ public class UserAuth extends BaseEntity { // 인증 레코드(1 user : N auth)
 
     @Column(name = "last_login_at") // 최근 로그인 시간 기록(보안/통계용)
     private java.time.LocalDateTime lastLoginAt;
+
+    /**
+     * 비밀번호 해시를 업데이트합니다.
+     *
+     * - 비밀번호 변경 시 새로운 해시값으로 교체합니다.
+     * - 평문 비밀번호가 아닌 BCrypt 등으로 해시된 값을 전달해야 합니다.
+     * - LOCAL 인증 제공자에서만 사용됩니다.
+     *
+     * @param newPasswordHash 새로운 비밀번호 해시 (BCrypt 등으로 인코딩된 값)
+     */
+    public void updatePasswordHash(String newPasswordHash) {
+        // 새 해시값이 null이거나 빈 문자열이면 변경하지 않습니다.
+        if (newPasswordHash != null && !newPasswordHash.trim().isEmpty()) {
+            this.passwordHash = newPasswordHash.trim();
+        }
+    }
 }
 
 

@@ -1,83 +1,52 @@
-package com.salemale.domain.user.service; // 인증(로그인) 유스케이스를 담당하는 서비스 레이어
+package com.salemale.domain.user.service; // 인증(로그인/회원가입) 서비스 인터페이스
 
-import com.salemale.domain.user.entity.UserAuth; // 인증수단 엔티티(LOCAL/소셜)
-import com.salemale.domain.user.entity.User; // 사용자 프로필 엔티티
 import com.salemale.domain.user.dto.request.SignupRequest; // 회원가입 요청 DTO
-import com.salemale.domain.user.repository.UserRepository; // User 저장소
-import com.salemale.domain.user.repository.UserAuthRepository; // 인증수단 조회용 리포지토리
-import com.salemale.global.common.enums.LoginType; // 인증 제공자 타입(LOCAL, KAKAO, ...)
-import com.salemale.global.security.jwt.JwtTokenProvider; // 액세스 토큰 생성기
-import com.salemale.common.exception.GeneralException; // 커스텀 예외
-import com.salemale.common.code.status.ErrorStatus; // 에러 코드 집합
-import org.springframework.security.crypto.password.PasswordEncoder; // 비밀번호 해시 검증용
-import org.springframework.stereotype.Service; // 서비스 빈 선언
-import org.springframework.transaction.annotation.Transactional; // 트랜잭션 처리
 
-@Service
-public class AuthService { // 응용 서비스: 컨트롤러와 리포지토리 사이 비즈니스 로직 구현
+/**
+ * AuthService: 인증 관련 비즈니스 로직을 정의하는 서비스 인터페이스입니다.
+ *
+ * - 로컬(이메일/비밀번호) 로그인 및 회원가입 기능을 제공합니다.
+ * - 이메일/닉네임 중복 체크 기능을 제공합니다.
+ * - 구현체(AuthServiceImpl)에서 실제 비즈니스 로직을 처리합니다.
+ *
+ * 주요 기능:
+ * 1. 로그인: 이메일/비밀번호를 검증하고 JWT 토큰을 발급합니다.
+ * 2. 회원가입: 새로운 사용자를 생성하고 인증 정보를 저장합니다.
+ * 3. 중복 검사: 이메일/닉네임이 이미 사용 중인지 확인합니다.
+ */
+public interface AuthService {
 
-    private final UserAuthRepository userAuthRepository;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtTokenProvider jwtTokenProvider;
+    /**
+     * 로컬 로그인(이메일/비밀번호): 사용자가 입력한 자격 증명을 검증하고 JWT 토큰을 발급합니다.
+     *
+     * @param email 사용자가 입력한 이메일(로그인 ID)
+     * @param rawPassword 사용자가 입력한 평문 비밀번호
+     * @return JWT 액세스 토큰 문자열
+     * @throws com.salemale.common.exception.GeneralException 이메일이 존재하지 않거나 비밀번호가 일치하지 않을 때 발생
+     */
+    String loginLocal(String email, String rawPassword);
 
-    public AuthService(UserAuthRepository userAuthRepository, UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider) {
-        this.userAuthRepository = userAuthRepository;
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtTokenProvider = jwtTokenProvider;
-    }
+    /**
+     * 로컬 회원가입: 새로운 사용자를 생성하고 이메일/비밀번호 인증 정보를 등록합니다.
+     *
+     * @param request 회원가입 요청 정보(이메일, 닉네임, 비밀번호)
+     * @throws com.salemale.common.exception.GeneralException 이미 등록된 이메일인 경우 발생
+     */
+    void registerLocal(SignupRequest request);
 
-    public String loginLocal(String email, String rawPassword) {
-        String normalized = email.trim().toLowerCase(); // 이메일 정규화(대소문자 이슈 제거)
-        UserAuth auth = userAuthRepository.findByProviderAndEmailNormalized(LoginType.LOCAL, normalized)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.AUTH_INVALID_CREDENTIALS));
-        // 존재하지 않으면 인증 실패 처리
+    /**
+     * 이메일 중복 확인: 회원가입 전 해당 이메일이 이미 사용 중인지 검사합니다.
+     *
+     * @param email 검사할 이메일 주소
+     * @return true이면 이미 사용 중, false이면 사용 가능
+     */
+    boolean existsLocalEmail(String email);
 
-        String hash = auth.getPasswordHash();
-        if (hash == null || !passwordEncoder.matches(rawPassword, hash)) {
-            throw new GeneralException(ErrorStatus.AUTH_INVALID_CREDENTIALS);
-        }
-        // 비밀번호 불일치 시 실패
-
-        return jwtTokenProvider.generateToken(normalized); // 정상 시 JWT 발급(추후 userId/roles 등 클레임 확장 가능)
-    }
-
-    @Transactional
-    public void registerLocal(SignupRequest request) {
-        String normalized = request.getEmail().trim().toLowerCase();
-        // 중복 이메일 확인(LOCAL 자격 기준)
-        userAuthRepository.findByProviderAndEmailNormalized(LoginType.LOCAL, normalized)
-                .ifPresent(a -> { throw new GeneralException(ErrorStatus.USER_EMAIL_ALREADY_EXISTS); });
-
-        // 프로필 생성(표시용 이메일은 선택)
-        User user = User.builder()
-                .nickname(request.getNickname())
-                .email(request.getEmail())
-                .build();
-        user = userRepository.save(user);
-
-        // 비밀번호 해시 후 로컬 인증수단 저장
-        String hash = passwordEncoder.encode(request.getPassword());
-        UserAuth auth = UserAuth.builder()
-                .user(user)
-                .provider(LoginType.LOCAL)
-                .emailNormalized(normalized)
-                .passwordHash(hash)
-                .build();
-        userAuthRepository.save(auth);
-    }
-
-    public boolean existsLocalEmail(String email) {
-        String normalized = email.trim().toLowerCase();
-        // LOCAL 제공자 기준으로 해당 이메일 자격이 이미 등록되어 있는지 검사합니다.
-        return userAuthRepository.existsByProviderAndEmailNormalized(LoginType.LOCAL, normalized);
-    }
-
-    public boolean existsNickname(String nickname) {
-        // 프로필(User) 테이블에서 닉네임 중복 여부를 검사합니다.
-        return userRepository.existsByNickname(nickname);
-    }
+    /**
+     * 닉네임 중복 확인: 회원가입 전 해당 닉네임이 이미 사용 중인지 검사합니다.
+     *
+     * @param nickname 검사할 닉네임
+     * @return true이면 이미 사용 중, false이면 사용 가능
+     */
+    boolean existsNickname(String nickname);
 }
-
-

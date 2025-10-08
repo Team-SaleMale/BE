@@ -29,6 +29,11 @@ spring:
   
   # 로그 설정
   logging:
+  flyway:
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+
     level:
       org.hibernate.SQL: INFO
       org.hibernate.type.descriptor.sql: TRACE
