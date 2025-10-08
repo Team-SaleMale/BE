@@ -82,18 +82,27 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
-        // 2) 닉네임 변경: User 엔티티의 updateNickname 메서드를 호출합니다.
+        // 2) 닉네임 중복 체크: 회원가입과 동일한 검증 로직을 적용합니다.
+        //    - 다른 사용자가 이미 사용 중인 닉네임인지 확인합니다.
+        //    - 자신의 현재 닉네임과 같은 경우는 변경할 필요가 없으므로 중복 체크를 건너뜁니다.
+        String newNickname = request.getNickname().trim();
+        if (!user.getNickname().equals(newNickname) && userRepository.existsByNickname(newNickname)) {
+            log.warn("닉네임 변경 실패 - 사용자 ID: {}, 원인: 닉네임 중복 ({})", userId, newNickname);
+            throw new GeneralException(ErrorStatus.NICKNAME_ALREADY_EXISTS);
+        }
+
+        // 3) 닉네임 변경: User 엔티티의 updateNickname 메서드를 호출합니다.
         //    - 엔티티 메서드가 앞뒤 공백 제거 및 null 검증을 수행합니다.
         String oldNickname = user.getNickname();
-        user.updateNickname(request.getNickname());
+        user.updateNickname(newNickname);
 
         log.info("닉네임 변경 - 사용자 ID: {}, 이전: {}, 변경: {}", userId, oldNickname, user.getNickname());
 
-        // 3) 변경 감지: JPA의 Dirty Checking으로 자동으로 UPDATE 쿼리가 실행됩니다.
+        // 4) 변경 감지: JPA의 Dirty Checking으로 자동으로 UPDATE 쿼리가 실행됩니다.
         //    - @Transactional 메서드가 종료될 때 변경사항이 감지되어 저장됩니다.
         //    - 명시적으로 save()를 호출하지 않아도 됩니다.
 
-        // 4) 엔티티 → DTO 변환: 변경된 정보를 반환합니다.
+        // 5) 엔티티 → DTO 변환: 변경된 정보를 반환합니다.
         return UserProfileResponse.from(user);
     }
 
@@ -134,9 +143,10 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
         // 4) 비밀번호 재사용 방지: 새 비밀번호가 현재 비밀번호와 같은지 확인합니다.
         //    - passwordEncoder.matches로 평문과 해시를 비교합니다.
         //    - 보안 정책: 비밀번호 재사용을 차단하여 보안을 강화합니다.
+        //    - 재사용 시도 시 명확한 에러 메시지로 사용자에게 안내합니다.
         if (passwordEncoder.matches(request.getNewPassword(), userAuth.getPasswordHash())) {
             log.warn("비밀번호 변경 실패 - 사용자 ID: {}, 원인: 새 비밀번호가 현재 비밀번호와 동일", userId);
-            throw new GeneralException(ErrorStatus.AUTH_INVALID_CREDENTIALS);
+            throw new GeneralException(ErrorStatus.PASSWORD_REUSE_NOT_ALLOWED);
         }
 
         // 5) 새 비밀번호 해시 생성: BCrypt 등으로 새 비밀번호를 해시합니다.
