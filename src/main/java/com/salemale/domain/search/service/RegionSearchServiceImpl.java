@@ -56,27 +56,37 @@ public class RegionSearchServiceImpl implements RegionSearchService { // RegionS
     @Override // 인터페이스 메서드 구현을 명시적으로 표시
     @Transactional(readOnly = true) // 읽기 전용 트랜잭션: 데이터 변경 없이 조회만 수행하여 성능을 향상시킵니다.
     public List<RegionSearchResponse> searchPagedByNameOnly(String q, int page, int size) {
-        // 1) 검색 패턴 생성: 사용자 입력 양쪽에 `%`를 붙여 부분 일치 패턴을 만듭니다.
+        // 1) 입력 검증 및 정규화: null 또는 공백 검색어는 빈 결과를 반환합니다.
+        //    - trim: 앞뒤 공백 제거
+        //    - isBlank: null, 빈 문자열, 공백만 있는 문자열 검증
+        if (q == null || q.trim().isBlank()) {
+            log.debug("검색어가 비어있어 빈 결과를 반환합니다.");
+            return java.util.Collections.emptyList();
+        }
+        
+        String trimmedQ = q.trim();
+        
+        // 2) 검색 패턴 생성: 정규화된 검색어 양쪽에 `%`를 붙여 부분 일치 패턴을 만듭니다.
         //    - 예: "강남" → "%강남%"
         //    - SQL ILIKE 연산자와 함께 사용하여 대소문자를 구분하지 않고 검색합니다.
-        String pattern = "%" + q + "%";
+        String pattern = "%" + trimmedQ + "%";
 
-        // 2) 페이지 크기 검증: 너무 큰 값이 들어오면 메모리 부족이나 성능 저하를 일으킬 수 있습니다.
+        // 3) 페이지 크기 검증: 너무 큰 값이 들어오면 메모리 부족이나 성능 저하를 일으킬 수 있습니다.
         //    - Math.max(size, 1): 최소 1개 이상
         //    - Math.min(..., 5000): 최대 5000개로 제한
         int limit = Math.min(Math.max(size, 1), 5000);
 
-        // 3) 오프셋 계산: 페이지 번호에 따라 건너뛸 레코드 수를 계산합니다.
+        // 4) 오프셋 계산: 페이지 번호에 따라 건너뛸 레코드 수를 계산합니다.
         //    - Math.max(page, 0): 음수 페이지 방지(0 이상만 허용)
         //    - offset = page * limit: 예) page=2, limit=10이면 offset=20 (21번째부터 조회)
         int offset = Math.max(page, 0) * limit;
 
-        // 4) 데이터베이스 조회: 리포지토리를 통해 검색 패턴, 제한, 오프셋을 전달하여 지역을 조회합니다.
+        // 5) 데이터베이스 조회: 리포지토리를 통해 검색 패턴, 제한, 오프셋을 전달하여 지역을 조회합니다.
         //    - findAllByKeywordPaged: 네이티브 쿼리 또는 JPQL로 ILIKE 검색을 수행합니다.
         //    - 시/군/구, 읍/면/동 모든 필드를 검색 대상으로 합니다.
         List<Region> rows = regionRepository.findAllByKeywordPaged(pattern, limit, offset);
 
-        // 5) DTO 변환: Region 엔티티를 RegionSearchResponse DTO로 변환합니다.
+        // 6) DTO 변환: Region 엔티티를 RegionSearchResponse DTO로 변환합니다.
         //    - stream(): 리스트를 스트림으로 변환하여 함수형 처리를 시작합니다.
         //    - map(RegionSearchConverter::toResponse): 각 Region을 DTO로 변환합니다.
         //    - collect(Collectors.toList()): 스트림을 다시 리스트로 모읍니다.

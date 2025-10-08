@@ -7,8 +7,10 @@ import io.swagger.v3.oas.annotations.Operation; // Swagger: API 설명
 import io.swagger.v3.oas.annotations.Parameter; // Swagger: 파라미터 설명
 import io.swagger.v3.oas.annotations.responses.ApiResponses; // Swagger: 여러 응답 설명
 import io.swagger.v3.oas.annotations.tags.Tag; // Swagger: 컨트롤러 그룹 태그
+import jakarta.validation.constraints.Min; // Bean Validation: 최소값 제약
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated; // Bean Validation 활성화
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -29,6 +31,7 @@ import java.util.List;
 @RequestMapping("/api/search") // 검색 API의 베이스 경로입니다.
 @RequiredArgsConstructor // 필요한 서비스는 생성자 주입으로 받습니다.
 @Slf4j // 검색어/응답시간 등을 로그로 남겨 추적합니다.
+@Validated // Bean Validation을 활성화하여 메서드 파라미터 검증을 수행합니다.
 @Tag(name = "검색", description = "지역 검색 API (향후 상품, 사용자 검색 등 확장 예정)")
 public class SearchController {
 
@@ -81,9 +84,9 @@ public class SearchController {
             @Parameter(description = "검색어 (시/군구/읍면동 이름)", example = "역삼", required = true)
             @RequestParam String q,
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
-            @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "페이지 크기", example = "10")
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "0") @Min(value = 0, message = "페이지 번호는 0 이상이어야 합니다.") int page,
+            @Parameter(description = "페이지 크기 (1-5000)", example = "10")
+            @RequestParam(defaultValue = "10") @Min(value = 1, message = "페이지 크기는 1 이상이어야 합니다.") int size
     ) {
         // 1) 검색어 로깅: 검색 패턴 분석 및 디버깅에 활용
         log.debug("지역 검색 - 검색어: {}, 페이지: {}, 크기: {}", q, page, size);

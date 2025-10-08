@@ -131,16 +131,24 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
             throw new GeneralException(ErrorStatus.AUTH_INVALID_CREDENTIALS);
         }
 
-        // 4) 새 비밀번호 해시 생성: BCrypt 등으로 새 비밀번호를 해시합니다.
+        // 4) 비밀번호 재사용 방지: 새 비밀번호가 현재 비밀번호와 같은지 확인합니다.
+        //    - passwordEncoder.matches로 평문과 해시를 비교합니다.
+        //    - 보안 정책: 비밀번호 재사용을 차단하여 보안을 강화합니다.
+        if (passwordEncoder.matches(request.getNewPassword(), userAuth.getPasswordHash())) {
+            log.warn("비밀번호 변경 실패 - 사용자 ID: {}, 원인: 새 비밀번호가 현재 비밀번호와 동일", userId);
+            throw new GeneralException(ErrorStatus.AUTH_INVALID_CREDENTIALS);
+        }
+
+        // 5) 새 비밀번호 해시 생성: BCrypt 등으로 새 비밀번호를 해시합니다.
         //    - passwordEncoder.encode: 평문 비밀번호를 안전한 해시값으로 변환합니다.
         String newHash = passwordEncoder.encode(request.getNewPassword());
 
-        // 5) 비밀번호 업데이트: UserAuth 엔티티의 updatePasswordHash 메서드를 호출합니다.
+        // 6) 비밀번호 업데이트: UserAuth 엔티티의 updatePasswordHash 메서드를 호출합니다.
         userAuth.updatePasswordHash(newHash);
 
         log.info("비밀번호 변경 완료 - 사용자 ID: {}", userId);
 
-        // 6) 변경 감지: JPA의 Dirty Checking으로 자동으로 UPDATE 쿼리가 실행됩니다.
+        // 7) 변경 감지: JPA의 Dirty Checking으로 자동으로 UPDATE 쿼리가 실행됩니다.
         //    - @Transactional 메서드가 종료될 때 변경사항이 감지되어 저장됩니다.
     }
 

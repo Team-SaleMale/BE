@@ -29,7 +29,31 @@ public class RegionConverter {
                 .build();
     }
 
-    // 부분 수정 반영: null이 아닌 필드만 교체합니다(불변 스타일로 새 인스턴스 빌드)
+    /**
+     * In-place 업데이트: 관리 중인(managed) Region 엔티티를 직접 수정합니다.
+     * 
+     * - 새 인스턴스를 생성하지 않고 기존 엔티티의 필드를 변경합니다.
+     * - BaseEntity 필드(createdAt, updatedAt, deletedAt) 및 연관관계 보존
+     * - JPA의 변경 감지(Dirty Checking)가 자동으로 UPDATE 쿼리 실행
+     * 
+     * @param current 관리 중인 Region 엔티티 (영속성 컨텍스트 내)
+     * @param req 부분 수정 요청 (null 필드는 무시)
+     */
+    public static void applyUpdateInPlace(Region current, RegionUpdateRequest req) {
+        current.updateFields(
+                req.getSido(),
+                req.getSigungu(),
+                req.getEupmyeondong(),
+                req.getLatitude(),
+                req.getLongitude()
+        );
+    }
+    
+    /**
+     * @deprecated 새 인스턴스 생성 방식은 BaseEntity 필드를 덮어씌울 수 있습니다.
+     * 대신 {@link #applyUpdateInPlace(Region, RegionUpdateRequest)}를 사용하세요.
+     */
+    @Deprecated
     public static Region applyUpdate(Region current, RegionUpdateRequest req) {
         return Region.builder()
                 .regionId(current.getRegionId())

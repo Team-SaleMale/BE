@@ -92,15 +92,17 @@ public class RegionCrudServiceImpl implements RegionCrudService { // RegionCrudS
         //    - findById: Optional<Region>을 반환합니다.
         //    - orElseThrow: 지역이 없으면 예외를 던집니다.
         Region region = regionRepository.findById(regionId)
-                .orElseThrow(() -> new GeneralException(com.salemale.common.code.status.ErrorStatus.REGION_NOT_FOUND));
+                .orElseThrow(() -> new GeneralException(ErrorStatus.REGION_NOT_FOUND));
 
-        // 2) 부분 수정 적용: RegionConverter를 사용하여 null이 아닌 필드만 기존 엔티티에 반영합니다.
-        //    - applyUpdate: 기존 엔티티와 수정 요청을 받아 업데이트된 엔티티를 반환합니다.
-        //    - null 필드는 무시되므로 원하는 필드만 선택적으로 수정할 수 있습니다.
-        region = RegionConverter.applyUpdate(region, req);
+        // 2) In-place 부분 수정: 관리 중인 엔티티를 직접 수정합니다.
+        //    - applyUpdateInPlace: null이 아닌 필드만 엔티티에 직접 반영합니다.
+        //    - BaseEntity 필드(createdAt, updatedAt)와 연관관계는 보존됩니다.
+        //    - 새 인스턴스를 생성하지 않으므로 영속성 컨텍스트가 유지됩니다.
+        RegionConverter.applyUpdateInPlace(region, req);
 
-        // 3) 데이터베이스 저장: JPA의 변경 감지(Dirty Checking) 또는 명시적 save로 UPDATE 쿼리를 실행합니다.
-        region = regionRepository.save(region);
+        // 3) 변경 감지: JPA의 Dirty Checking으로 자동으로 UPDATE 쿼리가 실행됩니다.
+        //    - @Transactional 메서드 종료 시 변경사항이 감지되어 저장됩니다.
+        //    - 명시적 save()를 호출할 필요가 없습니다.
 
         // 4) 엔티티 → DTO 변환: 수정된 엔티티를 응답 DTO로 변환하여 반환합니다.
         return RegionConverter.toResponse(region);

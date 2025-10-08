@@ -1,5 +1,7 @@
 package com.salemale.domain.user.service; // 사용자-지역 할당 비즈니스 로직 구현체
 
+import com.salemale.common.code.status.ErrorStatus;
+import com.salemale.common.exception.GeneralException;
 import com.salemale.domain.region.entity.Region; // 지역 엔티티(시군구/읍면동 정보)
 import com.salemale.domain.user.entity.UserRegion; // 사용자-지역 연결 엔티티
 import com.salemale.domain.region.repository.RegionRepository; // 지역 저장소
@@ -50,7 +52,7 @@ public class UserRegionServiceImpl implements UserRegionService { // UserRegionS
      * @param userId 동네를 할당할 사용자 ID
      * @param request 동네 할당 요청 정보(읍/면/동 이름, isPrimary 등)
      * @return 할당된 지역(Region)의 ID
-     * @throws IllegalArgumentException 사용자를 찾을 수 없거나 지역을 찾을 수 없을 때 발생
+     * @throws GeneralException 사용자를 찾을 수 없거나 지역을 찾을 수 없을 때 발생
      */
     @Override // 인터페이스 메서드 구현을 명시적으로 표시
     @Transactional // 데이터베이스 변경 작업을 하나의 트랜잭션으로 묶어 일관성을 보장합니다.
@@ -59,20 +61,31 @@ public class UserRegionServiceImpl implements UserRegionService { // UserRegionS
         //    - findById: Optional<User>를 반환합니다.
         //    - orElseThrow: 사용자가 없으면 예외를 던집니다.
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
-        // 2) 지역 검색: 읍/면/동 이름으로 모든 일치하는 지역을 조회합니다.
-        //    - 동일한 이름의 동네가 여러 시/군/구에 존재할 수 있습니다(예: 신림동).
-        List<Region> candidates = regionRepository.findAllByEupmyeondong(request.getEupmyeondong());
+        // 2) 지역 검색: sido, sigungu, eupmyeondong으로 정확한 지역을 조회합니다.
+        //    - 모든 행정구역 정보를 사용하여 명확하게 지역을 특정합니다.
+        List<Region> candidates = regionRepository.findAllBySidoAndSigunguAndEupmyeondong(
+                request.getSido(), 
+                request.getSigungu(), 
+                request.getEupmyeondong()
+        );
 
         // 3) 검색 결과 검증: 지역을 찾지 못하면 예외를 던집니다.
         if (candidates.isEmpty()) {
-            throw new IllegalArgumentException("Region not found by eupmyeondong: " + request.getEupmyeondong());
+            throw new GeneralException(ErrorStatus.REGION_NOT_FOUND);
         }
 
-        // 4) 지역 선택: 현재는 첫 번째 검색 결과를 사용합니다.
-        //    - TODO: 향후 시/군/구 정보를 추가로 받아 정확한 지역을 선택할 수 있도록 개선 필요
+        // 4) 지역 선택: sido+sigungu+eupmyeondong 조합으로 유일한 지역이 특정되어야 합니다.
+        //    - 만약 여러 개가 조회되면 데이터 정합성 문제이므로 첫 번째를 사용합니다.
+        //    - 정상적인 경우 정확히 1개만 조회됩니다.
         Region target = candidates.get(0);
+        
+        // 5) 다중 매칭 경고: 동일한 sido+sigungu+eupmyeondong 조합이 여러 개면 로그를 남깁니다.
+        if (candidates.size() > 1) {
+            log.warn("Multiple regions found for sido={}, sigungu={}, eupmyeondong={}: {} matches",
+                    request.getSido(), request.getSigungu(), request.getEupmyeondong(), candidates.size());
+        }
 
         // 5) 동네 할당 적용: 기존 동네를 해제하고 새 동네를 설정합니다.
         applyAssignment(user, target, request.isPrimary());
@@ -92,18 +105,18 @@ public class UserRegionServiceImpl implements UserRegionService { // UserRegionS
      * @param regionId 설정할 지역 ID
      * @param primary 주 활동 동네 여부(현재는 항상 true)
      * @return 설정된 지역(Region)의 ID
-     * @throws IllegalArgumentException 사용자를 찾을 수 없거나 지역을 찾을 수 없을 때 발생
+     * @throws GeneralException 사용자를 찾을 수 없거나 지역을 찾을 수 없을 때 발생
      */
     @Override // 인터페이스 메서드 구현을 명시적으로 표시
     @Transactional // 데이터베이스 변경 작업을 하나의 트랜잭션으로 묶어 일관성을 보장합니다.
     public Long setRegionForUser(Long userId, Long regionId, boolean primary) {
         // 1) 사용자 존재 확인: 주어진 ID로 사용자를 조회합니다.
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
         // 2) 지역 존재 확인: 주어진 ID로 지역을 조회합니다.
         Region target = regionRepository.findById(regionId)
-                .orElseThrow(() -> new IllegalArgumentException("Region not found: " + regionId));
+                .orElseThrow(() -> new GeneralException(ErrorStatus.REGION_NOT_FOUND));
 
         // 3) 동네 할당 적용: 기존 동네를 해제하고 새 동네를 설정합니다.
         applyAssignment(user, target, primary);
@@ -152,14 +165,14 @@ public class UserRegionServiceImpl implements UserRegionService { // UserRegionS
      *
      * @param userId 동네를 조회할 사용자 ID
      * @return 주 활동 동네의 지역 ID, 없으면 null
-     * @throws IllegalArgumentException 사용자를 찾을 수 없을 때 발생
+     * @throws GeneralException 사용자를 찾을 수 없을 때 발생
      */
     @Override // 인터페이스 메서드 구현을 명시적으로 표시
     @Transactional(readOnly = true) // 읽기 전용 트랜잭션: 데이터 변경 없이 조회만 수행합니다.
     public Long getPrimaryRegionId(Long userId) {
         // 1) 사용자 존재 확인: 주어진 ID로 사용자를 조회합니다.
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
         // 2) 주 활동 동네 찾기:
         //    - findAllByUser: 해당 사용자의 모든 UserRegion을 조회합니다.

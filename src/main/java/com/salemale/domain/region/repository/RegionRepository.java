@@ -13,6 +13,9 @@ public interface RegionRepository extends JpaRepository<Region, Long> {
 
     // 행정 3단계(시/군구/읍면동)로 고유 레코드 조회 — 비즈니스 유니크키
     Optional<Region> findBySidoAndSigunguAndEupmyeondong(String sido, String sigungu, String eupmyeondong);
+    
+    // 행정 3단계(시/군구/읍면동)로 고유 레코드 조회 (복수 결과 허용 - 데이터 정합성 검증용)
+    List<Region> findAllBySidoAndSigunguAndEupmyeondong(String sido, String sigungu, String eupmyeondong);
 
     // 동명으로 후보 조회(정확 일치). 동명이 여러 시군구에 존재할 수 있어 다수 반환 가능
     List<Region> findAllByEupmyeondong(String eupmyeondong);

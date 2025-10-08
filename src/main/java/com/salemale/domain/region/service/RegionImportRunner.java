@@ -68,10 +68,19 @@ public class RegionImportRunner implements ApplicationRunner { // ApplicationRun
         // 2) 임포트 실행: RegionImportService를 호출하여 CSV 파일을 읽고 데이터베이스에 적재합니다.
         //    - importFromClasspathCsv(): resources/data/region_data.csv를 읽어 UPSERT를 수행합니다.
         //    - 반환값: 처리된(UPSERT된) 레코드 수
-        int count = regionImportService.importFromClasspathCsv();
-
-        // 3) 로그 기록: 임포트가 완료되었음을 알리고 처리된 레코드 수를 표시합니다.
-        //    - 예: "Region import completed: 1234 upserted"
-        log.info("Region import completed: {} upserted", count);
+        //    - try-catch로 감싸서 임포트 실패 시에도 애플리케이션 시작을 계속합니다.
+        try {
+            int count = regionImportService.importFromClasspathCsv();
+            
+            // 3) 로그 기록: 임포트가 완료되었음을 알리고 처리된 레코드 수를 표시합니다.
+            //    - 예: "Region import completed: 1234 upserted"
+            log.info("Region import completed: {} upserted", count);
+        } catch (Exception e) {
+            // 4) 임포트 실패 시: 에러 로그를 남기고 애플리케이션은 정상 시작합니다.
+            //    - 파일 누락, 파싱 오류, DB 연결 실패 등 다양한 예외를 처리합니다.
+            //    - 운영 환경에서는 임포트 없이도 정상 동작할 수 있도록 합니다.
+            log.error("Region import failed: {}. Application will continue without import data.", 
+                    e.getMessage(), e);
+        }
     }
 }

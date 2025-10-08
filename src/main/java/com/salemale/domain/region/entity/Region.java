@@ -50,4 +50,25 @@ public class Region extends BaseEntity {
     // 경도(WGS84)
     @Column(name = "longitude", precision = 18, scale = 10, nullable = false)
     private BigDecimal longitude;
+    
+    /**
+     * 지역 정보를 부분 수정합니다 (null 필드는 무시).
+     * 
+     * - JPA 관리 중인 엔티티에서 이 메서드를 호출하면 Dirty Checking으로 자동 UPDATE됩니다.
+     * - BaseEntity 필드(createdAt, updatedAt, deletedAt)는 보존됩니다.
+     * 
+     * @param sido 새 시/도 (null이면 변경하지 않음)
+     * @param sigungu 새 시/군/구 (null이면 변경하지 않음)
+     * @param eupmyeondong 새 읍/면/동 (null이면 변경하지 않음)
+     * @param latitude 새 위도 (null이면 변경하지 않음)
+     * @param longitude 새 경도 (null이면 변경하지 않음)
+     */
+    public void updateFields(String sido, String sigungu, String eupmyeondong, 
+                            BigDecimal latitude, BigDecimal longitude) {
+        if (sido != null) this.sido = sido;
+        if (sigungu != null) this.sigungu = sigungu;
+        if (eupmyeondong != null) this.eupmyeondong = eupmyeondong;
+        if (latitude != null) this.latitude = latitude;
+        if (longitude != null) this.longitude = longitude;
+    }
 }
