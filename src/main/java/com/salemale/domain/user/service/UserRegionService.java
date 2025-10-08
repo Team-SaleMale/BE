@@ -29,9 +29,9 @@ public interface UserRegionService {
      * - 사용자의 기존 동네를 해제하고 새 동네를 설정합니다.
      *
      * @param userId 동네를 할당할 사용자 ID
-     * @param request 동네 할당 요청 정보(읍/면/동 이름, isPrimary 등)
+     * @param request 동네 할당 요청 정보(시도, 시군구, 읍면동, isPrimary)
      * @return 할당된 지역(Region)의 ID
-     * @throws IllegalArgumentException 사용자를 찾을 수 없거나 지역을 찾을 수 없을 때 발생
+     * @throws com.salemale.common.exception.GeneralException 사용자를 찾을 수 없을 때 (ErrorStatus.USER_NOT_FOUND) 또는 지역을 찾을 수 없을 때 (ErrorStatus.REGION_NOT_FOUND)
      */
     Long assignRegionToUser(Long userId, UserRegionAssignRequest request);
 
@@ -46,7 +46,7 @@ public interface UserRegionService {
      * @param regionId 설정할 지역 ID
      * @param primary 주 활동 동네 여부(현재는 항상 true)
      * @return 설정된 지역(Region)의 ID
-     * @throws IllegalArgumentException 사용자를 찾을 수 없거나 지역을 찾을 수 없을 때 발생
+     * @throws com.salemale.common.exception.GeneralException 사용자를 찾을 수 없을 때 (ErrorStatus.USER_NOT_FOUND) 또는 지역을 찾을 수 없을 때 (ErrorStatus.REGION_NOT_FOUND)
      */
     Long setRegionForUser(Long userId, Long regionId, boolean primary);
 
@@ -58,7 +58,7 @@ public interface UserRegionService {
      *
      * @param userId 동네를 조회할 사용자 ID
      * @return 주 활동 동네의 지역 ID, 없으면 null
-     * @throws IllegalArgumentException 사용자를 찾을 수 없을 때 발생
+     * @throws com.salemale.common.exception.GeneralException 사용자를 찾을 수 없을 때 (ErrorStatus.USER_NOT_FOUND)
      */
     Long getPrimaryRegionId(Long userId);
 }
