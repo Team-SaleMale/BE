@@ -26,7 +26,10 @@ public class User extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY) // DB의 AUTO_INCREMENT/IDENTITY 전략 사용
     private Long id;
 
-    @Column(name = "nickname", nullable = false, length = 15) // UI에 표시되는 별칭(서비스 정책에 따라 유니크 고려 가능)
+    // 닉네임: UI에 표시되는 별칭 (유니크 제약 조건으로 중복 방지)
+    // - DB 레벨에서 unique=true로 중복을 차단합니다.
+    // - 애플리케이션 레벨에서도 existsByNickname() 체크로 명확한 에러 메시지를 제공합니다.
+    @Column(name = "nickname", nullable = false, length = 15, unique = true)
     private String nickname;
 
     // 소셜 로그인에서 이메일 미제공이 가능하므로 nullable 허용
