@@ -3,9 +3,6 @@ package com.salemale.domain.item.repository;
 import com.salemale.domain.item.entity.Item;
 import com.salemale.domain.item.entity.ItemTransaction;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-
 import java.util.Optional;
 
 public interface ItemTransactionRepository extends JpaRepository<ItemTransaction, Long> {
