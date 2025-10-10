@@ -33,9 +33,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(bearer) && bearer.startsWith("Bearer ")) {
             String token = bearer.substring(7);
             try {
-                // 토큰 유효성/서명 검증 + subject 추출(여기서는 이메일 normalized)
+                // 토큰 유효성/서명 검증 + subject 추출(이제는 userId 문자열)
                 String subject = jwtTokenProvider.getSubject(token);
-                // 간단한 인증 주체 생성(권한은 추후 확장 가능)
+                // 간단한 인증 주체 생성(권한은 추후 확장 가능). username에 userId를 담습니다.
                 UserDetails principal = User.withUsername(subject).password("").authorities(Collections.emptyList()).build();
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         principal,

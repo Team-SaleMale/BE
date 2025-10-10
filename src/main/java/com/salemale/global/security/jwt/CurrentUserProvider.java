@@ -1,11 +1,7 @@
 package com.salemale.global.security.jwt; // JWT에서 현재 사용자 ID 추출 유틸리티
-
-import com.salemale.domain.user.entity.User;
-import com.salemale.domain.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
 import java.util.Locale;
@@ -15,15 +11,13 @@ import java.util.Locale;
 public class CurrentUserProvider {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final UserRepository userRepository;
 
     /**
      * HTTP 요청에서 JWT 토큰을 추출하여 현재 사용자 ID를 반환합니다.
      * 
      * 원리:
      * 1) Authorization: Bearer <token> 헤더에서 토큰 추출
-     * 2) subject가 숫자면 userId로 간주
-     * 3) 숫자가 아니면 이메일로 간주하고 UserRepository에서 조회해 id 반환
+     * 2) subject는 userId 문자열이어야 하며, 숫자로 파싱됩니다.
      * 
      * @param request HTTP 요청 객체
      * @return 현재 사용자 ID
@@ -49,18 +43,14 @@ public class CurrentUserProvider {
             throw new AuthenticationCredentialsNotFoundException("Empty JWT token");
         }
         
-        // 4) Subject 추출 (userId 또는 email)
+        // 4) Subject 추출 (userId 문자열)
         String subject = jwtTokenProvider.getSubject(token);
         
-        // 5) Subject가 숫자면 userId로 간주
+        // 5) Subject는 반드시 숫자여야 합니다.
         try {
             return Long.parseLong(subject);
         } catch (NumberFormatException e) {
-            // 6) 숫자가 아니면 이메일로 간주하고 조회 (정규화: 소문자)
-            String normalizedEmail = subject.trim().toLowerCase(Locale.ROOT);
-            User user = userRepository.findByEmail(normalizedEmail)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-            return user.getId();
+            throw new AuthenticationCredentialsNotFoundException("Token subject is not a numeric userId");
         }
     }
 }

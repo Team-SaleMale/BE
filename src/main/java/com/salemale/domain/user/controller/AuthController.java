@@ -122,13 +122,13 @@ public class AuthController { // 인증 관련 엔드포인트 집합(초심자�
 
     @Operation(
             summary = "로그인 상태 확인",
-            description = "JWT 토큰이 유효한지 확인하고 현재 로그인한 사용자 정보(이메일)를 반환합니다."
+            description = "JWT 토큰이 유효한지 확인하고 현재 로그인한 사용자 식별자(userId)를 반환합니다."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "인증 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패 (JWT 토큰 없음 또는 유효하지 않음)")
     })
-    @GetMapping("/me") // 로그인 상태 확인: 토큰이 유효하면 주체(subject: 이메일)를 반환, 아니면 401
+    @GetMapping("/me") // 로그인 상태 확인: 토큰이 유효하면 주체(subject: userId)를 반환, 아니면 401
     public ResponseEntity<ApiResponse<Map<String, String>>> me(
             @Parameter(hidden = true) @AuthenticationPrincipal UserDetails principal) {
         // 1) JwtAuthenticationFilter가 토큰을 검증하고 SecurityContext에 주체를 세팅합니다.
