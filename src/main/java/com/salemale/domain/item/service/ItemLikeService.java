@@ -57,4 +57,26 @@ public class ItemLikeService {
         // 6. DTO로 응답 반환
         return ItemLikeResponse.of(itemId, true);
     }
+
+    @Transactional
+    public ItemLikeResponse unlikeItem(String email, Long itemId) {
+
+        // 1. 사용자 조회
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+        // 2. 상품 조회
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.ITEM_NOT_FOUND));
+
+        // 3. 찜한 레코드 찾기
+        UserLiked userLiked = userLikedRepository.findByUserAndItem(user, item)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.ITEM_NOT_LIKED));
+
+        // 4. 찜 취소 (삭제)
+        userLikedRepository.delete(userLiked);
+
+        // 5. 응답 반환
+        return ItemLikeResponse.of(itemId, false);
+    }
 }
