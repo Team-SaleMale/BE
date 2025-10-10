@@ -79,28 +79,16 @@ public class ItemService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
         // 2. 판매자의 대표 동네 (Region) 조회 -> 테스트 위해 주석 처리
-        //Region region = userRegionRepository.findByPrimaryUser(seller)
-        //        .map(userRegion -> userRegion.getRegion())
-        //        .orElseThrow(() -> new GeneralException(ErrorStatus.REGION_NOT_SET));
+        Region region = userRegionRepository.findByPrimaryUser(seller)
+                .map(userRegion -> userRegion.getRegion())
+                .orElseThrow(() -> new GeneralException(ErrorStatus.REGION_NOT_SET));
 
-        // 임시로 테스트용 지역 객체 생성
-        Region region = regionRepository.findById(1L)
-                .orElseGet(() -> {
-                    // 1-B. (대안) 만약 DB에 Region이 없다면, 테스트용 객체를 생성하여 DB에 저장
-                    Region tempRegion = Region.builder()
-                            .regionName("테스트 동네")
-                            .latitude(null) // BigDecimal 필드는 null 허용 시
-                            .longitude(null)
-                            .build();
-                    return regionRepository.save(tempRegion);
-                });
-
-        // 3. 자동 계산 값 설정 및 시간 처리
+        // 3. 자동 계산 값 설정 및 시간 처리, 현재 모든 상품의 최소 입찰 금액은 100원 이상 & 시작가의 5% 이상으로 설정
         Integer startPrice = request.getStartPrice();
-        Integer bidIncrement = (int) Math.round(startPrice * 0.05);
+        Integer bidIncrement = Math.max(100, (int) Math.round(startPrice * 0.05));
         LocalDateTime endTime;
         try {
-            // "YYYY-MM-DD" + "T23:59:59" 조합 (명세서 요구사항)
+            // "YYYY-MM-DD" + "T23:59:59" 조합
             LocalDate endDate = LocalDate.parse(request.getEndDate());
             endTime = LocalDateTime.of(endDate, LocalTime.MAX);
         } catch (DateTimeParseException e) {
