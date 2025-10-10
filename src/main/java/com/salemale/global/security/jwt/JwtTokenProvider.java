@@ -14,7 +14,7 @@ import java.util.Date; // 발급/만료 시각 표현
  * JwtTokenProvider: JWT 액세스 토큰을 생성하고 검증하는 컴포넌트입니다.
  *
  * - HMAC-SHA 대칭키 방식으로 서명/검증을 수행합니다.
- * - 토큰의 주체(subject)에 사용자 식별자(이메일 등)를 담습니다.
+ * - 토큰의 주체(subject)에 사용자 식별자(userId)를 담습니다.
  * - 만료 시간을 설정하여 토큰의 유효기간을 제한합니다.
  *
  * 주의사항:
@@ -66,7 +66,7 @@ public class JwtTokenProvider {
     /**
      * JWT 액세스 토큰 생성: 사용자 식별자를 담은 서명된 토큰을 발급합니다.
      *
-     * @param subject 토큰의 주체(보통 사용자 이메일 또는 ID)
+     * @param subject 토큰의 주체(사용자 ID)
      * @return 서명된 JWT 문자열(헤더.페이로드.서명 형태)
      */
     public String generateToken(String subject) {
