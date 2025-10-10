@@ -18,9 +18,12 @@ import com.salemale.global.security.jwt.JwtTokenProvider; // 토큰 프로바이
 public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider; // JWT 파서/생성기 주입
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;  // 추가
 
-    public SecurityConfig(JwtTokenProvider jwtTokenProvider) {
+    // 생성자 수정
+    public SecurityConfig(JwtTokenProvider jwtTokenProvider, CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;  // 추가
     }
 
     @Bean
@@ -40,6 +43,10 @@ public class SecurityConfig {
                                 "/api/auth/**" // 로그인/회원가입/로그아웃 등 인증 경로는 공개(과거 프리픽스 호환)
                         ).permitAll()
                         .anyRequest().authenticated() // 그 외는 인증 필요
+                )
+                // 로그인 안하고 api 진행했을때 생성되는 에러 응답 추가
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)
                 )
                 .httpBasic(Customizer.withDefaults()); // httpBasic 기본값(사용 안 해도 무방)
 
