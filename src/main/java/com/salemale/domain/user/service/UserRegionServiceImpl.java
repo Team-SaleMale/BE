@@ -5,16 +5,12 @@ import com.salemale.common.exception.GeneralException;
 import com.salemale.domain.region.entity.Region; // 지역 엔티티(시군구/읍면동 정보)
 import com.salemale.domain.user.entity.UserRegion; // 사용자-지역 연결 엔티티
 import com.salemale.domain.region.repository.RegionRepository; // 지역 저장소
-import com.salemale.domain.user.dto.request.UserRegionAssignRequest; // 지역 할당 요청 DTO
 import com.salemale.domain.user.entity.User; // 사용자 엔티티
 import com.salemale.domain.user.repository.UserRegionRepository; // 사용자-지역 연결 저장소
 import com.salemale.domain.user.repository.UserRepository; // 사용자 저장소
 import lombok.RequiredArgsConstructor; // Lombok: 생성자 자동 생성
-import lombok.extern.slf4j.Slf4j; // Lombok: 로깅 지원
 import org.springframework.stereotype.Service; // 스프링 서비스 빈 선언
 import org.springframework.transaction.annotation.Transactional; // 트랜잭션 처리
-
-import java.util.List; // 리스트 컬렉션
 
 /**
  * UserRegionServiceImpl: 사용자의 활동 동네를 관리하는 서비스 구현체입니다.
@@ -24,75 +20,18 @@ import java.util.List; // 리스트 컬렉션
  * - 현재는 사용자당 1개의 동네만 유지하는 정책을 적용합니다.
  *
  * 동작 원리:
- * 1. 읍/면/동 이름으로 Region을 조회합니다(동명이 여러 개 있을 수 있음).
- * 2. 검색된 지역 중 하나를 선택하여 사용자에게 할당합니다.
+ * 1. 지역 검색은 SearchController에서 수행합니다.
+ * 2. 프론트엔드에서 선택한 지역 ID를 받아 사용자에게 할당합니다.
  * 3. 기존 UserRegion을 모두 삭제하고 새로운 연결을 생성합니다(1:1 제약).
- *
- * 주의사항:
- * - 동일한 읍/면/동 이름이 여러 시/군/구에 존재할 수 있습니다(예: 서울 중구, 부산 중구).
- * - 현재는 첫 번째 검색 결과를 사용하지만, 향후 시/군/구 정보를 추가로 받아 정확도를 높일 예정입니다.
  */
 @Service // 스프링이 이 클래스를 서비스 빈으로 등록하여 컨트롤러에서 주입받을 수 있게 합니다.
 @RequiredArgsConstructor // Lombok: final 필드를 매개변수로 받는 생성자를 자동 생성합니다.
-@Slf4j // Lombok: log 객체를 자동으로 생성하여 로깅을 할 수 있게 합니다.
 public class UserRegionServiceImpl implements UserRegionService { // UserRegionService 인터페이스 구현
 
     // 의존성 선언: RequiredArgsConstructor로 자동 주입됩니다.
     private final UserRepository userRepository; // 사용자 정보 조회/저장
     private final RegionRepository regionRepository; // 지역 정보 조회
     private final UserRegionRepository userRegionRepository; // 사용자-지역 연결 정보 조회/저장/삭제
-
-    /**
-     * 사용자에게 동네를 할당합니다(읍/면/동 이름으로 검색).
-     *
-     * - 입력된 읍/면/동 이름으로 Region을 검색합니다.
-     * - 여러 개가 검색될 경우 첫 번째 결과를 선택합니다(향후 개선 예정).
-     * - 사용자의 기존 동네를 해제하고 새 동네를 설정합니다.
-     *
-     * @param userId 동네를 할당할 사용자 ID
-     * @param request 동네 할당 요청 정보(읍/면/동 이름, isPrimary 등)
-     * @return 할당된 지역(Region)의 ID
-     * @throws GeneralException 사용자를 찾을 수 없거나 지역을 찾을 수 없을 때 발생
-     */
-    @Override // 인터페이스 메서드 구현을 명시적으로 표시
-    @Transactional // 데이터베이스 변경 작업을 하나의 트랜잭션으로 묶어 일관성을 보장합니다.
-    public Long assignRegionToUser(Long userId, UserRegionAssignRequest request) {
-        // 1) 사용자 존재 확인: 주어진 ID로 사용자를 조회합니다.
-        //    - findById: Optional<User>를 반환합니다.
-        //    - orElseThrow: 사용자가 없으면 예외를 던집니다.
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
-
-        // 2) 지역 검색: sido, sigungu, eupmyeondong으로 정확한 지역을 조회합니다.
-        //    - 모든 행정구역 정보를 사용하여 명확하게 지역을 특정합니다.
-        List<Region> candidates = regionRepository.findAllBySidoAndSigunguAndEupmyeondong(
-                request.getSido(), 
-                request.getSigungu(), 
-                request.getEupmyeondong()
-        );
-
-        // 3) 검색 결과 검증: 지역을 찾지 못하면 예외를 던집니다.
-        if (candidates.isEmpty()) {
-            throw new GeneralException(ErrorStatus.REGION_NOT_FOUND);
-        }
-
-        // 4) 지역 선택: sido+sigungu+eupmyeondong 조합으로 유일한 지역이 특정되어야 합니다.
-        //    - 만약 여러 개가 조회되면 데이터 정합성 문제이므로 첫 번째를 사용합니다.
-        //    - 정상적인 경우 정확히 1개만 조회됩니다.
-        Region target = candidates.get(0);
-        
-        // 5) 다중 매칭 경고: 동일한 sido+sigungu+eupmyeondong 조합이 여러 개면 로그를 남깁니다.
-        if (candidates.size() > 1) {
-            log.warn("Multiple regions found for sido={}, sigungu={}, eupmyeondong={}: {} matches",
-                    request.getSido(), request.getSigungu(), request.getEupmyeondong(), candidates.size());
-        }
-
-        // 5) 동네 할당 적용: 기존 동네를 해제하고 새 동네를 설정합니다.
-        applyAssignment(user, target, request.isPrimary());
-
-        // 6) 할당된 지역 ID 반환
-        return target.getRegionId();
-    }
 
     /**
      * 선택된 지역 ID로 사용자의 동네를 직접 설정합니다.
@@ -146,11 +85,11 @@ public class UserRegionServiceImpl implements UserRegionService { // UserRegionS
         // 2) 새 동네 생성: UserRegion 엔티티를 빌더 패턴으로 생성합니다.
         //    - user: 동네를 할당받을 사용자
         //    - region: 할당할 지역
-        //    - isPrimary: 항상 true(단일 관계이므로 이 동네가 주 활동 동네입니다)
+        //    - isPrimary: 호출자가 지정한 주/부 동네 여부 적용
         UserRegion created = UserRegion.builder()
                 .user(user) // 사용자 연결
                 .region(target) // 지역 연결
-                .isPrimary(true) // 단일 관계이므로 항상 주 활동 동네
+                .isPrimary(primary) // 호출자가 지정한 주/부 동네 여부 적용
                 .build();
 
         // 3) 데이터베이스에 저장: 새로운 UserRegion을 저장하여 연결을 완료합니다.

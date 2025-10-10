@@ -1,7 +1,5 @@
 package com.salemale.domain.user.service; // 사용자-지역 할당 서비스 인터페이스
 
-import com.salemale.domain.user.dto.request.UserRegionAssignRequest; // 지역 할당 요청 DTO
-
 /**
  * UserRegionService: 사용자의 활동 동네를 관리하는 서비스 인터페이스입니다.
  *
@@ -10,9 +8,8 @@ import com.salemale.domain.user.dto.request.UserRegionAssignRequest; // 지역 �
  * - 구현체(UserRegionServiceImpl)에서 실제 비즈니스 로직을 처리합니다.
  *
  * 주요 기능:
- * 1. 동네 할당: 사용자에게 특정 동네를 할당합니다(읍/면/동 이름으로 검색).
- * 2. 동네 설정: 선택된 지역 ID로 사용자의 동네를 직접 설정합니다.
- * 3. 현재 동네 조회: 사용자의 주 활동 동네 ID를 반환합니다.
+ * 1. 동네 설정: 선택된 지역 ID로 사용자의 동네를 직접 설정합니다.
+ * 2. 현재 동네 조회: 사용자의 주 활동 동네 ID를 반환합니다.
  *
  * 비즈니스 규칙:
  * - 현재는 사용자당 1개의 동네만 등록 가능합니다(1:1 관계).
@@ -20,20 +17,6 @@ import com.salemale.domain.user.dto.request.UserRegionAssignRequest; // 지역 �
  * - isPrimary는 항상 true로 설정됩니다(단일 관계이므로).
  */
 public interface UserRegionService {
-
-    /**
-     * 사용자에게 동네를 할당합니다(읍/면/동 이름으로 검색).
-     *
-     * - 입력된 읍/면/동 이름으로 Region을 검색합니다.
-     * - 여러 개가 검색될 경우 첫 번째 결과를 선택합니다(향후 개선 예정).
-     * - 사용자의 기존 동네를 해제하고 새 동네를 설정합니다.
-     *
-     * @param userId 동네를 할당할 사용자 ID
-     * @param request 동네 할당 요청 정보(시도, 시군구, 읍면동, isPrimary)
-     * @return 할당된 지역(Region)의 ID
-     * @throws com.salemale.common.exception.GeneralException 사용자를 찾을 수 없을 때 (ErrorStatus.USER_NOT_FOUND) 또는 지역을 찾을 수 없을 때 (ErrorStatus.REGION_NOT_FOUND)
-     */
-    Long assignRegionToUser(Long userId, UserRegionAssignRequest request);
 
     /**
      * 선택된 지역 ID로 사용자의 동네를 직접 설정합니다.
