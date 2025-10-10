@@ -4,13 +4,19 @@ import com.salemale.domain.user.entity.User;
 import com.salemale.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "message")
+@Getter
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class Message extends BaseEntity {
 
     @Id
@@ -32,114 +38,17 @@ public class Message extends BaseEntity {
     @Column(name = "sent_at", nullable = false)
     private LocalDateTime sentAt;
 
+    @Builder.Default
     @Column(name = "is_read", nullable = false)
-    private Boolean isRead = false;
+    private boolean isRead = false;  // primitive type + 기본값
 
+    @Builder.Default
     @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted = false;
+    private boolean isDeleted = false;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false)
+    @Column(name = "type", nullable = false, columnDefinition = "VARCHAR(20)")
     private MessageType type;
-
-    public Message(Chat chat, User sender, String content, LocalDateTime sentAt,
-                   Boolean isRead, Boolean isDeleted, MessageType type) {
-        this.chat = chat;
-        this.sender = sender;
-        this.content = content;
-        this.sentAt = sentAt;
-        this.isRead = isRead;
-        this.isDeleted = isDeleted;
-        this.type = type;
-    }
-
-    public static Message of(Chat chat, User sender, String content, MessageType type) {
-        Message message = new Message();
-        message.chat = chat;
-        message.sender = sender;
-        message.content = content;
-        message.sentAt = LocalDateTime.now();
-        message.type = type;
-        return message;
-    }
-
-    public void markAsRead() {
-        this.isRead = true;
-    }
-
-    public void markAsDeleted() {
-        this.isDeleted = true;
-    }
-
-    public void updateContent(String content) {
-        this.content = content;
-    }
-
-    // Getter
-    public Long getMessageId() {
-        return messageId;
-    }
-
-    public Chat getChat() {
-        return chat;
-    }
-
-    public User getSender() {
-        return sender;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public LocalDateTime getSentAt() {
-        return sentAt;
-    }
-
-    public Boolean getIsRead() {
-        return isRead;
-    }
-
-    public Boolean getIsDeleted() {
-        return isDeleted;
-    }
-
-    public MessageType getType() {
-        return type;
-    }
-
-    // Setter
-    public void setMessageId(Long messageId) {
-        this.messageId = messageId;
-    }
-
-    public void setChat(Chat chat) {
-        this.chat = chat;
-    }
-
-    public void setSender(User sender) {
-        this.sender = sender;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    public void setSentAt(LocalDateTime sentAt) {
-        this.sentAt = sentAt;
-    }
-
-    public void setIsRead(Boolean isRead) {
-        this.isRead = isRead;
-    }
-
-    public void setIsDeleted(Boolean isDeleted) {
-        this.isDeleted = isDeleted;
-    }
-
-    public void setType(MessageType type) {
-        this.type = type;
-    }
 
     public enum MessageType {
         TEXT, IMAGE, URL

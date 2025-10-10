@@ -4,11 +4,17 @@ import com.salemale.domain.user.entity.User;
 import com.salemale.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "review")
+@Getter
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class Review extends BaseEntity {
 
     @Id
@@ -17,8 +23,13 @@ public class Review extends BaseEntity {
     private Long reviewId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @JoinColumn(name = "reviewer_id", nullable = false)
+    private User reviewer;
+
+    //리뷰의 대상이 되는 사용자를 의미
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_id", nullable = false)
+    private User target;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "item_id", nullable = false)
@@ -31,79 +42,7 @@ public class Review extends BaseEntity {
     @Column(name = "content", columnDefinition = "TEXT")
     private String content;
 
-
-    public Review(User user, Item item, Rating rating, String content) {
-        this.user = user;
-        this.item = item;
-        this.rating = rating;
-        this.content = content;
-    }
-
-    public static Review of(User user, Item item, Rating rating, String content) {
-        return new Review(user, item, rating, content);
-    }
-
-    public void updateContent(String content) {
-        this.content = content;
-    }
-
-    public void updateRating(Rating rating) {
-        this.rating = rating;
-    }
-
-    // Getter
-    public Long getReviewId() {
-        return reviewId;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public Item getItem() {
-        return item;
-    }
-
-    public Rating getRating() {
-        return rating;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    // Setter
-    public void setReviewId(Long reviewId) {
-        this.reviewId = reviewId;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public void setItem(Item item) {
-        this.item = item;
-    }
-
-    public void setRating(Rating rating) {
-        this.rating = rating;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
     public enum Rating {
-        ONE(1), TWO(2), THREE(3), FOUR(4), FIVE(5);
-
-        private final int value;
-
-        Rating(int value) {
-            this.value = value;
-        }
-
-        public int getValue() {
-            return value;
-        }
+        ONE, TWO, THREE, FOUR, FIVE
     }
 }

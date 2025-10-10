@@ -41,3 +41,6 @@ out/
 .env.local
 .env.production
 .env.staging
+
+### QueryDSL generated sources ###
+src/main/generated/
