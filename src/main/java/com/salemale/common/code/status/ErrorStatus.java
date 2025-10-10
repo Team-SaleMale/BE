@@ -26,6 +26,12 @@ public enum ErrorStatus implements BaseErrorCode {
     USER_EMAIL_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "USER4003", "이미 가입된 이메일입니다."),
     AUTH_INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "AUTH4011", "아이디 또는 비밀번호가 올바르지 않습니다."),
 
+    // 경매 물품 관련 에러
+    ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ITEM4001", "경매 물품을 찾을 수 없습니다."),
+    ITEM_SELF_LIKE_FORBIDDEN(HttpStatus.BAD_REQUEST, "ITEM4002", "본인 경매 물품은 찜할 수 없습니다."),
+    ITEM_ALREADY_LIKED(HttpStatus.BAD_REQUEST, "ITEM4003", "이미 찜한 상품입니다."),
+    ITEM_NOT_LIKED(HttpStatus.BAD_REQUEST, "ITEM4004", "찜하지 않은 상품입니다."),
+
     // 경매 관련 에러 (나중에 추가)
     AUCTION_NOT_FOUND(HttpStatus.NOT_FOUND, "AUCTION4001", "경매를 찾을 수 없습니다."),
     AUCTION_ALREADY_ENDED(HttpStatus.BAD_REQUEST, "AUCTION4002", "이미 종료된 경매입니다."),
