@@ -33,4 +33,20 @@ public class ItemLikeController {
 
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
     }
+
+    /**
+     * 경매 상품 찜 취소
+     * DELETE /auctions/{itemId}/liked
+     */
+    @Operation(summary = "경매 상품 찜 취소", description = "경매 상품 찜을 취소합니다.")
+    @DeleteMapping("/{itemId}/liked")
+    public ResponseEntity<ApiResponse<ItemLikeResponse>> unlikeItem(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long itemId
+    ) {
+        String email = userDetails.getUsername();
+        ItemLikeResponse response = itemLikeService.unlikeItem(email, itemId);
+
+        return ResponseEntity.ok(ApiResponse.onSuccess(response));
+    }
 }
