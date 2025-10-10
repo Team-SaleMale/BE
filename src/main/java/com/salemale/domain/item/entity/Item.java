@@ -89,4 +89,15 @@ public class Item extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "region_id", nullable = false)
     private Region region;
+
+    // 입찰이 없을때 낙찰로 경매 상품 상태 변경
+    public void completeAuction(User winner) {
+        this.winner = winner;
+        this.itemStatus = ItemStatus.SUCCESS;
+    }
+
+    // 입찰이 없었을 경우 유찰로 경매 상품 상태 변경
+    public void failAuction() {
+        this.itemStatus = ItemStatus.FAIL;
+    }
 }
