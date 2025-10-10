@@ -18,7 +18,7 @@ spring:
   # JPA/Hibernate 설정
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: true
     properties:
       hibernate:
@@ -29,6 +29,7 @@ spring:
   
   # Flyway 마이그레이션 설정
   flyway:
+    enabled: false
     baseline-on-migrate: true
     baseline-version: 0
     locations: classpath:db/migration
