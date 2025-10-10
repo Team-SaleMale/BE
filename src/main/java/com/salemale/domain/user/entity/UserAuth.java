@@ -49,6 +49,51 @@ public class UserAuth extends BaseEntity { // 인증 레코드(1 user : N auth)
 
     @Column(name = "last_login_at") // 최근 로그인 시간 기록(보안/통계용)
     private java.time.LocalDateTime lastLoginAt;
+
+    /**
+     * 비밀번호 해시를 업데이트합니다.
+     *
+     * - 비밀번호 변경 시 새로운 해시값으로 교체합니다.
+     * - **평문 비밀번호가 아닌 BCrypt로 해시된 값**을 전달해야 합니다.
+     * - BCrypt 해시 형식 검증: $2a$, $2b$, $2y$ 버전과 올바른 형식만 허용합니다.
+     * - LOCAL 인증 제공자에서만 사용됩니다.
+     *
+     * **호출자 책임:**
+     * - 이 메서드는 이미 BCrypt로 해시된 값을 받습니다.
+     * - 평문 비밀번호를 전달하면 안 됩니다.
+     * - 서비스 계층에서 PasswordEncoder.encode()를 먼저 호출해야 합니다.
+     *
+     * BCrypt 해시 형식 예시:
+     * - $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+     * - $2b$12$ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuv (60자)
+     *
+     * @param newPasswordHash 새로운 비밀번호 해시 (BCrypt 형식)
+     * @throws IllegalArgumentException BCrypt 해시 형식이 올바르지 않을 때
+     */
+    public void updatePasswordHash(String newPasswordHash) {
+        // 1) null 또는 빈 문자열은 무시: 소셜 로그인 계정은 비밀번호가 없을 수 있습니다.
+        if (newPasswordHash == null || newPasswordHash.isEmpty()) {
+            return;
+        }
+        
+        // 2) BCrypt 해시 형식 검증: $2[a|b|y]$[cost]$[22자 salt][31자 hash]
+        //    - 형식: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+        //    - 총 길이: 60자 (버전 3자 + cost 3자 + $ 1자 + salt 22자 + hash 31자)
+        //    - 정규식: ^\\$2[aby]\\$\\d{2}\\$[./A-Za-z0-9]{53}$
+        if (!newPasswordHash.matches("^\\$2[aby]\\$\\d{2}\\$[./A-Za-z0-9]{53}$")) {
+            // 2-1) 형식이 올바르지 않으면 예외를 발생시킵니다.
+            //      - 평문 비밀번호가 전달된 경우 여기서 걸러집니다.
+            //      - 에러 메시지에는 처음 10자만 포함하여 전체 해시가 노출되지 않도록 합니다.
+            throw new IllegalArgumentException(
+                "Invalid BCrypt hash format. Expected BCrypt hash (e.g., $2a$10$...), but got: " 
+                + newPasswordHash.substring(0, Math.min(10, newPasswordHash.length())) + "..."
+            );
+        }
+        
+        // 3) BCrypt 해시는 공백이 포함되면 안 되므로 trim하지 않고 그대로 저장합니다.
+        //    - BCrypt 해시는 정확히 60자이고, 공백이 있으면 위 정규식에서 이미 거부됩니다.
+        this.passwordHash = newPasswordHash;
+    }
 }
 
 

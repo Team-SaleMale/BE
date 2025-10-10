@@ -4,6 +4,10 @@ import com.salemale.common.response.ApiResponse; // 통일된 API 응답 포맷 
 import com.salemale.domain.user.dto.request.LoginRequest; // 로그인 요청 DTO(email/password)
 import com.salemale.domain.user.dto.request.SignupRequest; // 회원가입 요청 DTO(email/nickname/password)
 import com.salemale.domain.user.service.AuthService; // 인증 비즈니스 로직 서비스(로그인/회원가입 등)
+import io.swagger.v3.oas.annotations.Operation; // Swagger: API 설명
+import io.swagger.v3.oas.annotations.Parameter; // Swagger: 파라미터 설명
+import io.swagger.v3.oas.annotations.responses.ApiResponses; // Swagger: 여러 응답 설명
+import io.swagger.v3.oas.annotations.tags.Tag; // Swagger: 컨트롤러 그룹 태그
 import jakarta.validation.Valid; // 요청 바디 검증
 import org.springframework.http.ResponseEntity; // HTTP 응답 래퍼
 import org.springframework.web.bind.annotation.PostMapping; // POST 매핑
@@ -20,6 +24,7 @@ import java.util.Map; // 간단한 키/값 응답을 위해 사용
 
 @RestController
 @RequestMapping("/auth") // 모든 인증 관련 경로는 /auth 하위로 통일(/auth/login, /auth/register, /auth/logout)
+@Tag(name = "인증", description = "로그인, 회원가입, 로그아웃, 이메일/닉네임 중복 체크 API")
 public class AuthController { // 인증 관련 엔드포인트 집합(초심자도 이해할 수 있도록 상세 주석 포함)
 
     private final AuthService authService;
@@ -28,6 +33,14 @@ public class AuthController { // 인증 관련 엔드포인트 집합(초심자�
         this.authService = authService; // 스프링이 AuthService 빈을 자동으로 넣어줍니다.
     }
 
+    @Operation(
+            summary = "로그인",
+            description = "이메일/비밀번호로 로그인하고 JWT 액세스 토큰을 발급받습니다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그인 성공, JWT 토큰 발급"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "이메일 또는 비밀번호 불일치")
+    })
     @PostMapping("/login") // 로그인: 사용자가 이메일/비밀번호를 보내면 서버가 확인 후 토큰을 발급해 줍니다.
     public ResponseEntity<ApiResponse<Map<String, String>>> login(@Valid @RequestBody LoginRequest request) {
         // 1) @Valid: request에 적힌 @Email, @NotBlank 등의 검사를 먼저 수행합니다.
@@ -38,6 +51,14 @@ public class AuthController { // 인증 관련 엔드포인트 집합(초심자�
         return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("accessToken", token)));
     }
 
+    @Operation(
+            summary = "회원가입",
+            description = "이메일/닉네임/비밀번호로 새 계정을 생성합니다. 비밀번호는 안전하게 해시되어 저장됩니다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "회원가입 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "이미 가입된 이메일 또는 유효하지 않은 입력")
+    })
     @PostMapping("/register") // 회원가입: 새 사용자를 만들고 로컬 자격(이메일/비번)을 저장합니다.
     public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody SignupRequest request) {
         // 1) 이메일/닉네임/비밀번호 입력 검증(@Valid)
@@ -47,6 +68,13 @@ public class AuthController { // 인증 관련 엔드포인트 집합(초심자�
         return ResponseEntity.ok(ApiResponse.onSuccess());
     }
 
+    @Operation(
+            summary = "로그아웃",
+            description = "로그아웃합니다. JWT 토큰은 클라이언트에서 삭제해야 합니다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그아웃 성공")
+    })
     @PatchMapping("/logout") // 로그아웃: JWT는 서버가 상태를 저장하지 않으므로 보통 클라이언트에서 토큰을 버립니다.
     public ResponseEntity<ApiResponse<Void>> logout() {
         // 서버 세션을 쓰지 않는 JWT 구조에서는 서버가 무언가 지울 상태가 없습니다.
@@ -54,8 +82,17 @@ public class AuthController { // 인증 관련 엔드포인트 집합(초심자�
         return ResponseEntity.ok(ApiResponse.onSuccess());
     }
 
+    @Operation(
+            summary = "이메일 중복 체크",
+            description = "입력한 이메일이 이미 가입되어 있는지 확인합니다. 회원가입 전 중복 검사용입니다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "중복 검사 완료")
+    })
     @GetMapping("/check/email") // 이메일(로그인 ID) 중복 체크: true/false로 빠르게 응답
-    public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkEmail(@RequestParam("value") String email) {
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkEmail(
+            @Parameter(description = "확인할 이메일 주소", example = "user@example.com")
+            @RequestParam("value") String email) {
         // 보안: 계정 열거(account enumeration) 완화
         // - 실서비스에선 반드시 IP/디바이스 기준 레이트리밋(예: 분당 N회)을 적용하세요.
         // - CAPTCHA나 가입 플로우 내부에서만 사용하도록 제한하는 것도 효과적입니다.
@@ -66,16 +103,34 @@ public class AuthController { // 인증 관련 엔드포인트 집합(초심자�
         return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("exists", exists)));
     }
 
+    @Operation(
+            summary = "닉네임 중복 체크",
+            description = "입력한 닉네임이 이미 사용 중인지 확인합니다. 회원가입 전 중복 검사용입니다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "중복 검사 완료")
+    })
     @GetMapping("/check/nickname") // 닉네임 중복 체크: true/false 응답
-    public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkNickname(@RequestParam("value") String nickname) {
+    public ResponseEntity<ApiResponse<Map<String, Boolean>>> checkNickname(
+            @Parameter(description = "확인할 닉네임", example = "홍길동")
+            @RequestParam("value") String nickname) {
         // 1) 닉네임은 표시용이므로 그대로 검사(정책에 따라 trim/소문자화 가능)
         boolean exists = authService.existsNickname(nickname);
         // 2) {"exists": true/false}
         return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("exists", exists)));
     }
 
+    @Operation(
+            summary = "로그인 상태 확인",
+            description = "JWT 토큰이 유효한지 확인하고 현재 로그인한 사용자 정보(이메일)를 반환합니다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "인증 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패 (JWT 토큰 없음 또는 유효하지 않음)")
+    })
     @GetMapping("/me") // 로그인 상태 확인: 토큰이 유효하면 주체(subject: 이메일)를 반환, 아니면 401
-    public ResponseEntity<ApiResponse<Map<String, String>>> me(@AuthenticationPrincipal UserDetails principal) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> me(
+            @Parameter(hidden = true) @AuthenticationPrincipal UserDetails principal) {
         // 1) JwtAuthenticationFilter가 토큰을 검증하고 SecurityContext에 주체를 세팅합니다.
         // 2) @AuthenticationPrincipal로 인증된 사용자 정보를 주입받을 수 있습니다.
         if (principal == null) {
