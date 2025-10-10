@@ -27,13 +27,17 @@ public class QRegion extends EntityPathBase<Region> {
     //inherited
     public final DateTimePath<java.time.LocalDateTime> deletedAt = _super.deletedAt;
 
+    public final StringPath eupmyeondong = createString("eupmyeondong");
+
     public final NumberPath<java.math.BigDecimal> latitude = createNumber("latitude", java.math.BigDecimal.class);
 
     public final NumberPath<java.math.BigDecimal> longitude = createNumber("longitude", java.math.BigDecimal.class);
 
     public final NumberPath<Long> regionId = createNumber("regionId", Long.class);
 
-    public final StringPath regionName = createString("regionName");
+    public final StringPath sido = createString("sido");
+
+    public final StringPath sigungu = createString("sigungu");
 
     //inherited
     public final DateTimePath<java.time.LocalDateTime> updatedAt = _super.updatedAt;

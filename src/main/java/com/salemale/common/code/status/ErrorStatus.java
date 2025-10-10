@@ -24,7 +24,16 @@ public enum ErrorStatus implements BaseErrorCode {
     USER_NOT_FOUND(HttpStatus.BAD_REQUEST, "USER4001", "사용자가 없습니다."),
     NICKNAME_NOT_EXIST(HttpStatus.BAD_REQUEST, "USER4002", "닉네임은 필수입니다."),
     USER_EMAIL_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "USER4003", "이미 가입된 이메일입니다."),
+    NICKNAME_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "USER4004", "이미 사용 중인 닉네임입니다."),
+    USER_REGION_NOT_SET(HttpStatus.BAD_REQUEST, "USER4005", "활동 동네를 먼저 설정해주세요."),
+    PASSWORD_REUSE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "USER4006", "새 비밀번호는 현재 비밀번호와 달라야 합니다."),
+    
+    // 인증 관련 에러
     AUTH_INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "AUTH4011", "아이디 또는 비밀번호가 올바르지 않습니다."),
+    AUTH_NOT_LOCAL_ACCOUNT(HttpStatus.FORBIDDEN, "AUTH4031", "소셜 로그인 계정은 비밀번호를 변경할 수 없습니다."),
+    
+    // 지역 관련 에러
+    REGION_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION4001", "지역을 찾을 수 없습니다."),
 
     // 경매 관련 에러 (나중에 추가)
     AUCTION_NOT_FOUND(HttpStatus.NOT_FOUND, "AUCTION4001", "경매를 찾을 수 없습니다."),

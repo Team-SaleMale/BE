@@ -27,11 +27,17 @@ spring:
         default_batch_fetch_size: 1000
     database-platform: org.hibernate.dialect.PostgreSQLDialect
   
-  # 로그 설정
-  logging:
-    level:
-      org.hibernate.SQL: INFO
-      org.hibernate.type.descriptor.sql: TRACE
+  # Flyway 마이그레이션 설정
+  flyway:
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+
+# 로그 설정
+logging:
+  level:
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql: TRACE
 
 # Swagger 설정
 springdoc:
