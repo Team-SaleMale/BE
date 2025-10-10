@@ -33,10 +33,11 @@ public class ItemRegisterRequest {
     @PositiveOrZero(message = "시작 가격은 0 이상이어야 합니다.")
     private Integer startPrice;
 
-    // 경매 종료 날짜 (YYYY-MM-DD 형식의 문자열로 받을 예정)
-    @NotBlank(message = "경매 종료 날짜는 필수입니다.")
-    @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "날짜 형식(YYYY-MM-DD)이 올바르지 않습니다.")
-    private String endDate;
+    // 변경: 날짜 + 시간을 함께 받음
+    @NotBlank(message = "경매 종료 일시는 필수입니다.")
+    @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$",
+            message = "날짜/시간 형식(YYYY-MM-DDTHH:mm)이 올바르지 않습니다.")
+    private String endDateTime;
 
     // 거래 방법 (다중 선택 가능)
     @NotEmpty(message = "최소 한 가지 이상의 거래 방식을 선택해야 합니다.")

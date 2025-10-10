@@ -88,11 +88,16 @@ public class ItemService {
         Integer bidIncrement = Math.max(100, (int) Math.round(startPrice * 0.05));
         LocalDateTime endTime;
         try {
-            // "YYYY-MM-DD" + "T23:59:59" 조합
-            LocalDate endDate = LocalDate.parse(request.getEndDate());
-            endTime = LocalDateTime.of(endDate, LocalTime.MAX);
+            // "YYYY-MM-DDTHH:mm" 형식으로 파싱 날짜+시분 까지 입력받음
+            endTime = LocalDateTime.parse(request.getEndDateTime());
+
+            // 경매 종료 시간 검증 (현재 시간보다 미래여야 함)
+            if (endTime.isBefore(LocalDateTime.now())) {
+                throw new GeneralException(ErrorStatus.INVALID_END_TIME); // 또는 새로운 에러 코드
+            }
+
         } catch (DateTimeParseException e) {
-            throw new GeneralException(ErrorStatus._BAD_REQUEST); // 잘못된 날짜 형식 처리
+            throw new GeneralException(ErrorStatus._BAD_REQUEST); // 잘못된 날짜/시간 형식 처리
         }
 
         // 4. Item 엔티티 생성 및 저장
