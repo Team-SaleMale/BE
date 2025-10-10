@@ -13,6 +13,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -71,6 +73,7 @@ public class Item extends BaseEntity {
 
     @Convert(converter = TradeMethodListConverter.class)
     @Column(name = "trade_methods", nullable = false, columnDefinition = "JSON")
+    @JdbcTypeCode(SqlTypes.JSON)
     @Builder.Default
     private List<TradeMethod> tradeMethods = new ArrayList<>();
 
