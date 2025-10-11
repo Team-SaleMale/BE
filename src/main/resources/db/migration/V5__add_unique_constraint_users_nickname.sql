@@ -1,0 +1,31 @@
+-- V5: Add unique constraint on users.nickname
+-- 
+-- Purpose:
+-- - Enforce nickname uniqueness at the database level
+-- - Prevent duplicate nicknames across all users
+-- - Complement application-level validation (UserRepository.existsByNickname)
+--
+-- Migration strategy:
+-- 1. Check for existing duplicate nicknames
+-- 2. If duplicates exist, this migration will fail with a clear error message
+-- 3. Duplicates must be resolved manually before applying this migration
+-- 
+-- To find duplicates (if migration fails):
+--   SELECT nickname, COUNT(*) 
+--   FROM users 
+--   GROUP BY nickname 
+--   HAVING COUNT(*) > 1;
+--
+-- To resolve duplicates:
+--   UPDATE users SET nickname = nickname || '_' || id WHERE id IN (
+--     SELECT id FROM (
+--       SELECT id, ROW_NUMBER() OVER (PARTITION BY nickname ORDER BY id) as rn
+--       FROM users
+--     ) t WHERE rn > 1
+--   );
+
+-- Add unique constraint
+-- - ux_users_nickname: 닉네임 중복 방지를 위한 유니크 제약 조건
+-- - 이미 중복된 데이터가 있으면 마이그레이션이 실패하므로, 사전에 데이터를 정리해야 합니다.
+ALTER TABLE users ADD CONSTRAINT ux_users_nickname UNIQUE (nickname);
+

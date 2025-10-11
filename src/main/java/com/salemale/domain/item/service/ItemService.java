@@ -12,17 +12,15 @@ import com.salemale.domain.item.repository.ItemRepository;
 import com.salemale.domain.item.repository.UserLikedRepository;
 import com.salemale.domain.region.entity.Region;
 import com.salemale.domain.region.repository.RegionRepository;
-import com.salemale.domain.region.repository.UserRegionRepository;
 import com.salemale.domain.user.entity.User;
+import com.salemale.domain.user.repository.UserRegionRepository;
 import com.salemale.domain.user.repository.UserRepository;
 import com.salemale.global.common.enums.ItemStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.stream.IntStream;
