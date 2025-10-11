@@ -3,11 +3,15 @@ package com.salemale.domain.item.dto.request;
 import com.salemale.global.common.enums.Category;
 import com.salemale.global.common.enums.TradeMethod;
 import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Getter
+@NoArgsConstructor
+@AllArgsConstructor
 public class ItemRegisterRequest {
 
     // 경매 게시글 제목
