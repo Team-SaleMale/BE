@@ -24,10 +24,14 @@ public class QItem extends EntityPathBase<Item> {
 
     public final com.salemale.global.common.QBaseEntity _super = new com.salemale.global.common.QBaseEntity(this);
 
+    public final NumberPath<Integer> bidIncrement = createNumber("bidIncrement", Integer.class);
+
     public final EnumPath<com.salemale.global.common.enums.Category> category = createEnum("category", com.salemale.global.common.enums.Category.class);
 
     //inherited
     public final DateTimePath<java.time.LocalDateTime> createdAt = _super.createdAt;
+
+    public final NumberPath<Integer> currentPrice = createNumber("currentPrice", Integer.class);
 
     //inherited
     public final DateTimePath<java.time.LocalDateTime> deletedAt = _super.deletedAt;
@@ -36,21 +40,25 @@ public class QItem extends EntityPathBase<Item> {
 
     public final DateTimePath<java.time.LocalDateTime> endTime = createDateTime("endTime", java.time.LocalDateTime.class);
 
+    public final ListPath<ItemImage, QItemImage> images = this.<ItemImage, QItemImage>createList("images", ItemImage.class, QItemImage.class, PathInits.DIRECT2);
+
     public final NumberPath<Long> itemId = createNumber("itemId", Long.class);
 
     public final EnumPath<com.salemale.global.common.enums.ItemStatus> itemStatus = createEnum("itemStatus", com.salemale.global.common.enums.ItemStatus.class);
 
     public final StringPath name = createString("name");
 
-    public final StringPath photoUrl = createString("photoUrl");
-
-    public final NumberPath<Integer> price = createNumber("price", Integer.class);
+    public final com.salemale.domain.region.entity.QRegion region;
 
     public final com.salemale.domain.user.entity.QUser seller;
 
     public final NumberPath<Integer> startPrice = createNumber("startPrice", Integer.class);
 
     public final StringPath title = createString("title");
+
+    public final StringPath tradeDetails = createString("tradeDetails");
+
+    public final ListPath<com.salemale.global.common.enums.TradeMethod, EnumPath<com.salemale.global.common.enums.TradeMethod>> tradeMethods = this.<com.salemale.global.common.enums.TradeMethod, EnumPath<com.salemale.global.common.enums.TradeMethod>>createList("tradeMethods", com.salemale.global.common.enums.TradeMethod.class, EnumPath.class, PathInits.DIRECT2);
 
     //inherited
     public final DateTimePath<java.time.LocalDateTime> updatedAt = _super.updatedAt;
@@ -75,6 +83,7 @@ public class QItem extends EntityPathBase<Item> {
 
     public QItem(Class<? extends Item> type, PathMetadata metadata, PathInits inits) {
         super(type, metadata, inits);
+        this.region = inits.isInitialized("region") ? new com.salemale.domain.region.entity.QRegion(forProperty("region")) : null;
         this.seller = inits.isInitialized("seller") ? new com.salemale.domain.user.entity.QUser(forProperty("seller")) : null;
         this.winner = inits.isInitialized("winner") ? new com.salemale.domain.user.entity.QUser(forProperty("winner")) : null;
     }

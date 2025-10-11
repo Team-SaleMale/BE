@@ -1,10 +1,15 @@
 package com.salemale.domain.item.controller;
 
+import com.salemale.common.code.status.SuccessStatus;
 import com.salemale.common.response.ApiResponse;
+import com.salemale.domain.item.dto.request.ItemRegisterRequest;
 import com.salemale.domain.item.dto.response.ItemLikeResponse;
-import com.salemale.domain.item.service.ItemLikeService;
+import com.salemale.domain.item.dto.response.ItemRegisterResponse;
+import com.salemale.domain.item.service.ItemService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -14,9 +19,9 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/auctions")
 @RequiredArgsConstructor
-public class ItemLikeController {
+public class ItemController {
 
-    private final ItemLikeService itemLikeService;
+    private final ItemService itemService;
 
     /**
      * 경매 상품 찜하기
@@ -29,24 +34,29 @@ public class ItemLikeController {
             @PathVariable Long itemId
     ) {
         String email = userDetails.getUsername();
-        ItemLikeResponse response = itemLikeService.likeItem(email, itemId);
+        ItemLikeResponse response = itemService.likeItem(email, itemId);
 
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
     }
 
     /**
-     * 경매 상품 찜 취소
-     * DELETE /auctions/{itemId}/liked
+     * 경매 상품 등록 API
+     * POST /auctions/registration
      */
-    @Operation(summary = "경매 상품 찜 취소", description = "경매 상품 찜을 취소합니다.")
-    @DeleteMapping("/{itemId}/liked")
-    public ResponseEntity<ApiResponse<ItemLikeResponse>> unlikeItem(
+    @Operation(summary = "경매 상품 등록하기")
+    @PostMapping("/registration")
+    public ResponseEntity<ApiResponse<ItemRegisterResponse>> registerItem(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long itemId
+            @Valid @RequestBody ItemRegisterRequest request
     ) {
+        // 1. 인증된 사용자 식별 (이메일 = UserDetails.getUsername())
         String email = userDetails.getUsername();
-        ItemLikeResponse response = itemLikeService.unlikeItem(email, itemId);
 
-        return ResponseEntity.ok(ApiResponse.onSuccess(response));
+        // 2. 서비스 로직 위임 및 결과 반환
+        ItemRegisterResponse response = itemService.registerItem(email, request);
+
+        // 3. 201 Created 응답 반환
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.of(SuccessStatus._CREATED, response));
     }
 }
