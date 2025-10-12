@@ -5,7 +5,6 @@ import com.salemale.domain.chat.entity.Chat; // 채팅 엔티티
 import com.salemale.domain.chat.repository.ChatRepository; // 채팅 리포지토리
 import com.salemale.domain.chat.repository.MessageRepository; // 메시지 리포지토리
 import com.salemale.domain.item.entity.Item; // 아이템 엔티티
-import com.salemale.domain.item.repository.ItemRepository;
 import com.salemale.domain.user.entity.User; // 유저 엔티티
 import com.salemale.domain.user.repository.UserRepository; // 유저 리포지토리
 import jakarta.persistence.EntityNotFoundException; // 예외 처리용
