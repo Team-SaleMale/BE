@@ -236,7 +236,7 @@ public class ItemService {
         }
 
         // 4. 최소 입찰 가격 확인 (현재가 + 최소 입찰 단위 이상)
-        Integer minimumBidPrice = item.getCurrentPrice() + item.getBidIncrement();
+        long minimumBidPrice = (long) item.getCurrentPrice() + item.getBidIncrement();
         if (bidPrice < minimumBidPrice) {
             throw new GeneralException(ErrorStatus.BID_AMOUNT_TOO_LOW);
         }
