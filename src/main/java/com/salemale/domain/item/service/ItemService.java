@@ -2,13 +2,17 @@ package com.salemale.domain.item.service;
 
 import com.salemale.common.code.status.ErrorStatus;
 import com.salemale.common.exception.GeneralException;
+import com.salemale.domain.item.dto.request.BidRequest;
 import com.salemale.domain.item.dto.request.ItemRegisterRequest;
+import com.salemale.domain.item.dto.response.BidResponse;
 import com.salemale.domain.item.dto.response.ItemLikeResponse;
 import com.salemale.domain.item.dto.response.ItemRegisterResponse;
 import com.salemale.domain.item.entity.Item;
 import com.salemale.domain.item.entity.ItemImage;
+import com.salemale.domain.item.entity.ItemTransaction;
 import com.salemale.domain.item.entity.UserLiked;
 import com.salemale.domain.item.repository.ItemRepository;
+import com.salemale.domain.item.repository.ItemTransactionRepository;
 import com.salemale.domain.item.repository.UserLikedRepository;
 import com.salemale.domain.region.entity.Region;
 import com.salemale.domain.region.repository.RegionRepository;
@@ -35,6 +39,7 @@ public class ItemService {
     private final UserLikedRepository userLikedRepository;
     private final UserRegionRepository userRegionRepository;
     private final RegionRepository regionRepository;
+    private final ItemTransactionRepository itemTransactionRepository;
 
     @Transactional
     public ItemLikeResponse likeItem(String email, Long itemId) {
@@ -138,5 +143,78 @@ public class ItemService {
                 .endTime(savedItem.getEndTime())
                 .createdAt(savedItem.getCreatedAt())
                 .build();
+    }
+
+    // 경매 상품에 입찰 @param email 입찰자 이메일, itemId 상품 ID, request 입찰 요청 (입찰 가격), @return 입찰 결과
+    @Transactional
+    public BidResponse bidOnItem(String email, Long itemId, BidRequest request) {
+
+        // 1. 입찰자 조회
+        User buyer = userRepository.findByEmail(email)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+        // 2. 상품 조회 (비관적 락 사용 - 동시성 제어)
+        Item item = itemRepository.findByIdWithLock(itemId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.ITEM_NOT_FOUND));
+
+        // 3. 입찰 전 현재가 저장 (previousPrice로 사용)
+        Integer previousPrice = item.getCurrentPrice();
+
+        // 4. 입찰 검증
+        validateBid(buyer, item, request.getBidPrice());
+
+        // 5. 입찰 거래 생성
+        ItemTransaction transaction = ItemTransaction.builder()
+                .buyer(buyer)
+                .item(item)
+                .bidPrice(request.getBidPrice())
+                .build();
+        ItemTransaction savedTransaction = itemTransactionRepository.save(transaction);
+
+        // 6. Item의 현재가 업데이트
+        item.updateCurrentPrice(request.getBidPrice());
+
+        // 7. 입찰 수 조회
+        Long bidCount = itemTransactionRepository.countByItem(item);
+
+        // 8. 응답 DTO 생성
+        return BidResponse.builder()
+                .transactionId(savedTransaction.getTransactionId())
+                .itemId(item.getItemId())
+                .buyerId(buyer.getId())
+                .bidPrice(request.getBidPrice())
+                .previousPrice(previousPrice)
+                .currentHighestPrice(request.getBidPrice())
+                .bidIncrement(item.getBidIncrement())
+                .bidCount(bidCount)
+                .bidTime(savedTransaction.getCreatedAt())
+                .endTime(item.getEndTime())
+                .build();
+    }
+
+
+    //입찰 가능 여부를 검증
+    private void validateBid(User buyer, Item item, Integer bidPrice) {
+
+        // 1. 본인 상품 입찰 방지
+        if (item.getSeller().getId().equals(buyer.getId())) {
+            throw new GeneralException(ErrorStatus.BID_SELF_AUCTION);
+        }
+
+        // 2. 경매 상태 확인 (BIDDING 상태여야 함)
+        if (!item.isBiddingStatus()) {
+            throw new GeneralException(ErrorStatus.AUCTION_NOT_BIDDING);
+        }
+
+        // 3. 경매 종료 시간 확인
+        if (item.isAuctionEnded()) {
+            throw new GeneralException(ErrorStatus.AUCTION_ALREADY_ENDED);
+        }
+
+        // 4. 최소 입찰 가격 확인 (현재가 + 최소 입찰 단위 이상)
+        Integer minimumBidPrice = item.getCurrentPrice() + item.getBidIncrement();
+        if (bidPrice < minimumBidPrice) {
+            throw new GeneralException(ErrorStatus.BID_AMOUNT_TOO_LOW);
+        }
     }
 }

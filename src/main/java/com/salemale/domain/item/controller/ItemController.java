@@ -2,7 +2,9 @@ package com.salemale.domain.item.controller;
 
 import com.salemale.common.code.status.SuccessStatus;
 import com.salemale.common.response.ApiResponse;
+import com.salemale.domain.item.dto.request.BidRequest;
 import com.salemale.domain.item.dto.request.ItemRegisterRequest;
+import com.salemale.domain.item.dto.response.BidResponse;
 import com.salemale.domain.item.dto.response.ItemLikeResponse;
 import com.salemale.domain.item.dto.response.ItemRegisterResponse;
 import com.salemale.domain.item.service.ItemService;
@@ -58,5 +60,22 @@ public class ItemController {
         // 3. 201 Created 응답 반환
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.of(SuccessStatus._CREATED, response));
+    }
+
+    /**
+     * 경매 상품 입찰
+     * POST /auctions/{itemId}/bid
+     */
+    @Operation(summary = "경매 상품 입찰", description = "경매 중인 상품에 입찰합니다.")
+    @PostMapping("/{itemId}/bid")
+    public ResponseEntity<ApiResponse<BidResponse>> bidOnItem(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long itemId,
+            @Valid @RequestBody BidRequest request
+    ) {
+        String email = userDetails.getUsername();
+        BidResponse response = itemService.bidOnItem(email, itemId, request);
+
+        return ResponseEntity.ok(ApiResponse.onSuccess(response));
     }
 }
