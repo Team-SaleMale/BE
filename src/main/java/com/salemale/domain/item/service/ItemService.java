@@ -38,9 +38,9 @@ public class ItemService {
     private final UserRepository userRepository;
     private final UserLikedRepository userLikedRepository;
     private final UserRegionRepository userRegionRepository;
-    private final RegionRepository regionRepository;
     private final ItemTransactionRepository itemTransactionRepository;
 
+    //찜하기
     @Transactional
     public ItemLikeResponse likeItem(String email, Long itemId) {
 
@@ -74,6 +74,30 @@ public class ItemService {
         return ItemLikeResponse.of(itemId, true);
     }
 
+    // 찜 취소
+    @Transactional
+    public ItemLikeResponse unlikeItem(String email, Long itemId) {
+
+        // 1. 사용자 조회
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+        // 2. 상품 조회
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.ITEM_NOT_FOUND));
+
+        // 3. 찜한 레코드 찾기
+        UserLiked userLiked = userLikedRepository.findByUserAndItem(user, item)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.ITEM_NOT_LIKED));
+
+        // 4. 찜 취소 (삭제)
+        userLikedRepository.delete(userLiked);
+
+        // 5. 응답 반환
+        return ItemLikeResponse.of(itemId, false);
+    }
+
+    // 경매 상품 등록
     @Transactional
     public ItemRegisterResponse registerItem(String sellerEmail, ItemRegisterRequest request) {
 
