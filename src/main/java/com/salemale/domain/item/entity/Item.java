@@ -100,4 +100,19 @@ public class Item extends BaseEntity {
     public void failAuction() {
         this.itemStatus = ItemStatus.FAIL;
     }
+
+    // 현재 입찰가 업데이트
+    public void updateCurrentPrice(Integer newPrice) {
+        this.currentPrice = newPrice;
+    }
+
+    // 경매가 종료되었는지 확인 @param newPrice 새로운 입찰가
+    public boolean isAuctionEnded() {
+        return LocalDateTime.now().isAfter(this.endTime);
+    }
+
+    // 경매가 입찰 중인지 확인 @return 입찰 가능 여부
+    public boolean isBiddingStatus() {
+        return this.itemStatus == ItemStatus.BIDDING;
+    }
 }
