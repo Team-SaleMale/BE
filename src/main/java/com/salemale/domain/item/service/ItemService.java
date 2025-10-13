@@ -74,12 +74,18 @@ public class ItemService {
         return ItemLikeResponse.of(itemId, true);
     }
 
-    // 찜 취소
+    /**
+     * 찜 취소
+     * 
+     * @param userId 찜 취소하려는 사용자의 ID (JWT에서 추출)
+     * @param itemId 찜 취소할 상품의 ID
+     * @return 찜 취소 결과 (itemId, liked=false)
+     */
     @Transactional
-    public ItemLikeResponse unlikeItem(String email, Long itemId) {
+    public ItemLikeResponse unlikeItem(Long userId, Long itemId) {
 
-        // 1. 사용자 조회
-        User user = userRepository.findByEmail(email)
+        // 1. 사용자 조회 (UID 기반)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
         // 2. 상품 조회
@@ -169,12 +175,19 @@ public class ItemService {
                 .build();
     }
 
-    // 경매 상품에 입찰 @param email 입찰자 이메일, itemId 상품 ID, request 입찰 요청 (입찰 가격), @return 입찰 결과
+    /**
+     * 경매 상품에 입찰
+     * 
+     * @param userId 입찰자의 사용자 ID (JWT에서 추출)
+     * @param itemId 입찰할 상품의 ID
+     * @param request 입찰 요청 (입찰 가격)
+     * @return 입찰 결과 (거래 ID, 입찰가, 이전가, 입찰 수 등)
+     */
     @Transactional
-    public BidResponse bidOnItem(String email, Long itemId, BidRequest request) {
+    public BidResponse bidOnItem(Long userId, Long itemId, BidRequest request) {
 
-        // 1. 입찰자 조회
-        User buyer = userRepository.findByEmail(email)
+        // 1. 입찰자 조회 (UID 기반)
+        User buyer = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
         // 2. 상품 조회 (비관적 락 사용 - 동시성 제어)

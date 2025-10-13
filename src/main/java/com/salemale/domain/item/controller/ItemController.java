@@ -50,15 +50,19 @@ public class ItemController {
     /**
      * 경매 상품 찜 취소
      * DELETE /auctions/{itemId}/liked
+     * 
+     * - JWT 인증 필요 (Authorization: Bearer <token>)
+     * - JWT의 subject(UID)를 기반으로 현재 사용자 식별
      */
     @Operation(summary = "경매 상품 찜 취소", description = "경매 상품 찜을 취소합니다.")
     @DeleteMapping("/{itemId}/liked")
     public ResponseEntity<ApiResponse<ItemLikeResponse>> unlikeItem(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @Parameter(hidden = true) HttpServletRequest request,
             @PathVariable Long itemId
     ) {
-        String email = userDetails.getUsername();
-        ItemLikeResponse response = itemService.unlikeItem(email, itemId);
+        // JWT에서 현재 사용자 ID 추출
+        Long userId = currentUserProvider.getCurrentUserId(request);
+        ItemLikeResponse response = itemService.unlikeItem(userId, itemId);
 
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
     }
@@ -90,16 +94,20 @@ public class ItemController {
     /**
      * 경매 상품 입찰
      * POST /auctions/{itemId}/bid
+     * 
+     * - JWT 인증 필요 (Authorization: Bearer <token>)
+     * - JWT의 subject(UID)를 기반으로 현재 사용자(입찰자) 식별
      */
     @Operation(summary = "경매 상품 입찰", description = "경매 중인 상품에 입찰합니다.")
     @PostMapping("/{itemId}/bid")
     public ResponseEntity<ApiResponse<BidResponse>> bidOnItem(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @Parameter(hidden = true) HttpServletRequest httpRequest,
             @PathVariable Long itemId,
             @Valid @RequestBody BidRequest request
     ) {
-        String email = userDetails.getUsername();
-        BidResponse response = itemService.bidOnItem(email, itemId, request);
+        // JWT에서 현재 사용자 ID 추출 (입찰자)
+        Long userId = currentUserProvider.getCurrentUserId(httpRequest);
+        BidResponse response = itemService.bidOnItem(userId, itemId, request);
 
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
     }
