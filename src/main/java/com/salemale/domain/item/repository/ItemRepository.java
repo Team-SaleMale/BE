@@ -23,4 +23,12 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT i FROM Item i WHERE i.itemId = :itemId")
     Optional<Item> findByIdWithLock(@Param("itemId") Long itemId);
+
+    //상품 상세 조회 시 필요한 연관 엔티티를 한 번에 조회 (N+1 방지)
+    @Query("SELECT i FROM Item i " +
+            "JOIN FETCH i.seller " +
+            "JOIN FETCH i.region " +
+            "LEFT JOIN FETCH i.images " +
+            "WHERE i.itemId = :itemId")
+    Optional<Item> findByIdWithDetails(@Param("itemId") Long itemId);
 }

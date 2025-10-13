@@ -7,6 +7,7 @@ import com.salemale.domain.item.dto.request.ItemRegisterRequest;
 import com.salemale.domain.item.dto.response.BidResponse;
 import com.salemale.domain.item.dto.response.ItemLikeResponse;
 import com.salemale.domain.item.dto.response.ItemRegisterResponse;
+import com.salemale.domain.item.dto.response.detail.ItemDetailResponse;
 import com.salemale.domain.item.service.ItemService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -91,6 +92,23 @@ public class ItemController {
     ) {
         String email = userDetails.getUsername();
         BidResponse response = itemService.bidOnItem(email, itemId, request);
+
+        return ResponseEntity.ok(ApiResponse.onSuccess(response));
+    }
+
+    /**
+     * 경매 상품 상세 조회
+     * GET /auctions/{itemId}
+     */
+    @Operation(summary = "경매 상품 상세 조회", description = "경매 상품의 상세 정보와 입찰 내역을 조회합니다.")
+    @GetMapping("/{itemId}")
+    public ResponseEntity<ApiResponse<ItemDetailResponse>> getItemDetail(
+            @PathVariable Long itemId,
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false, defaultValue = "10") Integer bidHistoryLimit
+    ) {
+        String email = userDetails != null ? userDetails.getUsername() : null;
+        ItemDetailResponse response = itemService.getItemDetail(itemId, email, bidHistoryLimit);
 
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
     }
