@@ -36,11 +36,18 @@ public class ItemService {
     private final UserRegionRepository userRegionRepository;
     private final RegionRepository regionRepository;
 
+    /**
+     * 경매 상품 찜하기
+     * 
+     * @param userId 찜하려는 사용자의 ID (JWT에서 추출)
+     * @param itemId 찜할 상품의 ID
+     * @return 찜하기 결과 (itemId, liked=true)
+     */
     @Transactional
-    public ItemLikeResponse likeItem(String email, Long itemId) {
+    public ItemLikeResponse likeItem(Long userId, Long itemId) {
 
-        // 1. 사용자 조회
-        User user = userRepository.findByEmail(email)
+        // 1. 사용자 조회 (UID 기반)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
         // 2. 상품 조회
@@ -69,11 +76,18 @@ public class ItemService {
         return ItemLikeResponse.of(itemId, true);
     }
 
+    /**
+     * 경매 상품 등록
+     * 
+     * @param sellerId 판매자의 사용자 ID (JWT에서 추출)
+     * @param request 상품 등록 요청 정보
+     * @return 등록된 상품 정보
+     */
     @Transactional
-    public ItemRegisterResponse registerItem(String sellerEmail, ItemRegisterRequest request) {
+    public ItemRegisterResponse registerItem(Long sellerId, ItemRegisterRequest request) {
 
-        // 1. 판매자 (User) 조회
-        User seller = userRepository.findByEmail(sellerEmail)
+        // 1. 판매자 (User) 조회 (UID 기반)
+        User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
         // 2. 판매자의 대표 동네 (Region) 조회 -> 테스트 위해 주석 처리
