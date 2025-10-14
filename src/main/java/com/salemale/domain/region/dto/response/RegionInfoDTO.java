@@ -1,4 +1,4 @@
-package com.salemale.domain.item.dto.response.detail;
+package com.salemale.domain.region.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

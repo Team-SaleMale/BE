@@ -1,5 +1,6 @@
 package com.salemale.domain.item.dto.response.detail;
 
+import com.salemale.domain.region.dto.response.RegionInfoDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

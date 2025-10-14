@@ -4,6 +4,7 @@ import com.salemale.domain.item.dto.response.detail.*;
 import com.salemale.domain.item.entity.Item;
 import com.salemale.domain.item.entity.ItemImage;
 import com.salemale.domain.item.entity.ItemTransaction;
+import com.salemale.domain.region.dto.response.RegionInfoDTO;
 import com.salemale.domain.region.entity.Region;
 import com.salemale.domain.user.entity.User;
 
