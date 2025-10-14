@@ -122,23 +122,25 @@ public class AuthController { // 인증 관련 엔드포인트 집합(초심자�
 
     @Operation(
             summary = "로그인 상태 확인",
-            description = "JWT 토큰이 유효한지 확인하고 현재 로그인한 사용자 정보(이메일)를 반환합니다."
+            description = "JWT 토큰이 유효한지 확인하고 현재 로그인한 사용자 정보(사용자 ID)를 반환합니다."
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "인증 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패 (JWT 토큰 없음 또는 유효하지 않음)")
     })
-    @GetMapping("/me") // 로그인 상태 확인: 토큰이 유효하면 주체(subject: 이메일)를 반환, 아니면 401
+    @GetMapping("/me") // 로그인 상태 확인: 토큰이 유효하면 주체(subject: 사용자 ID)를 반환, 아니면 401
     public ResponseEntity<ApiResponse<Map<String, String>>> me(
             @Parameter(hidden = true) @AuthenticationPrincipal UserDetails principal) {
-        // 1) JwtAuthenticationFilter가 토큰을 검증하고 SecurityContext에 주체를 세팅합니다.
+        // 1) JwtAuthenticationFilter가 토큰을 검증하고 SecurityContext에 주체(UID)를 세팅합니다.
         // 2) @AuthenticationPrincipal로 인증된 사용자 정보를 주입받을 수 있습니다.
+        // 3) principal.getUsername()은 JWT의 subject(사용자 ID)입니다.
         if (principal == null) {
             // 스프링 시큐리티가 자동으로 401을 보내도록 구성되어 있으나, 명시적으로 실패 응답을 줄 수도 있습니다.
             return ResponseEntity.status(401)
                     .body(ApiResponse.onFailure("COMMON401", "인증이 필요합니다.", null));
         }
-        return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("subject", principal.getUsername())));
+        // subject = 사용자 ID (숫자 문자열)
+        return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("userId", principal.getUsername())));
     }
 }
 

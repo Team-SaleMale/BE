@@ -76,8 +76,10 @@ public class AuthServiceImpl implements AuthService { // AuthService 인터페�
         }
 
         // 5) 모든 검증을 통과했으므로 JWT 토큰을 생성하여 반환합니다.
-        //    - 토큰에는 사용자 식별자(이메일)가 포함되며, 클라이언트는 이후 요청 시 이 토큰을 헤더에 담아 보냅니다.
-        return jwtTokenProvider.generateToken(normalized);
+        //    - 토큰 subject는 사용자 ID로 설정하여(숫자형) 소셜/로컬 계정 모두 일관되게 식별합니다.
+        User user = auth.getUser();
+        String subjectUserId = String.valueOf(user.getId());
+        return jwtTokenProvider.generateToken(subjectUserId);
     }
 
     /**
