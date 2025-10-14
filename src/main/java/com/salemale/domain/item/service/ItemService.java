@@ -2,11 +2,13 @@ package com.salemale.domain.item.service;
 
 import com.salemale.common.code.status.ErrorStatus;
 import com.salemale.common.exception.GeneralException;
+import com.salemale.domain.item.converter.ItemConverter;
 import com.salemale.domain.item.dto.request.BidRequest;
 import com.salemale.domain.item.dto.request.ItemRegisterRequest;
 import com.salemale.domain.item.dto.response.BidResponse;
 import com.salemale.domain.item.dto.response.ItemLikeResponse;
 import com.salemale.domain.item.dto.response.ItemRegisterResponse;
+import com.salemale.domain.item.dto.response.detail.ItemDetailResponse;
 import com.salemale.domain.item.entity.Item;
 import com.salemale.domain.item.entity.ItemImage;
 import com.salemale.domain.item.entity.ItemTransaction;
@@ -15,12 +17,13 @@ import com.salemale.domain.item.repository.ItemRepository;
 import com.salemale.domain.item.repository.ItemTransactionRepository;
 import com.salemale.domain.item.repository.UserLikedRepository;
 import com.salemale.domain.region.entity.Region;
-import com.salemale.domain.region.repository.RegionRepository;
 import com.salemale.domain.user.entity.User;
 import com.salemale.domain.user.repository.UserRegionRepository;
 import com.salemale.domain.user.repository.UserRepository;
 import com.salemale.global.common.enums.ItemStatus;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -253,5 +256,51 @@ public class ItemService {
         if (bidPrice < minimumBidPrice) {
             throw new GeneralException(ErrorStatus.BID_AMOUNT_TOO_LOW);
         }
+    }
+
+    /**
+     * 경매 상품 상세 조회
+     * @param itemId 상품 ID
+     * @param email 로그인한 사용자 이메일 (nullable)
+     * @param bidHistoryLimit 조회할 입찰 내역 개수
+     * @return 상품 상세 정보
+     */
+    @Transactional(readOnly = true)
+    public ItemDetailResponse getItemDetail(Long itemId, String email, Integer bidHistoryLimit) {
+
+        // 1. 상품 조회 (fetch join으로 연관 엔티티 함께 조회)
+        Item item = itemRepository.findByIdWithDetails(itemId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.ITEM_NOT_FOUND));
+
+        // 2. 입찰 내역 조회 (최신순, 제한된 개수)
+        int limit = bidHistoryLimit != null ? bidHistoryLimit : 10;
+        Pageable pageable = PageRequest.of(0, limit);
+        List<ItemTransaction> bidHistory = itemTransactionRepository
+                .findBidHistoryByItem(item, pageable);
+
+        // 3. 최고 입찰 조회
+        ItemTransaction highestBid = itemTransactionRepository
+                .findTopByItemOrderByBidPriceDescCreatedAtAsc(item)
+                .orElse(null);
+
+        // 4. 입찰 수 조회
+        Long bidCount = itemTransactionRepository.countByItem(item);
+
+        // 5. 찜 개수 조회
+        Long likeCount = userLikedRepository.countByItem(item);
+
+        // 6. 현재 사용자의 찜 여부 확인 (로그인한 경우)
+        Boolean isLiked = false;
+        if (email != null) {
+            User user = userRepository.findByEmail(email).orElse(null);
+            if (user != null) {
+                isLiked = userLikedRepository.existsByUserAndItem(user, item);
+            }
+        }
+
+        // 7. Converter를 통해 DTO 변환
+        return ItemConverter.toItemDetailResponse(
+                item, bidHistory, highestBid, bidCount, likeCount, isLiked
+        );
     }
 }

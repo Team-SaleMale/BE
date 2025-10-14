@@ -14,4 +14,7 @@ public interface UserLikedRepository extends JpaRepository<UserLiked, Long> {
 
     // 찜 여부 확인
     boolean existsByUserAndItem(User user, Item item);
+
+    // 특정 상품에 찜한 총 개수 조회
+    Long countByItem(Item item);
 }

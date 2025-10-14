@@ -7,6 +7,7 @@ import com.salemale.domain.item.dto.request.ItemRegisterRequest;
 import com.salemale.domain.item.dto.response.BidResponse;
 import com.salemale.domain.item.dto.response.ItemLikeResponse;
 import com.salemale.domain.item.dto.response.ItemRegisterResponse;
+import com.salemale.domain.item.dto.response.detail.ItemDetailResponse;
 import com.salemale.domain.item.service.ItemService;
 import com.salemale.global.security.jwt.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +17,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -108,6 +111,23 @@ public class ItemController {
         // JWT에서 현재 사용자 ID 추출 (입찰자)
         Long userId = currentUserProvider.getCurrentUserId(httpRequest);
         BidResponse response = itemService.bidOnItem(userId, itemId, request);
+
+        return ResponseEntity.ok(ApiResponse.onSuccess(response));
+    }
+
+    /**
+     * 경매 상품 상세 조회
+     * GET /auctions/{itemId}
+     */
+    @Operation(summary = "경매 상품 상세 조회", description = "경매 상품의 상세 정보와 입찰 내역을 조회합니다.")
+    @GetMapping("/{itemId}")
+    public ResponseEntity<ApiResponse<ItemDetailResponse>> getItemDetail(
+            @PathVariable Long itemId,
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false, defaultValue = "10") Integer bidHistoryLimit
+    ) {
+        String email = userDetails != null ? userDetails.getUsername() : null;
+        ItemDetailResponse response = itemService.getItemDetail(itemId, email, bidHistoryLimit);
 
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
     }
