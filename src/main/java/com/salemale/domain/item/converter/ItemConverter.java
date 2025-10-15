@@ -128,4 +128,29 @@ public class ItemConverter {
                 .likeCount(likeCount)
                 .build();
     }
+
+    /**
+     * UserLiked Entity → LikedItemDTO 변환
+     * @param userLiked 찜한 상품 엔티티
+     * @param bidCount 입찰 수
+     * @return 찜한 상품 DTO
+     */
+    public static com.salemale.domain.item.dto.response.LikedItemDTO toLikedItemDTO(
+            com.salemale.domain.item.entity.UserLiked userLiked,
+            Long bidCount
+    ) {
+        Item item = userLiked.getItem();
+
+        // 썸네일은 첫 번째 이미지 사용
+        String thumbnailUrl = item.getImages().isEmpty() ? null : item.getImages().get(0).getImageUrl();
+
+        return com.salemale.domain.item.dto.response.LikedItemDTO.builder()
+                .itemId(item.getItemId())
+                .title(item.getTitle())
+                .thumbnailUrl(thumbnailUrl)
+                .bidderCount(bidCount)
+                .endTime(item.getEndTime())
+                .viewCount(item.getViewCount())  // 조회수 추가
+                .build();
+    }
 }
