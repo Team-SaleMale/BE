@@ -72,7 +72,9 @@ jobs:
           SPRING_PROFILES_ACTIVE=prod
           SERVER_PORT=8080
           JWT_SECRET=${{ secrets.JWT_SECRET }}
-          JWT_EXPIRATION=86400000
+          JWT_EXPIRATION=${{secrets.JWT_EXPIRATION}}
+          JWT_ACCESS_TOKEN_VALIDITY=${{ secrets.JWT_ACCESS_TOKEN_VALIDITY }}
+          JWT_REFRESH_TOKEN_VALIDITY=${{ secrets.JWT_REFRESH_TOKEN_VALIDITY }}
           DOCKERHUB_USERNAME=${{ secrets.DOCKER_USERNAME }}
           EOF
           
