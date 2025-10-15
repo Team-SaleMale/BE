@@ -272,6 +272,9 @@ public class ItemService {
         Item item = itemRepository.findByIdWithDetails(itemId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.ITEM_NOT_FOUND));
 
+        // 조회수 증가 로직 추가, JPA 더티체킹으로 자동 업데이트됨 (save 불필요)
+        item.incrementViewCount();
+
         // 2. 입찰 내역 조회 (최신순, 제한된 개수)
         int limit = bidHistoryLimit != null ? bidHistoryLimit : 10;
         Pageable pageable = PageRequest.of(0, limit);

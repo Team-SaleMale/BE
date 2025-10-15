@@ -90,6 +90,11 @@ public class Item extends BaseEntity {
     @JoinColumn(name = "region_id", nullable = false)
     private Region region;
 
+    // 조회수컬럼 추가
+    @Column(name = "view_count", nullable = false)
+    @Builder.Default
+    private Long viewCount = 0L;
+
     // 입찰이 없을때 낙찰로 경매 상품 상태 변경
     public void completeAuction(User winner) {
         this.winner = winner;
@@ -114,5 +119,14 @@ public class Item extends BaseEntity {
     // 경매가 입찰 중인지 확인 @return 입찰 가능 여부
     public boolean isBiddingStatus() {
         return this.itemStatus == ItemStatus.BIDDING;
+    }
+
+    // ===== 조회수 증가 메서드 추가 =====
+    /**
+     * 우선은 임시로 상품 상세보기 api 호출 될때마다 해당 상품 조회수 늘리는 로직으로 간편하게 구현하고
+     * 추후에 더 세밀한 로직으로 변경 예정
+     */
+    public void incrementViewCount() {
+        this.viewCount = this.viewCount == null ? 1L : this.viewCount + 1;
     }
 }
