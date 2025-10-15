@@ -265,15 +265,15 @@ public class ItemService {
      * @param bidHistoryLimit 조회할 입찰 내역 개수
      * @return 상품 상세 정보
      */
-    @Transactional(readOnly = true)
+    @Transactional //read only 제거 -> 조회수 업데이트 위해
     public ItemDetailResponse getItemDetail(Long itemId, String email, Integer bidHistoryLimit) {
 
         // 1. 상품 조회 (fetch join으로 연관 엔티티 함께 조회)
         Item item = itemRepository.findByIdWithDetails(itemId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.ITEM_NOT_FOUND));
 
-        // 조회수 증가 로직 추가, JPA 더티체킹으로 자동 업데이트됨 (save 불필요)
-        item.incrementViewCount();
+        // ===== 조회수 증가: 원자적 DB 업데이트 =====
+        itemRepository.incrementViewCount(itemId);
 
         // 2. 입찰 내역 조회 (최신순, 제한된 개수)
         int limit = bidHistoryLimit != null ? bidHistoryLimit : 10;
