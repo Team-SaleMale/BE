@@ -40,10 +40,13 @@ public enum ErrorStatus implements BaseErrorCode {
     ITEM_SELF_LIKE_FORBIDDEN(HttpStatus.BAD_REQUEST, "ITEM4002", "본인 경매 물품은 찜할 수 없습니다."),
     ITEM_ALREADY_LIKED(HttpStatus.BAD_REQUEST, "ITEM4003", "이미 찜한 상품입니다."),
     ITEM_NOT_LIKED(HttpStatus.BAD_REQUEST, "ITEM4004", "찜하지 않은 상품입니다."),
+    REGION_NOT_SET(HttpStatus.BAD_REQUEST, "ITEM4005", "상품 등록을 위해 대표 동네가 설정되어 있지 않습니다."),
+    INVALID_END_TIME(HttpStatus.BAD_REQUEST, "ITEM4006", "경매 종료 시간이 유효하지 않습니다."),
 
     // 경매 관련 에러 (나중에 추가)
     AUCTION_NOT_FOUND(HttpStatus.NOT_FOUND, "AUCTION4001", "경매를 찾을 수 없습니다."),
     AUCTION_ALREADY_ENDED(HttpStatus.BAD_REQUEST, "AUCTION4002", "이미 종료된 경매입니다."),
+    AUCTION_NOT_BIDDING(HttpStatus.BAD_REQUEST, "AUCTION4003", "현재 입찰할 수 없는 상품입니다."),
 
     // 입찰 관련 에러 (나중에 추가)
     BID_AMOUNT_TOO_LOW(HttpStatus.BAD_REQUEST, "BID4001", "최소 입찰 금액보다 낮습니다."),

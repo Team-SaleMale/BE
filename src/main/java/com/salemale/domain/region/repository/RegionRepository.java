@@ -13,7 +13,7 @@ public interface RegionRepository extends JpaRepository<Region, Long> {
 
     // 행정 3단계(시/군구/읍면동)로 고유 레코드 조회 — 비즈니스 유니크키
     Optional<Region> findBySidoAndSigunguAndEupmyeondong(String sido, String sigungu, String eupmyeondong);
-    
+
     // 행정 3단계(시/군구/읍면동)로 고유 레코드 조회 (복수 결과 허용 - 데이터 정합성 검증용)
     List<Region> findAllBySidoAndSigunguAndEupmyeondong(String sido, String sigungu, String eupmyeondong);
 
@@ -91,5 +91,3 @@ public interface RegionRepository extends JpaRepository<Region, Long> {
                                        @Param("limit") int limit,
                                        @Param("offset") int offset);
 }
-
-
