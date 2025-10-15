@@ -90,6 +90,11 @@ public class Item extends BaseEntity {
     @JoinColumn(name = "region_id", nullable = false)
     private Region region;
 
+    // 조회수컬럼 추가
+    @Column(name = "view_count", nullable = false)
+    @Builder.Default
+    private Long viewCount = 0L;
+
     // 입찰이 없을때 낙찰로 경매 상품 상태 변경
     public void completeAuction(User winner) {
         this.winner = winner;
