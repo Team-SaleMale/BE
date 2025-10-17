@@ -124,24 +124,29 @@ public class AuthController { // 인증 관련 엔드포인트 집합(초심자�
             return ResponseEntity.status(401).body(ApiResponse.onFailure("COMMON401", "리프레시 토큰이 없습니다.", null));
         }
 
-        // 유효성 검증(서명/만료 확인)과 subject 추출
-        String subject = jwtTokenProvider.getSubject(refreshToken);
+        try {
+            // 유효성 + 타입(refresh) 검증 후 subject 추출
+            String subject = jwtTokenProvider.getSubjectIfTokenType(refreshToken, "refresh");
 
-        // 새 액세스/리프레시 발급(회전)
-        String newAccess = jwtTokenProvider.generateToken(subject);
-        String newRefresh = jwtTokenProvider.generateRefreshToken(subject);
+            // 새 액세스/리프레시 발급(회전)
+            String newAccess = jwtTokenProvider.generateToken(subject);
+            String newRefresh = jwtTokenProvider.generateRefreshToken(subject);
 
-        ResponseCookie cookie = ResponseCookie.from("refreshToken", newRefresh)
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("None")
-                .path("/")
-                .maxAge(Duration.ofDays(14))
-                .build();
+            ResponseCookie cookie = ResponseCookie.from("refreshToken", newRefresh)
+                    .httpOnly(true)
+                    .secure(true)
+                    .sameSite("None")
+                    .path("/")
+                    .maxAge(Duration.ofDays(14))
+                    .build();
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(ApiResponse.onSuccess(Map.of("accessToken", newAccess)));
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .body(ApiResponse.onSuccess(Map.of("accessToken", newAccess)));
+        } catch (io.jsonwebtoken.JwtException ex) {
+            return ResponseEntity.status(401).body(ApiResponse.onFailure("COMMON401", "유효하지 않은 리프레시 토큰입니다.", null));
+        }
     }
 
     @Operation(
