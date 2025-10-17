@@ -89,6 +89,24 @@ public class JwtTokenProvider {
     }
 
     /**
+     * JWT 리프레시 토큰 생성: 더 긴 만료기간을 갖는 갱신 전용 토큰을 발급합니다.
+     *
+     * @param subject 토큰의 주체(사용자 ID)
+     * @return 서명된 JWT 문자열
+     */
+    public String generateRefreshToken(String subject) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + refreshTokenValidityMs);
+
+        return Jwts.builder()
+                .subject(subject)
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(signingKey)
+                .compact();
+    }
+
+    /**
      * JWT 토큰 검증 및 주체 추출: 서명을 확인하고 토큰에서 사용자 ID를 가져옵니다.
      *
      * @param token 검증할 JWT 문자열

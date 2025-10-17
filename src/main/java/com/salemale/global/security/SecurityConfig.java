@@ -74,8 +74,12 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
                 "https://valuebid.netlify.app", // 배포된 프론트엔드
-                "http://localhost:8080", // 로컬(호스트네임)
-                "http://127.0.0.1:8080" // 로컬(루프백 IP)
+                "http://localhost:3000", // React/Next.js 로컬 개발
+                "http://127.0.0.1:3000", // React/Next.js 루프백
+                "http://localhost:5173", // Vite/Vue 로컬 개발
+                "http://127.0.0.1:5173", // Vite/Vue 루프백
+                "http://localhost:8080", // 로컬(호스트네임 - 백엔드/스웨거)
+                "http://127.0.0.1:8080" // 로컬(루프백 IP - 백엔드)
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")); // 허용 메서드
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With")); // 허용 헤더
