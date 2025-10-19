@@ -265,12 +265,15 @@ public class ItemService {
      * @param bidHistoryLimit 조회할 입찰 내역 개수
      * @return 상품 상세 정보
      */
-    @Transactional(readOnly = true)
+    @Transactional //read only 제거 -> 조회수 업데이트 위해
     public ItemDetailResponse getItemDetail(Long itemId, String email, Integer bidHistoryLimit) {
 
         // 1. 상품 조회 (fetch join으로 연관 엔티티 함께 조회)
         Item item = itemRepository.findByIdWithDetails(itemId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.ITEM_NOT_FOUND));
+
+        // ===== 조회수 증가: 원자적 DB 업데이트 =====
+        itemRepository.incrementViewCount(itemId);
 
         // 2. 입찰 내역 조회 (최신순, 제한된 개수)
         int limit = bidHistoryLimit != null ? bidHistoryLimit : 10;
@@ -302,5 +305,48 @@ public class ItemService {
         return ItemConverter.toItemDetailResponse(
                 item, bidHistory, highestBid, bidCount, likeCount, isLiked
         );
+    }
+
+    /**
+     * 찜한 상품 목록 조회 (페이징)
+     * - 최신 찜한 순으로 고정 정렬
+     *
+     * @param userId 사용자 ID (JWT에서 추출)
+     * @param pageable 페이징 정보 (page, size)
+     * @return 찜한 상품 목록과 페이징 정보
+     */
+    @Transactional(readOnly = true)
+    public com.salemale.domain.item.dto.response.LikedItemListResponse getLikedItems(
+            Long userId,
+            org.springframework.data.domain.Pageable pageable) {
+
+        // 1. 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+        // 2. 찜한 상품 목록 조회 (페이징, 최신순 정렬)
+        org.springframework.data.domain.Page<UserLiked> likedPage =
+                userLikedRepository.findLikedItemsByUser(user, pageable);
+
+        // 3. 각 상품의 입찰 수 조회 후 DTO 변환
+        List<com.salemale.domain.item.dto.response.LikedItemDTO> likedItems =
+                likedPage.getContent().stream()
+                        .map(userLiked -> {
+                            Item item = userLiked.getItem();
+                            Long bidCount = itemTransactionRepository.countByItem(item);
+                            return ItemConverter.toLikedItemDTO(userLiked, bidCount);
+                        })
+                        .toList();
+
+        // 4. 페이징 정보와 함께 응답 DTO 생성
+        return com.salemale.domain.item.dto.response.LikedItemListResponse.builder()
+                .likedItems(likedItems)
+                .totalElements(likedPage.getTotalElements())
+                .totalPages(likedPage.getTotalPages())
+                .currentPage(likedPage.getNumber())
+                .size(likedPage.getSize())
+                .hasNext(likedPage.hasNext())
+                .hasPrevious(likedPage.hasPrevious())
+                .build();
     }
 }

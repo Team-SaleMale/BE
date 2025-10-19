@@ -5,6 +5,7 @@ import com.salemale.global.common.enums.ItemStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -31,4 +32,15 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
             "LEFT JOIN FETCH i.images " +
             "WHERE i.itemId = :itemId")
     Optional<Item> findByIdWithDetails(@Param("itemId") Long itemId);
+
+    /**
+     * 조회수를 원자적으로 1 증가시킵니다.
+     * DB 레벨에서 UPDATE 쿼리를 실행하여 동시성 문제를 방지합니다.
+     *
+     * @param itemId 상품 ID
+     * @return 업데이트된 행 수
+     */
+    @Modifying
+    @Query("UPDATE Item i SET i.viewCount = i.viewCount + 1 WHERE i.itemId = :itemId")
+    int incrementViewCount(@Param("itemId") Long itemId);
 }

@@ -4,15 +4,19 @@ import com.salemale.common.response.ApiResponse; // 통일된 API 응답 포맷 
 import com.salemale.domain.user.dto.request.LoginRequest; // 로그인 요청 DTO(email/password)
 import com.salemale.domain.user.dto.request.SignupRequest; // 회원가입 요청 DTO(email/nickname/password)
 import com.salemale.domain.user.service.AuthService; // 인증 비즈니스 로직 서비스(로그인/회원가입 등)
+import com.salemale.global.security.jwt.JwtTokenProvider; // JWT 생성/검증기
 import io.swagger.v3.oas.annotations.Operation; // Swagger: API 설명
 import io.swagger.v3.oas.annotations.Parameter; // Swagger: 파라미터 설명
 import io.swagger.v3.oas.annotations.responses.ApiResponses; // Swagger: 여러 응답 설명
 import io.swagger.v3.oas.annotations.tags.Tag; // Swagger: 컨트롤러 그룹 태그
 import jakarta.validation.Valid; // 요청 바디 검증
+import org.springframework.http.ResponseCookie; // 쿠키 작성 유틸
 import org.springframework.http.ResponseEntity; // HTTP 응답 래퍼
+import org.springframework.http.HttpHeaders; // 헤더 상수
 import org.springframework.web.bind.annotation.PostMapping; // POST 매핑
 import org.springframework.web.bind.annotation.PatchMapping; // PATCH 매핑(로그아웃 등 상태변경용)
 import org.springframework.web.bind.annotation.GetMapping; // GET 매핑(상태 점검)
+import org.springframework.web.bind.annotation.CookieValue; // 쿠키 값 바인딩
 import org.springframework.web.bind.annotation.RequestParam; // 쿼리 파라미터 바인딩
 import org.springframework.security.core.annotation.AuthenticationPrincipal; // 인증된 사용자 주입
 import org.springframework.security.core.userdetails.UserDetails; // 인증 주체 표현
@@ -20,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody; // 요청 바디 바
 import org.springframework.web.bind.annotation.RequestMapping; // 베이스 경로 매핑
 import org.springframework.web.bind.annotation.RestController; // REST 컨트롤러 선언
 
+import java.time.Duration; // 쿠키 만료 설정
 import java.util.Map; // 간단한 키/값 응답을 위해 사용
 
 @RestController
@@ -28,9 +33,11 @@ import java.util.Map; // 간단한 키/값 응답을 위해 사용
 public class AuthController { // 인증 관련 엔드포인트 집합(초심자도 이해할 수 있도록 상세 주석 포함)
 
     private final AuthService authService;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    public AuthController(AuthService authService) { // 생성자를 통해 서비스 의존성 주입
+    public AuthController(AuthService authService, JwtTokenProvider jwtTokenProvider) { // 생성자를 통해 서비스 의존성 주입
         this.authService = authService; // 스프링이 AuthService 빈을 자동으로 넣어줍니다.
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     @Operation(
@@ -46,9 +53,23 @@ public class AuthController { // 인증 관련 엔드포인트 집합(초심자�
         // 1) @Valid: request에 적힌 @Email, @NotBlank 등의 검사를 먼저 수행합니다.
         // 2) 서비스에 로그인 요청: 비밀번호 해시 검증에 성공하면 JWT 토큰이 문자열로 돌아옵니다.
         String token = authService.loginLocal(request.getEmail(), request.getPassword());
+        // refresh 토큰 생성(회전 전략은 추후 저장소 도입 시 강화)
+        String subject = jwtTokenProvider.getSubject(token);
+        String refresh = jwtTokenProvider.generateRefreshToken(subject);
+
+        // HttpOnly + Secure + SameSite=None 쿠키로 전달(크로스 도메인 사용을 위해)
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refresh)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(Duration.ofDays(14))
+                .build();
         // 3) ApiResponse.onSuccess로 성공 응답을 표준 형태로 감싸서 반환합니다.
         //    응답 본문 예시: { "isSuccess": true, "code": "200", "message": "OK", "result": { "accessToken": "..." } }
-        return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("accessToken", token)));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(ApiResponse.onSuccess(Map.of("accessToken", token)));
     }
 
     @Operation(
@@ -75,11 +96,57 @@ public class AuthController { // 인증 관련 엔드포인트 집합(초심자�
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "로그아웃 성공")
     })
-    @PatchMapping("/logout") // 로그아웃: JWT는 서버가 상태를 저장하지 않으므로 보통 클라이언트에서 토큰을 버립니다.
+    @PatchMapping("/logout") // 로그아웃: 리프레시 쿠키 제거
     public ResponseEntity<ApiResponse<Void>> logout() {
-        // 서버 세션을 쓰지 않는 JWT 구조에서는 서버가 무언가 지울 상태가 없습니다.
-        // 실서비스에선 "블랙리스트" 저장소를 운용하거나, 클라이언트가 토큰을 삭제하도록 안내합니다.
-        return ResponseEntity.ok(ApiResponse.onSuccess());
+        ResponseCookie delete = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(0)
+                .build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, delete.toString())
+                .body(ApiResponse.onSuccess());
+    }
+
+    @Operation(
+            summary = "토큰 재발급",
+            description = "HttpOnly 쿠키의 리프레시 토큰으로 액세스 토큰을 재발급합니다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "재발급 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "리프레시 토큰 유효하지 않음")
+    })
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<Map<String, String>>> refresh(@CookieValue(name = "refreshToken", required = false) String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return ResponseEntity.status(401).body(ApiResponse.onFailure("COMMON401", "리프레시 토큰이 없습니다.", null));
+        }
+
+        try {
+            // 유효성 + 타입(refresh) 검증 후 subject 추출
+            String subject = jwtTokenProvider.getSubjectIfTokenType(refreshToken, "refresh");
+
+            // 새 액세스/리프레시 발급(회전)
+            String newAccess = jwtTokenProvider.generateToken(subject);
+            String newRefresh = jwtTokenProvider.generateRefreshToken(subject);
+
+            ResponseCookie cookie = ResponseCookie.from("refreshToken", newRefresh)
+                    .httpOnly(true)
+                    .secure(true)
+                    .sameSite("None")
+                    .path("/")
+                    .maxAge(Duration.ofDays(14))
+                    .build();
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .body(ApiResponse.onSuccess(Map.of("accessToken", newAccess)));
+        } catch (io.jsonwebtoken.JwtException ex) {
+            return ResponseEntity.status(401).body(ApiResponse.onFailure("COMMON401", "유효하지 않은 리프레시 토큰입니다.", null));
+        }
     }
 
     @Operation(
