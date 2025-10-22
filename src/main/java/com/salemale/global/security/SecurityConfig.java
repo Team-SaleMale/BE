@@ -74,6 +74,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
                 "https://valuebid.netlify.app", // 배포된 프론트엔드
+                "https://valuebid.site", // 배포된 백엔드
                 "http://localhost:3000", // React/Next.js 로컬 개발
                 "http://127.0.0.1:3000", // React/Next.js 루프백
                 "http://localhost:5173", // Vite/Vue 로컬 개발
