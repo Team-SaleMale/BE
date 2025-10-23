@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-public interface ItemRepository extends JpaRepository<Item, Long> {
+public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositoryCustom{
     // 종료 시간이 지났고 아직 상태가 bidding(입찰중)인 상품들 조회
     List<Item> findByEndTimeBeforeAndItemStatus(
             LocalDateTime currentTime,

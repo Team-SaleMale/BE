@@ -5,9 +5,7 @@ import com.salemale.common.exception.GeneralException;
 import com.salemale.domain.item.converter.ItemConverter;
 import com.salemale.domain.item.dto.request.BidRequest;
 import com.salemale.domain.item.dto.request.ItemRegisterRequest;
-import com.salemale.domain.item.dto.response.BidResponse;
-import com.salemale.domain.item.dto.response.ItemLikeResponse;
-import com.salemale.domain.item.dto.response.ItemRegisterResponse;
+import com.salemale.domain.item.dto.response.*;
 import com.salemale.domain.item.dto.response.detail.ItemDetailResponse;
 import com.salemale.domain.item.entity.Item;
 import com.salemale.domain.item.entity.ItemImage;
@@ -20,8 +18,12 @@ import com.salemale.domain.region.entity.Region;
 import com.salemale.domain.user.entity.User;
 import com.salemale.domain.user.repository.UserRegionRepository;
 import com.salemale.domain.user.repository.UserRepository;
+import com.salemale.global.common.enums.AuctionSortType;
+import com.salemale.global.common.enums.AuctionStatus;
+import com.salemale.global.common.enums.Category;
 import com.salemale.global.common.enums.ItemStatus;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -347,6 +349,60 @@ public class ItemService {
                 .size(likedPage.getSize())
                 .hasNext(likedPage.hasNext())
                 .hasPrevious(likedPage.hasPrevious())
+                .build();
+    }
+
+    /**
+     * 경매 상품 리스트 조회
+     *
+     * @param status 상태 필터 (BIDDING, COMPLETED, POPULAR)
+     * @param categories 카테고리 필터
+     * @param minPrice 최소 가격
+     * @param maxPrice 최대 가격
+     * @param sortType 정렬 타입
+     * @param pageable 페이징 정보
+     * @return 경매 상품 리스트와 페이징 정보
+     */
+    @Transactional(readOnly = true)
+    public AuctionListResponse getAuctionList(
+            AuctionStatus status,
+            List<Category> categories,
+            Integer minPrice,
+            Integer maxPrice,
+            AuctionSortType sortType,
+            Pageable pageable
+    ) {
+        // 1. QueryDSL로 동적 쿼리 실행
+        Page<Item> itemPage = itemRepository.findAuctionList(
+                status, categories, minPrice, maxPrice, sortType, pageable
+        );
+
+        // 2. 각 상품의 입찰 수 조회 후 DTO 변환
+        List<AuctionListItemDTO> items =
+                itemPage.getContent().stream()
+                        .map(item -> {
+                            Long bidCount = itemTransactionRepository.countByItem(item);
+                            return ItemConverter.toAuctionListItemDTO(item, bidCount);
+                        })
+                        .toList();
+
+        // 3. 인기 탭이고 입찰 많은순 정렬이면 메모리에서 재정렬
+        if (status == AuctionStatus.POPULAR
+                && sortType == AuctionSortType.BID_COUNT_DESC) {
+            items = items.stream()
+                    .sorted((a, b) -> Long.compare(b.getBidderCount(), a.getBidderCount()))
+                    .toList();
+        }
+
+        // 4. 페이징 정보와 함께 응답 DTO 생성
+        return AuctionListResponse.builder()
+                .items(items)
+                .totalElements(itemPage.getTotalElements())
+                .totalPages(itemPage.getTotalPages())
+                .currentPage(itemPage.getNumber())
+                .size(itemPage.getSize())
+                .hasNext(itemPage.hasNext())
+                .hasPrevious(itemPage.hasPrevious())
                 .build();
     }
 }
