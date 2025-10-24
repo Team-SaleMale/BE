@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.support.PageableExecutionUtils;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 import static com.salemale.domain.item.entity.QItem.item;
@@ -41,19 +42,31 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
         final LocalDateTime now = LocalDateTime.now();
         final LocalDateTime threeDaysAgo = now.minusDays(3);
 
-        // 상품 리스트 조회
-        List<Item> content = queryFactory
-                .selectFrom(item)
-                .leftJoin(item.images).fetchJoin() // 상품 리스트 조회시 이미지도 같이 fetch join 되도록 수정
+        // Step 1: ID만 페이징해서 조회 (fetch join 없음)
+        List<Long> itemIds = queryFactory
+                .select(item.itemId)
+                .from(item)
+                .distinct()  // 중복 제거
                 .where(
                         statusCondition(status, now, threeDaysAgo),
-                        categoryCondition(categories),  // ← 변경
+                        categoryCondition(categories),
                         priceRangeCondition(minPrice, maxPrice)
                 )
                 .orderBy(getOrderSpecifier(sortType))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
+
+        // Step 2: 조회된 ID로 전체 데이터 + 이미지 fetch join
+        List<Item> content = Collections.emptyList();
+        if (!itemIds.isEmpty()) {
+            content = queryFactory
+                    .selectFrom(item)
+                    .leftJoin(item.images).fetchJoin()  // 이제는 안전함!
+                    .where(item.itemId.in(itemIds))
+                    .orderBy(getOrderSpecifier(sortType))  // 같은 정렬 유지
+                    .fetch();
+        }
 
         // Count 쿼리 (성능 최적화)
         JPAQuery<Long> countQuery = queryFactory
@@ -80,7 +93,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
             return null;
         }
 
-        // ⭐ 이제 내부에서 시간을 계산하지 않음
+        // 이제 내부에서 시간을 계산하지 않음
         return switch (status) {
             case BIDDING -> item.itemStatus.eq(ItemStatus.BIDDING)
                     .and(item.endTime.after(now));
@@ -109,7 +122,6 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
 
     /**
      * 가격 범위 필터 조건
-     *
      * 규칙:
      * - min:0, max:0 → 가격 조건 없음 (전체 조회)
      * - min:100, max:0 → 잘못된 조건 (결과 없음)

@@ -121,7 +121,7 @@ public class Item extends BaseEntity {
         this.bidCount++;
     }
 
-    // 경매가 종료되었는지 확인 @param newPrice 새로운 입찰가
+    // 경매가 종료되었는지 확인 @return 경매 종료 여부 (true: 종료됨, false: 진행 중)
     public boolean isAuctionEnded() {
         return LocalDateTime.now().isAfter(this.endTime);
     }
