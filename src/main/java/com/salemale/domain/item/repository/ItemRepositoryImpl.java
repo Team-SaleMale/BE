@@ -2,6 +2,7 @@ package com.salemale.domain.item.repository;
 
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.salemale.domain.item.entity.Item;
@@ -123,7 +124,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
         if (minPrice != null && minPrice > 0) {
             if (maxPrice != null && maxPrice == 0) {
                 // min:100, max:0 같은 잘못된 조건 → 결과 없음
-                return item.currentPrice.isNull();  // 항상 false가 되는 조건
+                return Expressions.FALSE.isTrue();  // 항상 false가 되는 조건
             }
             return item.currentPrice.goe(minPrice);
         }
@@ -150,7 +151,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
             case PRICE_DESC -> item.currentPrice.desc();
             case VIEW_COUNT_DESC -> item.viewCount.desc();
             case END_TIME_ASC -> item.endTime.asc();
-            case BID_COUNT_DESC -> item.createdAt.desc();
+            case BID_COUNT_DESC -> item.bidCount.desc();
         };
     }
 }

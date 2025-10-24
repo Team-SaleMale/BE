@@ -216,11 +216,9 @@ public class ItemService {
 
         // 6. Item의 현재가 업데이트
         item.updateCurrentPrice(request.getBidPrice());
+        item.incrementBidCount();
 
-        // 7. 입찰 수 조회
-        Long bidCount = itemTransactionRepository.countByItem(item);
-
-        // 8. 응답 DTO 생성
+        // 7. 응답 DTO 생성
         return BidResponse.builder()
                 .transactionId(savedTransaction.getTransactionId())
                 .itemId(item.getItemId())
@@ -229,7 +227,7 @@ public class ItemService {
                 .previousPrice(previousPrice)
                 .currentHighestPrice(request.getBidPrice())
                 .bidIncrement(item.getBidIncrement())
-                .bidCount(bidCount)
+                .bidCount(item.getBidCount())
                 .bidTime(savedTransaction.getCreatedAt())
                 .endTime(item.getEndTime())
                 .build();
@@ -289,9 +287,6 @@ public class ItemService {
                 .findTopByItemOrderByBidPriceDescCreatedAtAsc(item)
                 .orElse(null);
 
-        // 4. 입찰 수 조회
-        Long bidCount = itemTransactionRepository.countByItem(item);
-
         // 5. 찜 개수 조회
         Long likeCount = userLikedRepository.countByItem(item);
 
@@ -306,7 +301,7 @@ public class ItemService {
 
         // 7. Converter를 통해 DTO 변환
         return ItemConverter.toItemDetailResponse(
-                item, bidHistory, highestBid, bidCount, likeCount, isLiked
+                item, bidHistory, highestBid, likeCount, isLiked
         );
     }
 
@@ -319,30 +314,26 @@ public class ItemService {
      * @return 찜한 상품 목록과 페이징 정보
      */
     @Transactional(readOnly = true)
-    public com.salemale.domain.item.dto.response.LikedItemListResponse getLikedItems(
+    public LikedItemListResponse getLikedItems(
             Long userId,
-            org.springframework.data.domain.Pageable pageable) {
+            Pageable pageable) {
 
         // 1. 사용자 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
         // 2. 찜한 상품 목록 조회 (페이징, 최신순 정렬)
-        org.springframework.data.domain.Page<UserLiked> likedPage =
+       Page<UserLiked> likedPage =
                 userLikedRepository.findLikedItemsByUser(user, pageable);
 
-        // 3. 각 상품의 입찰 수 조회 후 DTO 변환
-        List<com.salemale.domain.item.dto.response.LikedItemDTO> likedItems =
+        // 3. DTO 변환 (엔티티의 bidCount 사용)
+        List<LikedItemDTO> likedItems =
                 likedPage.getContent().stream()
-                        .map(userLiked -> {
-                            Item item = userLiked.getItem();
-                            Long bidCount = itemTransactionRepository.countByItem(item);
-                            return ItemConverter.toLikedItemDTO(userLiked, bidCount);
-                        })
+                        .map(userLiked -> ItemConverter.toLikedItemDTO(userLiked))  // ⭐ bidCount 파라미터 제거
                         .toList();
 
         // 4. 페이징 정보와 함께 응답 DTO 생성
-        return com.salemale.domain.item.dto.response.LikedItemListResponse.builder()
+        return LikedItemListResponse.builder()
                 .likedItems(likedItems)
                 .totalElements(likedPage.getTotalElements())
                 .totalPages(likedPage.getTotalPages())
@@ -373,34 +364,17 @@ public class ItemService {
             AuctionSortType sortType,
             Pageable pageable
     ) {
-        // 1. QueryDSL로 동적 쿼리 실행
+        // 1. QueryDSL로 동적 쿼리 실행 (이미 DB에서 정렬됨)
         Page<Item> itemPage = itemRepository.findAuctionList(
                 status, categories, minPrice, maxPrice, sortType, pageable
         );
 
-        // 2. 모든 상품의 입찰 수를 한 번에 조회 (1번의 쿼리)
-        List<Long> itemIds = itemPage.getContent().stream()
-                .map(Item::getItemId)
-                .toList();
-
-        Map<Long, Long> bidCountMap = itemTransactionRepository.countByItemIdsAsMap(itemIds);
-
-        // 3. DTO 변환 (Map에서 조회, O(1))
+        // 2. DTO 변환 (엔티티의 bidCount 사용)
         List<AuctionListItemDTO> items = itemPage.getContent().stream()
-                .map(item -> {
-                    Long bidCount = bidCountMap.getOrDefault(item.getItemId(), 0L);
-                    return ItemConverter.toAuctionListItemDTO(item, bidCount);
-                })
+                .map(item -> ItemConverter.toAuctionListItemDTO(item))
                 .toList();
 
-        // 4. 인기 탭이고 입찰 많은순 정렬이면 메모리에서 재정렬
-        if (status == AuctionStatus.POPULAR && sortType == AuctionSortType.BID_COUNT_DESC) {
-            items = items.stream()
-                    .sorted((a, b) -> Long.compare(b.getBidderCount(), a.getBidderCount()))
-                    .toList();
-        }
-
-        // 5. 페이징 정보와 함께 응답 DTO 생성
+        // 3. 페이징 정보와 함께 응답 DTO 생성
         return AuctionListResponse.builder()
                 .items(items)
                 .totalElements(itemPage.getTotalElements())

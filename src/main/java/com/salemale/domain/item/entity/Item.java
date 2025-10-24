@@ -95,6 +95,11 @@ public class Item extends BaseEntity {
     @Builder.Default
     private Long viewCount = 0L;
 
+    // 입찰 수 컬럼 추가
+    @Column(name = "bid_count", nullable = false)
+    @Builder.Default
+    private Long bidCount = 0L;
+
     // 입찰이 없을때 낙찰로 경매 상품 상태 변경
     public void completeAuction(User winner) {
         this.winner = winner;
@@ -109,6 +114,11 @@ public class Item extends BaseEntity {
     // 현재 입찰가 업데이트
     public void updateCurrentPrice(Integer newPrice) {
         this.currentPrice = newPrice;
+    }
+
+    // 입찰 수 증가 메서드, 입찰이 발생할 때 입찰 수를 1 증가
+    public void incrementBidCount() {
+        this.bidCount++;
     }
 
     // 경매가 종료되었는지 확인 @param newPrice 새로운 입찰가
