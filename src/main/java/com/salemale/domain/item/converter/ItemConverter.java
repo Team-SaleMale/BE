@@ -1,5 +1,7 @@
 package com.salemale.domain.item.converter;
 
+import com.salemale.domain.item.dto.response.AuctionListItemDTO;
+import com.salemale.domain.item.dto.response.LikedItemDTO;
 import com.salemale.domain.item.dto.response.detail.*;
 import com.salemale.domain.item.entity.Item;
 import com.salemale.domain.item.entity.ItemImage;
@@ -20,7 +22,6 @@ public class ItemConverter {
             Item item,
             List<ItemTransaction> bidHistory,
             ItemTransaction highestBid,
-            Long bidCount,
             Long likeCount,
             Boolean isLiked
     ) {
@@ -31,7 +32,7 @@ public class ItemConverter {
                 .description(item.getDescription())
                 .category(item.getCategory().name())
                 .itemStatus(item.getItemStatus().name())
-                .auctionInfo(toAuctionInfo(item, bidCount))
+                .auctionInfo(toAuctionInfo(item))  // bidCount 파라미터 제거
                 .sellerInfo(toSellerInfo(item.getSeller()))
                 .highestBidder(highestBid != null ? toHighestBidder(highestBid) : null)
                 .bidHistory(toBidHistoryList(bidHistory))
@@ -43,13 +44,13 @@ public class ItemConverter {
                 .build();
     }
 
-    private static AuctionInfoDTO toAuctionInfo(Item item, Long bidCount) {
+    private static AuctionInfoDTO toAuctionInfo(Item item) {  // bidCount 파라미터 제거
         return AuctionInfoDTO.builder()
                 .startPrice(item.getStartPrice())
                 .currentPrice(item.getCurrentPrice())
                 .bidIncrement(item.getBidIncrement())
                 .endTime(item.getEndTime())
-                .bidCount(bidCount)
+                .bidCount(item.getBidCount())  // ⭐ 엔티티에서 직접 조회
                 .build();
     }
 
@@ -129,28 +130,53 @@ public class ItemConverter {
                 .build();
     }
 
+    private static String getThumbnailUrl(Item item) {
+        return item.getImages().isEmpty() ? null : item.getImages().get(0).getImageUrl();
+    }
+
     /**
      * UserLiked Entity → LikedItemDTO 변환
      * @param userLiked 찜한 상품 엔티티
-     * @param bidCount 입찰 수
      * @return 찜한 상품 DTO
      */
-    public static com.salemale.domain.item.dto.response.LikedItemDTO toLikedItemDTO(
-            com.salemale.domain.item.entity.UserLiked userLiked,
-            Long bidCount
+    public static LikedItemDTO toLikedItemDTO(
+            com.salemale.domain.item.entity.UserLiked userLiked
     ) {
         Item item = userLiked.getItem();
 
         // 썸네일은 첫 번째 이미지 사용
-        String thumbnailUrl = item.getImages().isEmpty() ? null : item.getImages().get(0).getImageUrl();
+        String thumbnailUrl = getThumbnailUrl(item);
 
         return com.salemale.domain.item.dto.response.LikedItemDTO.builder()
                 .itemId(item.getItemId())
                 .title(item.getTitle())
                 .thumbnailUrl(thumbnailUrl)
-                .bidderCount(bidCount)
+                .bidderCount(item.getBidCount())
                 .endTime(item.getEndTime())
                 .viewCount(item.getViewCount())  // 조회수 추가
+                .build();
+    }
+
+    /**
+     * Item Entity → AuctionListItemDTO 변환
+     * @param item 경매 상품 엔티티
+     * @return 경매 상품 리스트 항목 DTO
+     */
+    public static AuctionListItemDTO toAuctionListItemDTO(
+            Item item
+    ) {
+        // 썸네일은 첫 번째 이미지 사용
+        String thumbnailUrl = getThumbnailUrl(item);
+
+        return com.salemale.domain.item.dto.response.AuctionListItemDTO.builder()
+                .itemId(item.getItemId())
+                .title(item.getTitle())
+                .thumbnailUrl(thumbnailUrl)
+                .currentPrice(item.getCurrentPrice())
+                .bidderCount(item.getBidCount())
+                .endTime(item.getEndTime())
+                .viewCount(item.getViewCount())
+                .itemStatus(item.getItemStatus().name())
                 .build();
     }
 }
