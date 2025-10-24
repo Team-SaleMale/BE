@@ -14,6 +14,10 @@ import com.salemale.domain.item.entity.UserLiked;
 import com.salemale.domain.item.repository.ItemRepository;
 import com.salemale.domain.item.repository.ItemTransactionRepository;
 import com.salemale.domain.item.repository.UserLikedRepository;
+import com.salemale.domain.mypage.dto.response.LikedItemListResponse;
+import com.salemale.domain.mypage.dto.response.MyAuctionItemDTO;
+import com.salemale.domain.mypage.dto.response.MyAuctionListResponse;
+import com.salemale.domain.mypage.dto.response.MyAuctionSummaryDTO;
 import com.salemale.domain.region.entity.Region;
 import com.salemale.domain.user.entity.User;
 import com.salemale.domain.user.repository.UserRegionRepository;
@@ -29,7 +33,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.IntStream;
 
 @Service
@@ -303,45 +306,6 @@ public class ItemService {
     }
 
     /**
-     * 찜한 상품 목록 조회 (페이징)
-     * - 최신 찜한 순으로 고정 정렬
-     *
-     * @param userId 사용자 ID (JWT에서 추출)
-     * @param pageable 페이징 정보 (page, size)
-     * @return 찜한 상품 목록과 페이징 정보
-     */
-    @Transactional(readOnly = true)
-    public LikedItemListResponse getLikedItems(
-            Long userId,
-            Pageable pageable) {
-
-        // 1. 사용자 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
-
-        // 2. 찜한 상품 목록 조회 (페이징, 최신순 정렬)
-       Page<UserLiked> likedPage =
-                userLikedRepository.findLikedItemsByUser(user, pageable);
-
-        // 3. DTO 변환 (엔티티의 bidCount 사용)
-        List<LikedItemDTO> likedItems =
-                likedPage.getContent().stream()
-                        .map(userLiked -> ItemConverter.toLikedItemDTO(userLiked))  // ⭐ bidCount 파라미터 제거
-                        .toList();
-
-        // 4. 페이징 정보와 함께 응답 DTO 생성
-        return LikedItemListResponse.builder()
-                .likedItems(likedItems)
-                .totalElements(likedPage.getTotalElements())
-                .totalPages(likedPage.getTotalPages())
-                .currentPage(likedPage.getNumber())
-                .size(likedPage.getSize())
-                .hasNext(likedPage.hasNext())
-                .hasPrevious(likedPage.hasPrevious())
-                .build();
-    }
-
-    /**
      * 경매 상품 리스트 조회
      *
      * @param status 상태 필터 (BIDDING, COMPLETED, POPULAR)
@@ -380,87 +344,6 @@ public class ItemService {
                 .size(itemPage.getSize())
                 .hasNext(itemPage.hasNext())
                 .hasPrevious(itemPage.hasPrevious())
-                .build();
-    }
-
-    /**
-     * 내 경매 목록 조회
-     * @param userId 사용자 ID
-     * @param type 경매 타입 (ALL, SELLING, BIDDING, WON, FAILED)
-     * @param sortType 정렬 타입 (CREATED_DESC, PRICE_DESC, PRICE_ASC)
-     * @param pageable 페이징 정보
-     * @return 내 경매 목록
-     */
-    public MyAuctionListResponse getMyAuctions(
-            Long userId,
-            MyAuctionType type,
-            MyAuctionSortType sortType,
-            Pageable pageable
-    ) {
-        // 1. 사용자 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
-
-        // 2. 내 경매 목록 조회
-        Page<Item> itemPage = itemRepository.findMyAuctions(user, type, sortType, pageable);
-
-        // 3. 각 상품에 대해 최고가 입찰자 여부 확인
-        List<MyAuctionItemDTO> items = itemPage.getContent().stream()
-                .map(item -> {
-                    // 내가 입찰한 상품인 경우에만 최고가 여부 확인
-                    Boolean isHighestBidder = false;
-                    if (!item.getSeller().getId().equals(user.getId())) {
-                        // 판매자가 아닌 경우 (= 입찰자인 경우)
-                        isHighestBidder = itemTransactionRepository
-                                .isHighestBidder(item, user);
-                    }
-                    return ItemConverter.toMyAuctionItemDTO(item, user, isHighestBidder);
-                })
-                .toList();
-
-        // 4. Summary 정보 조회
-        MyAuctionSummaryDTO summary = getMyAuctionSummary(user);
-
-        // 5. 응답 생성
-        return MyAuctionListResponse.builder()
-                .items(items)
-                .summary(summary)
-                .totalElements(itemPage.getTotalElements())
-                .totalPages(itemPage.getTotalPages())
-                .currentPage(itemPage.getNumber())
-                .size(itemPage.getSize())
-                .hasNext(itemPage.hasNext())
-                .hasPrevious(itemPage.hasPrevious())
-                .build();
-    }
-
-    /**
-     * 내 경매 요약 정보 조회
-     * @param user 사용자
-     * @return 요약 정보 (전체, 판매, 입찰, 낙찰, 유찰 개수)
-     */
-    private MyAuctionSummaryDTO getMyAuctionSummary(User user) {
-        // 판매 중 개수
-        Long sellingCount = itemRepository.countBySeller(user);
-
-        // 입찰한 개수 (중복 제거)
-        Long biddingCount = itemTransactionRepository.countDistinctItemByBuyer(user);
-
-        // 낙찰받은 개수
-        Long wonCount = itemRepository.countByWinner(user);
-
-        // 유찰된 개수
-        Long failedCount = itemRepository.countBySellerAndItemStatus(user, ItemStatus.FAIL);
-
-        // 전체 개수 (판매 + 입찰, 중복은 DB 쿼리에서 처리됨)
-        Long totalCount = sellingCount + biddingCount;
-
-        return MyAuctionSummaryDTO.builder()
-                .totalCount(totalCount)
-                .sellingCount(sellingCount)
-                .biddingCount(biddingCount)
-                .wonCount(wonCount)
-                .failedCount(failedCount)
                 .build();
     }
 }

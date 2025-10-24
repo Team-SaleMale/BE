@@ -61,7 +61,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
         if (!itemIds.isEmpty()) {
             content = queryFactory
                     .selectFrom(item)
-                    .leftJoin(item.images).fetchJoin()  // 이제는 안전함!
+                    .leftJoin(item.images).fetchJoin()
                     .where(item.itemId.in(itemIds))
                     .orderBy(getOrderSpecifier(sortType))  // 같은 정렬 유지
                     .fetch();
@@ -284,7 +284,9 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
      * - winner가 나인 경우만 (경매 종료 후 확정)
      */
     private BooleanExpression myWon(User user) {
-        return item.winner.eq(user);
+        // 경매 마감 후 winner가 결정되므로 SUCCESS 상태 확인
+        return item.winner.eq(user)
+                .and(item.itemStatus.eq(ItemStatus.SUCCESS));
     }
 
     /**

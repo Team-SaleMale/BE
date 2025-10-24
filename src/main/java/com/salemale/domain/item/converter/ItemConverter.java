@@ -1,8 +1,9 @@
 package com.salemale.domain.item.converter;
 
 import com.salemale.domain.item.dto.response.AuctionListItemDTO;
-import com.salemale.domain.item.dto.response.LikedItemDTO;
-import com.salemale.domain.item.dto.response.MyAuctionItemDTO;
+import com.salemale.domain.item.entity.UserLiked;
+import com.salemale.domain.mypage.dto.response.LikedItemDTO;
+import com.salemale.domain.mypage.dto.response.MyAuctionItemDTO;
 import com.salemale.domain.item.dto.response.detail.*;
 import com.salemale.domain.item.entity.Item;
 import com.salemale.domain.item.entity.ItemImage;
@@ -140,15 +141,13 @@ public class ItemConverter {
      * @param userLiked 찜한 상품 엔티티
      * @return 찜한 상품 DTO
      */
-    public static LikedItemDTO toLikedItemDTO(
-            com.salemale.domain.item.entity.UserLiked userLiked
-    ) {
+    public static LikedItemDTO toLikedItemDTO(UserLiked userLiked) {
         Item item = userLiked.getItem();
 
         // 썸네일은 첫 번째 이미지 사용
         String thumbnailUrl = getThumbnailUrl(item);
 
-        return com.salemale.domain.item.dto.response.LikedItemDTO.builder()
+        return LikedItemDTO.builder()
                 .itemId(item.getItemId())
                 .title(item.getTitle())
                 .thumbnailUrl(thumbnailUrl)
@@ -163,13 +162,11 @@ public class ItemConverter {
      * @param item 경매 상품 엔티티
      * @return 경매 상품 리스트 항목 DTO
      */
-    public static AuctionListItemDTO toAuctionListItemDTO(
-            Item item
-    ) {
+    public static AuctionListItemDTO toAuctionListItemDTO(Item item) {
         // 썸네일은 첫 번째 이미지 사용
         String thumbnailUrl = getThumbnailUrl(item);
 
-        return com.salemale.domain.item.dto.response.AuctionListItemDTO.builder()
+        return AuctionListItemDTO.builder()
                 .itemId(item.getItemId())
                 .title(item.getTitle())
                 .thumbnailUrl(thumbnailUrl)
@@ -225,15 +222,13 @@ public class ItemConverter {
             return "WINNER";
         }
 
-        // 2. 판매자인지 확인
-        if (item.getSeller().getId().equals(currentUser.getId())) {
+        /// 2. 판매자인지 확인 (null 체크 추가)
+        if (item.getSeller() != null &&
+                item.getSeller().getId().equals(currentUser.getId())) {
             return "SELLER";
         }
 
         // 3. 그 외는 입찰자
         return "BIDDER";
     }
-
-    // 기존의 getThumbnailUrl() 메서드 활용
-    // private static String getThumbnailUrl(Item item) { ... }
 }

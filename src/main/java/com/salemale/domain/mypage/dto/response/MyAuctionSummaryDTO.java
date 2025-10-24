@@ -1,4 +1,4 @@
-package com.salemale.domain.item.dto.response;
+package com.salemale.domain.mypage.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

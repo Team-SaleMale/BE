@@ -8,10 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public interface ItemTransactionRepository extends JpaRepository<ItemTransaction, Long> {
@@ -48,15 +45,19 @@ public interface ItemTransactionRepository extends JpaRepository<ItemTransaction
     Long countDistinctItemByBuyer(@Param("buyer") User buyer);
 
     /**
-     * 사용자가 특정 상품의 최고가 입찰자인지 확인
-     * @param item 상품
-     * @param buyer 사용자
-     * @return 최고가 입찰자 여부
+     * 여러 상품의 최고가 입찰 정보를 한 번에 조회 (N+1 방지)
+     * Repository는 데이터만 조회, 판단은 Service에서
+     *
+     * @param itemIds 상품 ID 목록
+     * @return 최고가 입찰 리스트 (각 상품당 하나씩)
      */
-    @Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END " +
-            "FROM ItemTransaction t " +
-            "WHERE t.item = :item " +
-            "AND t.buyer = :buyer " +
-            "AND t.bidPrice = (SELECT MAX(t2.bidPrice) FROM ItemTransaction t2 WHERE t2.item = :item)")
-    Boolean isHighestBidder(@Param("item") Item item, @Param("buyer") User buyer);
+    @Query("SELECT t FROM ItemTransaction t " +
+            "WHERE t.item.itemId IN :itemIds " +
+            "AND (t.item.itemId, t.bidPrice) IN (" +
+            "    SELECT t2.item.itemId, MAX(t2.bidPrice) " +
+            "    FROM ItemTransaction t2 " +
+            "    WHERE t2.item.itemId IN :itemIds " +
+            "    GROUP BY t2.item.itemId" +
+            ")")
+    List<ItemTransaction> findHighestBidsByItemIds(@Param("itemIds") List<Long> itemIds);
 }
