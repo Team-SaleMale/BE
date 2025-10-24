@@ -1,4 +1,4 @@
-package com.salemale.domain.item.dto.response;
+package com.salemale.domain.mypage.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
