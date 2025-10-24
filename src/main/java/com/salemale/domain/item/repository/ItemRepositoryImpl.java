@@ -37,12 +37,16 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
             AuctionSortType sortType,
             Pageable pageable
     ) {
+        // 시간을 딱 한 번만 계산해서 변수에 저장(데이터 불일치 방지)
+        final LocalDateTime now = LocalDateTime.now();
+        final LocalDateTime threeDaysAgo = now.minusDays(3);
+
         // 상품 리스트 조회
         List<Item> content = queryFactory
                 .selectFrom(item)
                 .leftJoin(item.images).fetchJoin() // 상품 리스트 조회시 이미지도 같이 fetch join 되도록 수정
                 .where(
-                        statusCondition(status),
+                        statusCondition(status, now, threeDaysAgo),
                         categoryCondition(categories),  // ← 변경
                         priceRangeCondition(minPrice, maxPrice)
                 )
@@ -56,7 +60,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
                 .select(item.count())
                 .from(item)
                 .where(
-                        statusCondition(status),
+                        statusCondition(status, now, threeDaysAgo),
                         categoryCondition(categories),  // ← 변경
                         priceRangeCondition(minPrice, maxPrice)
                 );
@@ -67,14 +71,16 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
     /**
      * 상태별 필터 조건
      */
-    private BooleanExpression statusCondition(AuctionStatus status) {
+    private BooleanExpression statusCondition(AuctionStatus status, LocalDateTime now, LocalDateTime threeDaysAgo) {
         if (status == null) {
             return null;
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime threeDaysAgo = now.minusDays(3);
+        if (status == null) {
+            return null;
+        }
 
+        // ⭐ 이제 내부에서 시간을 계산하지 않음
         return switch (status) {
             case BIDDING -> item.itemStatus.eq(ItemStatus.BIDDING)
                     .and(item.endTime.after(now));
@@ -84,7 +90,8 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
 
             case POPULAR -> item.itemStatus.eq(ItemStatus.BIDDING)
                     .and(item.endTime.after(now))
-                    .and(item.createdAt.after(threeDaysAgo));
+                    .and(item.createdAt.after(threeDaysAgo))
+                    .and(item.bidCount.goe(3L));
 
             default -> null;
         };
