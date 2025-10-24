@@ -46,7 +46,6 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
         List<Long> itemIds = queryFactory
                 .select(item.itemId)
                 .from(item)
-                .distinct()  // 중복 제거
                 .where(
                         statusCondition(status, now, threeDaysAgo),
                         categoryCondition(categories),
@@ -153,20 +152,23 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
     }
 
     /**
-     * 정렬 조건
+     * 정렬 조건, 보조키로 itemId를 추가해서 페이징시 상품 일관성을 유지함
      */
-    private OrderSpecifier<?> getOrderSpecifier(AuctionSortType sortType) {
+    private OrderSpecifier<?>[] getOrderSpecifier(AuctionSortType sortType) {
         if (sortType == null) {
-            return item.createdAt.desc();
+            return new OrderSpecifier<?>[]{
+                    item.createdAt.desc(),
+                    item.itemId.asc()
+            };
         }
 
         return switch (sortType) {
-            case CREATED_DESC -> item.createdAt.desc();
-            case PRICE_ASC -> item.currentPrice.asc();
-            case PRICE_DESC -> item.currentPrice.desc();
-            case VIEW_COUNT_DESC -> item.viewCount.desc();
-            case END_TIME_ASC -> item.endTime.asc();
-            case BID_COUNT_DESC -> item.bidCount.desc();
+            case CREATED_DESC -> new OrderSpecifier<?>[]{item.createdAt.desc(), item.itemId.asc()};
+            case PRICE_ASC -> new OrderSpecifier<?>[]{item.currentPrice.asc(), item.itemId.asc()};
+            case PRICE_DESC -> new OrderSpecifier<?>[]{item.currentPrice.desc(), item.itemId.asc()};
+            case VIEW_COUNT_DESC -> new OrderSpecifier<?>[]{item.viewCount.desc(), item.itemId.asc()};
+            case END_TIME_ASC -> new OrderSpecifier<?>[]{item.endTime.asc(), item.itemId.asc()};
+            case BID_COUNT_DESC -> new OrderSpecifier<?>[]{item.bidCount.desc(), item.itemId.asc()};
         };
     }
 }
