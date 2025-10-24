@@ -39,6 +39,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
         // 상품 리스트 조회
         List<Item> content = queryFactory
                 .selectFrom(item)
+                .leftJoin(item.images).fetchJoin() // 상품 리스트 조회시 이미지도 같이 fetch join 되도록 수정
                 .where(
                         statusCondition(status),
                         categoryCondition(categories),  // ← 변경

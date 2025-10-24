@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.IntStream;
 
 @Service
@@ -356,7 +357,7 @@ public class ItemService {
      * 경매 상품 리스트 조회
      *
      * @param status 상태 필터 (BIDDING, COMPLETED, POPULAR)
-     * @param categories 카테고리 필터
+     * @param categories 카테고리 필터(다중선택 가능)
      * @param minPrice 최소 가격
      * @param maxPrice 최대 가격
      * @param sortType 정렬 타입
@@ -377,24 +378,29 @@ public class ItemService {
                 status, categories, minPrice, maxPrice, sortType, pageable
         );
 
-        // 2. 각 상품의 입찰 수 조회 후 DTO 변환
-        List<AuctionListItemDTO> items =
-                itemPage.getContent().stream()
-                        .map(item -> {
-                            Long bidCount = itemTransactionRepository.countByItem(item);
-                            return ItemConverter.toAuctionListItemDTO(item, bidCount);
-                        })
-                        .toList();
+        // 2. 모든 상품의 입찰 수를 한 번에 조회 (1번의 쿼리)
+        List<Long> itemIds = itemPage.getContent().stream()
+                .map(Item::getItemId)
+                .toList();
 
-        // 3. 인기 탭이고 입찰 많은순 정렬이면 메모리에서 재정렬
-        if (status == AuctionStatus.POPULAR
-                && sortType == AuctionSortType.BID_COUNT_DESC) {
+        Map<Long, Long> bidCountMap = itemTransactionRepository.countByItemIdsAsMap(itemIds);
+
+        // 3. DTO 변환 (Map에서 조회, O(1))
+        List<AuctionListItemDTO> items = itemPage.getContent().stream()
+                .map(item -> {
+                    Long bidCount = bidCountMap.getOrDefault(item.getItemId(), 0L);
+                    return ItemConverter.toAuctionListItemDTO(item, bidCount);
+                })
+                .toList();
+
+        // 4. 인기 탭이고 입찰 많은순 정렬이면 메모리에서 재정렬
+        if (status == AuctionStatus.POPULAR && sortType == AuctionSortType.BID_COUNT_DESC) {
             items = items.stream()
                     .sorted((a, b) -> Long.compare(b.getBidderCount(), a.getBidderCount()))
                     .toList();
         }
 
-        // 4. 페이징 정보와 함께 응답 DTO 생성
+        // 5. 페이징 정보와 함께 응답 DTO 생성
         return AuctionListResponse.builder()
                 .items(items)
                 .totalElements(itemPage.getTotalElements())

@@ -8,8 +8,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public interface ItemTransactionRepository extends JpaRepository<ItemTransaction, Long> {
 
@@ -37,4 +40,25 @@ public interface ItemTransactionRepository extends JpaRepository<ItemTransaction
             "WHERE it.item = :item " +
             "ORDER BY it.createdAt DESC")
     List<ItemTransaction> findBidHistoryByItem(@Param("item") Item item, Pageable pageable);
+
+    // n+1 문제 방지 위해(상품 조회시마다 각 상품 입찰수가 n+1 만큼 추가로 조회되는걸 방지위한 배치 쿼리 적용)
+    @Query("SELECT t.item.itemId as itemId, COUNT(t) as bidCount " +
+            "FROM ItemTransaction t " +
+            "WHERE t.item.itemId IN :itemIds " +
+            "GROUP BY t.item.itemId")
+    List<Object[]> countByItemIds(@Param("itemIds") List<Long> itemIds);
+
+    // Map으로 변환하는 default 메서드 추가
+    default Map<Long, Long> countByItemIdsAsMap(List<Long> itemIds) {
+        if (itemIds == null || itemIds.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        List<Object[]> results = countByItemIds(itemIds);
+        return results.stream()
+                .collect(Collectors.toMap(
+                        arr -> (Long) arr[0],        // itemId
+                        arr -> (Long) arr[1],        // bidCount
+                        (existing, replacement) -> existing
+                ));
 }

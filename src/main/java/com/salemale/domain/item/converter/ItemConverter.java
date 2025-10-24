@@ -131,6 +131,10 @@ public class ItemConverter {
                 .build();
     }
 
+    private static String getThumbnailUrl(Item item) {
+        return item.getImages().isEmpty() ? null : item.getImages().get(0).getImageUrl();
+    }
+
     /**
      * UserLiked Entity → LikedItemDTO 변환
      * @param userLiked 찜한 상품 엔티티
@@ -144,7 +148,7 @@ public class ItemConverter {
         Item item = userLiked.getItem();
 
         // 썸네일은 첫 번째 이미지 사용
-        String thumbnailUrl = item.getImages().isEmpty() ? null : item.getImages().get(0).getImageUrl();
+        String thumbnailUrl = getThumbnailUrl(item);
 
         return com.salemale.domain.item.dto.response.LikedItemDTO.builder()
                 .itemId(item.getItemId())
@@ -167,7 +171,7 @@ public class ItemConverter {
             Long bidCount
     ) {
         // 썸네일은 첫 번째 이미지 사용
-        String thumbnailUrl = item.getImages().isEmpty() ? null : item.getImages().get(0).getImageUrl();
+        String thumbnailUrl = getThumbnailUrl(item);
 
         return com.salemale.domain.item.dto.response.AuctionListItemDTO.builder()
                 .itemId(item.getItemId())
