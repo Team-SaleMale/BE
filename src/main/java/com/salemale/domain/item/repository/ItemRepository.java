@@ -1,6 +1,7 @@
 package com.salemale.domain.item.repository;
 
 import com.salemale.domain.item.entity.Item;
+import com.salemale.domain.user.entity.User;
 import com.salemale.global.common.enums.ItemStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -43,4 +44,13 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
     @Modifying
     @Query("UPDATE Item i SET i.viewCount = i.viewCount + 1 WHERE i.itemId = :itemId")
     int incrementViewCount(@Param("itemId") Long itemId);
+
+    // 판매 중인 상품 개수
+    Long countBySeller(User seller);
+
+    // 낙찰받은 상품 개수
+    Long countByWinner(User winner);
+
+    // 특정 상태의 상품 개수
+    Long countBySellerAndItemStatus(User seller, ItemStatus itemStatus);
 }

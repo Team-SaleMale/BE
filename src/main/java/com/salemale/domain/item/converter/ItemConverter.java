@@ -2,6 +2,7 @@ package com.salemale.domain.item.converter;
 
 import com.salemale.domain.item.dto.response.AuctionListItemDTO;
 import com.salemale.domain.item.dto.response.LikedItemDTO;
+import com.salemale.domain.item.dto.response.MyAuctionItemDTO;
 import com.salemale.domain.item.dto.response.detail.*;
 import com.salemale.domain.item.entity.Item;
 import com.salemale.domain.item.entity.ItemImage;
@@ -179,4 +180,60 @@ public class ItemConverter {
                 .itemStatus(item.getItemStatus().name())
                 .build();
     }
+
+    /**
+     * Item → MyAuctionItemDTO 변환
+     * @param item 상품 엔티티
+     * @param currentUser 현재 로그인한 사용자
+     * @param isHighestBidder 최고가 입찰자 여부
+     * @return MyAuctionItemDTO
+     */
+    public static MyAuctionItemDTO toMyAuctionItemDTO(
+            Item item,
+            User currentUser,
+            Boolean isHighestBidder
+    ) {
+        String thumbnailUrl = getThumbnailUrl(item);
+        String myRole = determineMyRole(item, currentUser);
+
+        return MyAuctionItemDTO.builder()
+                .itemId(item.getItemId())
+                .title(item.getTitle())
+                .thumbnailUrl(thumbnailUrl)
+                .viewCount(item.getViewCount())
+                .bidderCount(item.getBidCount())
+                .startPrice(item.getStartPrice())
+                .currentPrice(item.getCurrentPrice())
+                .itemStatus(item.getItemStatus().name())
+                .endTime(item.getEndTime())
+                .myRole(myRole)
+                .isHighestBidder(isHighestBidder)
+                .build();
+    }
+
+    /**
+     * 내 역할 판단
+     *
+     * @param item 상품
+     * @param currentUser 현재 사용자
+     * @return SELLER, WINNER, BIDDER
+     */
+    private static String determineMyRole(Item item, User currentUser) {
+        // 1. 낙찰자인지 확인
+        if (item.getWinner() != null &&
+                item.getWinner().getId().equals(currentUser.getId())) {
+            return "WINNER";
+        }
+
+        // 2. 판매자인지 확인
+        if (item.getSeller().getId().equals(currentUser.getId())) {
+            return "SELLER";
+        }
+
+        // 3. 그 외는 입찰자
+        return "BIDDER";
+    }
+
+    // 기존의 getThumbnailUrl() 메서드 활용
+    // private static String getThumbnailUrl(Item item) { ... }
 }

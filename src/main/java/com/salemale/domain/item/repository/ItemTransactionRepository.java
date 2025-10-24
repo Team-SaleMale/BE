@@ -38,4 +38,25 @@ public interface ItemTransactionRepository extends JpaRepository<ItemTransaction
             "WHERE it.item = :item " +
             "ORDER BY it.createdAt DESC")
     List<ItemTransaction> findBidHistoryByItem(@Param("item") Item item, Pageable pageable);
+
+    /**
+     * 사용자가 입찰한 상품 개수 (중복 제거)
+     * @param buyer 입찰자
+     * @return 입찰한 상품 개수
+     */
+    @Query("SELECT COUNT(DISTINCT t.item) FROM ItemTransaction t WHERE t.buyer = :buyer")
+    Long countDistinctItemByBuyer(@Param("buyer") User buyer);
+
+    /**
+     * 사용자가 특정 상품의 최고가 입찰자인지 확인
+     * @param item 상품
+     * @param buyer 사용자
+     * @return 최고가 입찰자 여부
+     */
+    @Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END " +
+            "FROM ItemTransaction t " +
+            "WHERE t.item = :item " +
+            "AND t.buyer = :buyer " +
+            "AND t.bidPrice = (SELECT MAX(t2.bidPrice) FROM ItemTransaction t2 WHERE t2.item = :item)")
+    Boolean isHighestBidder(@Param("item") Item item, @Param("buyer") User buyer);
 }
