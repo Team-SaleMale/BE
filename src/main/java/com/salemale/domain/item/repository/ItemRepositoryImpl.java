@@ -89,10 +89,6 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
             return null;
         }
 
-        if (status == null) {
-            return null;
-        }
-
         // 이제 내부에서 시간을 계산하지 않음
         return switch (status) {
             case BIDDING -> item.itemStatus.eq(ItemStatus.BIDDING)
