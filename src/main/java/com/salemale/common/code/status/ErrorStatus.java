@@ -46,6 +46,7 @@ public enum ErrorStatus implements BaseErrorCode {
     // 경매 관련 에러 (나중에 추가)
     AUCTION_NOT_FOUND(HttpStatus.NOT_FOUND, "AUCTION4001", "경매를 찾을 수 없습니다."),
     AUCTION_ALREADY_ENDED(HttpStatus.BAD_REQUEST, "AUCTION4002", "이미 종료된 경매입니다."),
+    AUCTION_NOT_BIDDING(HttpStatus.BAD_REQUEST, "AUCTION4003", "현재 입찰할 수 없는 상품입니다."),
 
     // 입찰 관련 에러 (나중에 추가)
     BID_AMOUNT_TOO_LOW(HttpStatus.BAD_REQUEST, "BID4001", "최소 입찰 금액보다 낮습니다."),

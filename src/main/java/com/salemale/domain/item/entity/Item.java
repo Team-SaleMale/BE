@@ -90,6 +90,16 @@ public class Item extends BaseEntity {
     @JoinColumn(name = "region_id", nullable = false)
     private Region region;
 
+    // 조회수컬럼 추가
+    @Column(name = "view_count", nullable = false)
+    @Builder.Default
+    private Long viewCount = 0L;
+
+    // 입찰 수 컬럼 추가
+    @Column(name = "bid_count", nullable = false)
+    @Builder.Default
+    private Long bidCount = 0L;
+
     // 입찰이 없을때 낙찰로 경매 상품 상태 변경
     public void completeAuction(User winner) {
         this.winner = winner;
@@ -99,5 +109,25 @@ public class Item extends BaseEntity {
     // 입찰이 없었을 경우 유찰로 경매 상품 상태 변경
     public void failAuction() {
         this.itemStatus = ItemStatus.FAIL;
+    }
+
+    // 현재 입찰가 업데이트
+    public void updateCurrentPrice(Integer newPrice) {
+        this.currentPrice = newPrice;
+    }
+
+    // 입찰 수 증가 메서드, 입찰이 발생할 때 입찰 수를 1 증가
+    public void incrementBidCount() {
+        this.bidCount++;
+    }
+
+    // 경매가 종료되었는지 확인 @return 경매 종료 여부 (true: 종료됨, false: 진행 중)
+    public boolean isAuctionEnded() {
+        return LocalDateTime.now().isAfter(this.endTime);
+    }
+
+    // 경매가 입찰 중인지 확인 @return 입찰 가능 여부
+    public boolean isBiddingStatus() {
+        return this.itemStatus == ItemStatus.BIDDING;
     }
 }

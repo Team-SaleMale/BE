@@ -9,12 +9,13 @@ import org.springframework.stereotype.Component; // 스프링 빈 등록을 위�
 import java.nio.charset.StandardCharsets; // 문자열을 바이트로 변환 시 UTF-8 지정
 import javax.crypto.SecretKey; // HMAC 서명/검증에 사용하는 대칭키 타입
 import java.util.Date; // 발급/만료 시각 표현
+import java.util.UUID; // jti(토큰 식별자) 생성
 
 /**
  * JwtTokenProvider: JWT 액세스 토큰을 생성하고 검증하는 컴포넌트입니다.
  *
  * - HMAC-SHA 대칭키 방식으로 서명/검증을 수행합니다.
- * - 토큰의 주체(subject)에 사용자 식별자(이메일 등)를 담습니다.
+ * - 토큰의 주체(subject)에 사용자 ID(UID)를 담습니다 (소셜/로컬 계정 통합 식별).
  * - 만료 시간을 설정하여 토큰의 유효기간을 제한합니다.
  *
  * 주의사항:
@@ -64,9 +65,9 @@ public class JwtTokenProvider {
     }
 
     /**
-     * JWT 액세스 토큰 생성: 사용자 식별자를 담은 서명된 토큰을 발급합니다.
+     * JWT 액세스 토큰 생성: 사용자 ID를 담은 서명된 토큰을 발급합니다.
      *
-     * @param subject 토큰의 주체(보통 사용자 이메일 또는 ID)
+     * @param subject 토큰의 주체(사용자 ID를 문자열로 변환한 값, 예: "123")
      * @return 서명된 JWT 문자열(헤더.페이로드.서명 형태)
      */
     public String generateToken(String subject) {
@@ -75,13 +76,15 @@ public class JwtTokenProvider {
         Date expiry = new Date(now.getTime() + accessTokenValidityMs); // 현재 시각 + 유효기간 = 만료 시각
 
         // 2) JWT 빌더를 사용하여 토큰을 생성합니다.
-        //    - subject: 토큰의 주체(사용자 식별자)를 설정합니다.
+        //    - subject: 토큰의 주체(사용자 ID)를 설정합니다.
         //    - issuedAt: 발급 시각(iat 클레임)을 설정합니다.
         //    - expiration: 만료 시각(exp 클레임)을 설정합니다.
         //    - signWith: HMAC 알고리즘으로 서명하여 무결성을 보장합니다.
         //    - compact: 최종적으로 "헤더.페이로드.서명" 형태의 문자열로 변환합니다.
         return Jwts.builder()
-                .subject(subject) // 토큰의 주체 설정(인증된 사용자 식별자)
+                .subject(subject) // 토큰의 주체 설정(사용자 ID)
+                .claim("token_type", "access") // 액세스 토큰 타입 명시
+                .id(UUID.randomUUID().toString()) // jti 부여(추후 블랙리스트/회전 추적용)
                 .issuedAt(now) // 발급 시각(iat)
                 .expiration(expiry) // 만료 시각(exp)
                 .signWith(signingKey) // HMAC 서명
@@ -89,10 +92,30 @@ public class JwtTokenProvider {
     }
 
     /**
-     * JWT 토큰 검증 및 주체 추출: 서명을 확인하고 토큰에서 사용자 식별자를 가져옵니다.
+     * JWT 리프레시 토큰 생성: 더 긴 만료기간을 갖는 갱신 전용 토큰을 발급합니다.
+     *
+     * @param subject 토큰의 주체(사용자 ID)
+     * @return 서명된 JWT 문자열
+     */
+    public String generateRefreshToken(String subject) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + refreshTokenValidityMs);
+
+        return Jwts.builder()
+                .subject(subject)
+                .claim("token_type", "refresh") // 리프레시 토큰 타입 명시
+                .id(UUID.randomUUID().toString()) // jti 부여(회전/폐기 추적 기반)
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(signingKey)
+                .compact();
+    }
+
+    /**
+     * JWT 토큰 검증 및 주체 추출: 서명을 확인하고 토큰에서 사용자 ID를 가져옵니다.
      *
      * @param token 검증할 JWT 문자열
-     * @return 토큰의 주체(subject, 사용자 식별자)
+     * @return 토큰의 주체(subject, 사용자 ID를 문자열로 표현, 예: "123")
      * @throws io.jsonwebtoken.JwtException 토큰이 유효하지 않거나(서명 불일치/만료 등) 파싱 실패 시 발생
      */
     public String getSubject(String token) {
@@ -110,7 +133,25 @@ public class JwtTokenProvider {
                 .parseSignedClaims(token) // 서명 검증과 함께 클레임 파싱
                 .getPayload(); // 클레임 추출
 
-        // 2) 클레임에서 subject(사용자 식별자)를 반환합니다.
+        // 2) 클레임에서 subject(사용자 ID)를 반환합니다.
+        return claims.getSubject();
+    }
+
+    /**
+     * 토큰 타입을 검증하고, 예상 타입과 일치할 때만 subject를 반환합니다.
+     * 일치하지 않으면 JwtException을 던집니다.
+     */
+    public String getSubjectIfTokenType(String token, String expectedType) {
+        Claims claims = Jwts.parser()
+                .verifyWith(signingKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        String tokenType = claims.get("token_type", String.class);
+        if (tokenType == null || !expectedType.equals(tokenType)) {
+            throw new io.jsonwebtoken.JwtException("Unexpected token type: " + tokenType);
+        }
         return claims.getSubject();
     }
 }

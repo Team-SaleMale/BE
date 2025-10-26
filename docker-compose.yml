@@ -24,7 +24,9 @@ services:
       
       # JWT Configuration
       JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      # 애플리케이션 프로퍼티 키와 일치하는 만료값 전달
+      JWT_ACCESS_TOKEN_VALIDITY: ${JWT_ACCESS_TOKEN_VALIDITY}
+      JWT_REFRESH_TOKEN_VALIDITY: ${JWT_REFRESH_TOKEN_VALIDITY}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 30s

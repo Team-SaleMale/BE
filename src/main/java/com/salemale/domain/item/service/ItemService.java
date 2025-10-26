@@ -2,27 +2,37 @@ package com.salemale.domain.item.service;
 
 import com.salemale.common.code.status.ErrorStatus;
 import com.salemale.common.exception.GeneralException;
+import com.salemale.domain.item.converter.ItemConverter;
+import com.salemale.domain.item.dto.request.BidRequest;
 import com.salemale.domain.item.dto.request.ItemRegisterRequest;
-import com.salemale.domain.item.dto.response.ItemLikeResponse;
-import com.salemale.domain.item.dto.response.ItemRegisterResponse;
+import com.salemale.domain.item.dto.response.*;
+import com.salemale.domain.item.dto.response.detail.ItemDetailResponse;
 import com.salemale.domain.item.entity.Item;
 import com.salemale.domain.item.entity.ItemImage;
+import com.salemale.domain.item.entity.ItemTransaction;
 import com.salemale.domain.item.entity.UserLiked;
 import com.salemale.domain.item.repository.ItemRepository;
+import com.salemale.domain.item.repository.ItemTransactionRepository;
 import com.salemale.domain.item.repository.UserLikedRepository;
 import com.salemale.domain.region.entity.Region;
-import com.salemale.domain.region.repository.RegionRepository;
 import com.salemale.domain.user.entity.User;
 import com.salemale.domain.user.repository.UserRegionRepository;
 import com.salemale.domain.user.repository.UserRepository;
+import com.salemale.global.common.enums.AuctionSortType;
+import com.salemale.global.common.enums.AuctionStatus;
+import com.salemale.global.common.enums.Category;
 import com.salemale.global.common.enums.ItemStatus;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.IntStream;
 
 @Service
@@ -34,13 +44,14 @@ public class ItemService {
     private final UserRepository userRepository;
     private final UserLikedRepository userLikedRepository;
     private final UserRegionRepository userRegionRepository;
-    private final RegionRepository regionRepository;
+    private final ItemTransactionRepository itemTransactionRepository;
 
+    //찜하기
     @Transactional
-    public ItemLikeResponse likeItem(String email, Long itemId) {
+    public ItemLikeResponse likeItem(Long userId, Long itemId) {
 
-        // 1. 사용자 조회
-        User user = userRepository.findByEmail(email)
+        // 1. 사용자 조회 (UID 기반)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
         // 2. 상품 조회
@@ -69,11 +80,41 @@ public class ItemService {
         return ItemLikeResponse.of(itemId, true);
     }
 
+    /**
+     * 찜 취소
+     * 
+     * @param userId 찜 취소하려는 사용자의 ID (JWT에서 추출)
+     * @param itemId 찜 취소할 상품의 ID
+     * @return 찜 취소 결과 (itemId, liked=false)
+     */
     @Transactional
-    public ItemRegisterResponse registerItem(String sellerEmail, ItemRegisterRequest request) {
+    public ItemLikeResponse unlikeItem(Long userId, Long itemId) {
 
-        // 1. 판매자 (User) 조회
-        User seller = userRepository.findByEmail(sellerEmail)
+        // 1. 사용자 조회 (UID 기반)
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+        // 2. 상품 조회
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.ITEM_NOT_FOUND));
+
+        // 3. 찜한 레코드 찾기
+        UserLiked userLiked = userLikedRepository.findByUserAndItem(user, item)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.ITEM_NOT_LIKED));
+
+        // 4. 찜 취소 (삭제)
+        userLikedRepository.delete(userLiked);
+
+        // 5. 응답 반환
+        return ItemLikeResponse.of(itemId, false);
+    }
+
+    // 경매 상품 등록
+    @Transactional
+    public ItemRegisterResponse registerItem(Long sellerId, ItemRegisterRequest request) {
+
+        // 1. 판매자 (User) 조회 (UID 기반)
+        User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
         // 2. 판매자의 대표 동네 (Region) 조회 -> 테스트 위해 주석 처리
@@ -137,6 +178,211 @@ public class ItemService {
                 .startPrice(savedItem.getStartPrice())
                 .endTime(savedItem.getEndTime())
                 .createdAt(savedItem.getCreatedAt())
+                .build();
+    }
+
+    /**
+     * 경매 상품에 입찰
+     * 
+     * @param userId 입찰자의 사용자 ID (JWT에서 추출)
+     * @param itemId 입찰할 상품의 ID
+     * @param request 입찰 요청 (입찰 가격)
+     * @return 입찰 결과 (거래 ID, 입찰가, 이전가, 입찰 수 등)
+     */
+    @Transactional
+    public BidResponse bidOnItem(Long userId, Long itemId, BidRequest request) {
+
+        // 1. 입찰자 조회 (UID 기반)
+        User buyer = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+        // 2. 상품 조회 (비관적 락 사용 - 동시성 제어)
+        Item item = itemRepository.findByIdWithLock(itemId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.ITEM_NOT_FOUND));
+
+        // 3. 입찰 전 현재가 저장 (previousPrice로 사용)
+        Integer previousPrice = item.getCurrentPrice();
+
+        // 4. 입찰 검증
+        validateBid(buyer, item, request.getBidPrice());
+
+        // 5. 입찰 거래 생성
+        ItemTransaction transaction = ItemTransaction.builder()
+                .buyer(buyer)
+                .item(item)
+                .bidPrice(request.getBidPrice())
+                .build();
+        ItemTransaction savedTransaction = itemTransactionRepository.save(transaction);
+
+        // 6. Item의 현재가 업데이트
+        item.updateCurrentPrice(request.getBidPrice());
+        item.incrementBidCount();
+
+        // 7. 응답 DTO 생성
+        return BidResponse.builder()
+                .transactionId(savedTransaction.getTransactionId())
+                .itemId(item.getItemId())
+                .buyerId(buyer.getId())
+                .bidPrice(request.getBidPrice())
+                .previousPrice(previousPrice)
+                .currentHighestPrice(request.getBidPrice())
+                .bidIncrement(item.getBidIncrement())
+                .bidCount(item.getBidCount())
+                .bidTime(savedTransaction.getCreatedAt())
+                .endTime(item.getEndTime())
+                .build();
+    }
+
+
+    //입찰 가능 여부를 검증
+    private void validateBid(User buyer, Item item, Integer bidPrice) {
+
+        // 1. 본인 상품 입찰 방지
+        if (item.getSeller().getId().equals(buyer.getId())) {
+            throw new GeneralException(ErrorStatus.BID_SELF_AUCTION);
+        }
+
+        // 2. 경매 상태 확인 (BIDDING 상태여야 함)
+        if (!item.isBiddingStatus()) {
+            throw new GeneralException(ErrorStatus.AUCTION_NOT_BIDDING);
+        }
+
+        // 3. 경매 종료 시간 확인
+        if (item.isAuctionEnded()) {
+            throw new GeneralException(ErrorStatus.AUCTION_ALREADY_ENDED);
+        }
+
+        // 4. 최소 입찰 가격 확인 (현재가 + 최소 입찰 단위 이상)
+        long minimumBidPrice = (long) item.getCurrentPrice() + item.getBidIncrement();
+        if (bidPrice < minimumBidPrice) {
+            throw new GeneralException(ErrorStatus.BID_AMOUNT_TOO_LOW);
+        }
+    }
+
+    /**
+     * 경매 상품 상세 조회
+     * @param itemId 상품 ID
+     * @param email 로그인한 사용자 이메일 (nullable)
+     * @param bidHistoryLimit 조회할 입찰 내역 개수
+     * @return 상품 상세 정보
+     */
+    @Transactional //read only 제거 -> 조회수 업데이트 위해
+    public ItemDetailResponse getItemDetail(Long itemId, String email, Integer bidHistoryLimit) {
+
+        // 1. 상품 조회 (fetch join으로 연관 엔티티 함께 조회)
+        Item item = itemRepository.findByIdWithDetails(itemId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.ITEM_NOT_FOUND));
+
+        // ===== 조회수 증가: 원자적 DB 업데이트 =====
+        itemRepository.incrementViewCount(itemId);
+
+        // 2. 입찰 내역 조회 (최신순, 제한된 개수)
+        int limit = bidHistoryLimit != null ? bidHistoryLimit : 10;
+        Pageable pageable = PageRequest.of(0, limit);
+        List<ItemTransaction> bidHistory = itemTransactionRepository
+                .findBidHistoryByItem(item, pageable);
+
+        // 3. 최고 입찰 조회
+        ItemTransaction highestBid = itemTransactionRepository
+                .findTopByItemOrderByBidPriceDescCreatedAtAsc(item)
+                .orElse(null);
+
+        // 5. 찜 개수 조회
+        Long likeCount = userLikedRepository.countByItem(item);
+
+        // 6. 현재 사용자의 찜 여부 확인 (로그인한 경우)
+        Boolean isLiked = false;
+        if (email != null) {
+            User user = userRepository.findByEmail(email).orElse(null);
+            if (user != null) {
+                isLiked = userLikedRepository.existsByUserAndItem(user, item);
+            }
+        }
+
+        // 7. Converter를 통해 DTO 변환
+        return ItemConverter.toItemDetailResponse(
+                item, bidHistory, highestBid, likeCount, isLiked
+        );
+    }
+
+    /**
+     * 찜한 상품 목록 조회 (페이징)
+     * - 최신 찜한 순으로 고정 정렬
+     *
+     * @param userId 사용자 ID (JWT에서 추출)
+     * @param pageable 페이징 정보 (page, size)
+     * @return 찜한 상품 목록과 페이징 정보
+     */
+    @Transactional(readOnly = true)
+    public LikedItemListResponse getLikedItems(
+            Long userId,
+            Pageable pageable) {
+
+        // 1. 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+        // 2. 찜한 상품 목록 조회 (페이징, 최신순 정렬)
+       Page<UserLiked> likedPage =
+                userLikedRepository.findLikedItemsByUser(user, pageable);
+
+        // 3. DTO 변환 (엔티티의 bidCount 사용)
+        List<LikedItemDTO> likedItems =
+                likedPage.getContent().stream()
+                        .map(userLiked -> ItemConverter.toLikedItemDTO(userLiked))  // ⭐ bidCount 파라미터 제거
+                        .toList();
+
+        // 4. 페이징 정보와 함께 응답 DTO 생성
+        return LikedItemListResponse.builder()
+                .likedItems(likedItems)
+                .totalElements(likedPage.getTotalElements())
+                .totalPages(likedPage.getTotalPages())
+                .currentPage(likedPage.getNumber())
+                .size(likedPage.getSize())
+                .hasNext(likedPage.hasNext())
+                .hasPrevious(likedPage.hasPrevious())
+                .build();
+    }
+
+    /**
+     * 경매 상품 리스트 조회
+     *
+     * @param status 상태 필터 (BIDDING, COMPLETED, POPULAR)
+     * @param categories 카테고리 필터(다중선택 가능)
+     * @param minPrice 최소 가격
+     * @param maxPrice 최대 가격
+     * @param sortType 정렬 타입
+     * @param pageable 페이징 정보
+     * @return 경매 상품 리스트와 페이징 정보
+     */
+    @Transactional(readOnly = true)
+    public AuctionListResponse getAuctionList(
+            AuctionStatus status,
+            List<Category> categories,
+            Integer minPrice,
+            Integer maxPrice,
+            AuctionSortType sortType,
+            Pageable pageable
+    ) {
+        // 1. QueryDSL로 동적 쿼리 실행 (이미 DB에서 정렬됨)
+        Page<Item> itemPage = itemRepository.findAuctionList(
+                status, categories, minPrice, maxPrice, sortType, pageable
+        );
+
+        // 2. DTO 변환 (엔티티의 bidCount 사용)
+        List<AuctionListItemDTO> items = itemPage.getContent().stream()
+                .map(item -> ItemConverter.toAuctionListItemDTO(item))
+                .toList();
+
+        // 3. 페이징 정보와 함께 응답 DTO 생성
+        return AuctionListResponse.builder()
+                .items(items)
+                .totalElements(itemPage.getTotalElements())
+                .totalPages(itemPage.getTotalPages())
+                .currentPage(itemPage.getNumber())
+                .size(itemPage.getSize())
+                .hasNext(itemPage.hasNext())
+                .hasPrevious(itemPage.hasPrevious())
                 .build();
     }
 }
