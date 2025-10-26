@@ -49,6 +49,6 @@ public class Chat extends BaseEntity {
     @Column(name = "seller_deleted_at")
     private LocalDateTime sellerDeletedAt;
 
-    @Column(name = "winner_deleted_at")
-    private LocalDateTime winnerDeletedAt;
+    @Column(name = "buyer_deleted_at")
+    private LocalDateTime buyerDeletedAt;
 }

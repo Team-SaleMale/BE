@@ -48,6 +48,7 @@ public class ChatService {
                     } else if (chat.getBuyer().getId().equals(me)) {
                         return chat.getBuyerDeletedAt() == null;
                     }
+
                     return false;
                 })
                 .map(chat -> {
@@ -130,7 +131,7 @@ public class ChatService {
                     .item(chat.getItem())
                     .lastMessageAt(chat.getLastMessageAt())
                     .sellerDeletedAt(now)
-                    .winnerDeletedAt(chat.getWinnerDeletedAt())
+                    .buyerDeletedAt(chat.getBuyerDeletedAt())
                     .build();
         } else if (chat.getBuyer().getId().equals(me)) {
             chat = Chat.builder()
@@ -140,7 +141,7 @@ public class ChatService {
                     .item(chat.getItem())
                     .lastMessageAt(chat.getLastMessageAt())
                     .sellerDeletedAt(chat.getSellerDeletedAt())
-                    .winnerDeletedAt(now)
+                    .buyerDeletedAt(now)
                     .build();
         } else {
             throw new IllegalStateException("참여자가 아님");
