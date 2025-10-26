@@ -13,9 +13,15 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "chat")
+@Table(
+        name = "chat",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_chat_item_seller_buyer",
+                columnNames = {"item_id", "seller_id", "winner_id"}
+        )
+)
 @Getter
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class Chat extends BaseEntity {
@@ -43,6 +49,6 @@ public class Chat extends BaseEntity {
     @Column(name = "seller_deleted_at")
     private LocalDateTime sellerDeletedAt;
 
-    @Column(name = "buyer_deleted_at")
-    private LocalDateTime buyerDeletedAt;
+    @Column(name = "winner_deleted_at")
+    private LocalDateTime winnerDeletedAt;
 }

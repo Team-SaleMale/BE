@@ -7,7 +7,7 @@ import com.salemale.domain.chat.repository.MessageRepository; // 메시지 리�
 import com.salemale.domain.item.entity.Item; // 아이템 엔티티
 import com.salemale.domain.item.repository.ItemRepository;
 import com.salemale.domain.user.entity.User; // 유저 엔티티
-import com.salemale.domain.user.repository.UserRepository; // 유저 리포지토리
+// import com.salemale.domain.user.repository.UserRepository; // 유저 리포지토리 -> 아이템 참조로 변경
 import jakarta.persistence.EntityNotFoundException; // 예외 처리용
 import lombok.RequiredArgsConstructor; // 생성자 주입
 import org.springframework.data.domain.Page;
@@ -28,12 +28,12 @@ public class ChatService {
 
     private final ChatRepository chatRepository; // 채팅 DB 접근
     private final MessageRepository messageRepository; // 메시지 조회용
-    private final UserRepository userRepository; // 유저 정보 조회
+    // private final UserRepository userRepository; // 유저 정보 조회
     private final ItemRepository itemRepository; // 상품 정보 조회
 
     /*
      채팅방 목록 조회
-     - 판매자 또는 구매자로 참여 중인 채팅방 모두 조회
+     - 내가 판매자 또는 구매(buyer==winner)로 참여 중인 채팅방 모두 조회
      - 미읽은 메시지 개수(unreadCount) 계산 포함
      */
     public List<ChatSummary> getChatList(Long me, boolean onlyUnread, int page, int size) {
@@ -76,28 +76,33 @@ public class ChatService {
      */
     @Transactional
     public ChatResponse createChat(Long me, CreateChatRequest req) {
-        Long buyerId = (req.getBuyerId() != null) ? req.getBuyerId() : me;
+        // 1) Item만 조회해서 seller/winner 모두 참조
+        Item item = itemRepository.findById(req.getItemId())
+                .orElseThrow(() -> new EntityNotFoundException("상품 없음"));
+
+        User seller = item.getSeller();
+        User winner = item.getWinner(); // 낙찰자(없으면 생성 불가)
+
+        if (seller == null) {
+            throw new IllegalStateException("판매자 정보가 없습니다.");
+        }
+        if (winner == null) {
+            throw new IllegalStateException("아직 낙찰자가 없는 상품입니다.");
+        }
+
 
         // 기존 동일 조합이 있는지 확인
         var existing = chatRepository.findByItem_ItemIdAndSeller_IdAndBuyer_Id(
-                req.getItemId(), req.getSellerId(), buyerId
+                item.getItemId(), seller.getId(), winner.getId()
         );
         if (existing.isPresent()) {
             return new ChatResponse(existing.get().getChatId());
         }
 
-        // FK 엔티티 조회
-        User seller = userRepository.findById(req.getSellerId())
-                .orElseThrow(() -> new EntityNotFoundException("판매자 없음"));
-        User buyer = userRepository.findById(buyerId)
-                .orElseThrow(() -> new EntityNotFoundException("구매자 없음"));
-        Item item = itemRepository.findById(req.getItemId())
-                .orElseThrow(() -> new EntityNotFoundException("상품 없음"));
-
         // 채팅방 생성 및 저장
         Chat chat = Chat.builder()
                 .seller(seller)
-                .buyer(buyer)
+                .buyer(winner) //buyer == winner
                 .item(item)
                 .lastMessageAt(LocalDateTime.now())
                 .build();
@@ -125,7 +130,7 @@ public class ChatService {
                     .item(chat.getItem())
                     .lastMessageAt(chat.getLastMessageAt())
                     .sellerDeletedAt(now)
-                    .buyerDeletedAt(chat.getBuyerDeletedAt())
+                    .winnerDeletedAt(chat.getWinnerDeletedAt())
                     .build();
         } else if (chat.getBuyer().getId().equals(me)) {
             chat = Chat.builder()
@@ -135,11 +140,45 @@ public class ChatService {
                     .item(chat.getItem())
                     .lastMessageAt(chat.getLastMessageAt())
                     .sellerDeletedAt(chat.getSellerDeletedAt())
-                    .buyerDeletedAt(now)
+                    .winnerDeletedAt(now)
                     .build();
         } else {
             throw new IllegalStateException("참여자가 아님");
         }
         chatRepository.save(chat);
     }
+
+    // 경매 종료 시 chat 자동 생성용
+    @Transactional
+    public ChatResponse createChatForItemWinner(Long itemId) {
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new EntityNotFoundException("상품 없음"));
+
+        User seller = item.getSeller();
+        User winner = item.getWinner();
+
+        if (seller == null) {
+            throw new IllegalStateException("판매자 정보가 없습니다.");
+        }
+        if (winner == null) {
+            throw new IllegalStateException("낙찰자가 없음(경매 미완료/유찰)");
+        }
+
+        var existing = chatRepository.findByItem_ItemIdAndSeller_IdAndBuyer_Id(
+                item.getItemId(), seller.getId(), winner.getId()
+        );
+        if (existing.isPresent()) {
+            return new ChatResponse(existing.get().getChatId());
+        }
+
+        Chat saved = chatRepository.save(Chat.builder()
+                .seller(seller)
+                .buyer(winner) // buyer == winner
+                .item(item)
+                .lastMessageAt(LocalDateTime.now())
+                .build());
+
+        return new ChatResponse(saved.getChatId());
+    }
+
 }
