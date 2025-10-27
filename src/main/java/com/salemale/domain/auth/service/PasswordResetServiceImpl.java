@@ -33,8 +33,11 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     private final PasswordEncoder passwordEncoder;
     private final StringRedisTemplate redisTemplate;
 
-    @Value("${password.reset.token-validity:10}")
+    @Value("${password.reset.code-validity-minutes:10}")
     private int codeValidityMinutes;
+    
+    @Value("${password.reset.token-validity-minutes:10}")
+    private int tokenValidityMinutes;
 
     private static final String REDIS_KEY_PREFIX = "password:reset:code:";
     private static final String REDIS_KEY_VERIFIED_PREFIX = "password:reset:verified:";
@@ -52,7 +55,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         // 사용자 존재 여부 확인 (보안을 위해 존재하지 않아도 성공 메시지 반환)
         Optional<UserAuth> userAuthOpt = userAuthRepository.findByEmailNormalized(normalizedEmail);
         if (userAuthOpt.isEmpty()) {
-            log.warn("비밀번호 재설정 요청: 존재하지 않는 이메일 - {}", normalizedEmail);
+            log.warn("비밀번호 재설정 요청: 존재하지 않는 이메일 - {}", maskEmail(normalizedEmail));
             return;
         }
 
@@ -70,9 +73,9 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         // 이메일 전송
         try {
             emailService.sendPasswordResetCode(normalizedEmail, code);
-            log.info("비밀번호 재설정 인증번호 생성 및 이메일 전송 완료: {}", normalizedEmail);
+            log.info("비밀번호 재설정 인증번호 생성 및 이메일 전송 완료: {}", maskEmail(normalizedEmail));
         } catch (Exception e) {
-            log.error("비밀번호 재설정 이메일 전송 실패: {}", normalizedEmail, e);
+            log.error("비밀번호 재설정 이메일 전송 실패: {}", maskEmail(normalizedEmail), e);
             throw new RuntimeException("이메일 전송에 실패했습니다.", e);
         }
     }
@@ -99,23 +102,25 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         // 인증번호 해시 비교 (타이밍 공격 방지)
         String hashedCode = hashCode(code);
-        if (!MessageDigest.isEqual(hashedCode.getBytes(), storedHashedCode.getBytes())) {
+        if (!MessageDigest.isEqual(
+                hashedCode.getBytes(StandardCharsets.UTF_8),
+                storedHashedCode.getBytes(StandardCharsets.UTF_8))) {
             throw new IllegalArgumentException("인증번호가 일치하지 않습니다.");
         }
 
-        // 세션 토큰 생성 및 Redis에 저장 (10분 TTL)
+        // 세션 토큰 생성 및 Redis에 저장
         String sessionToken = generateSessionToken();
         String tokenKey = REDIS_KEY_TOKEN_PREFIX + sessionToken;
-        redisTemplate.opsForValue().set(tokenKey, normalizedEmail, 10, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(tokenKey, normalizedEmail, tokenValidityMinutes, TimeUnit.MINUTES);
         
         // 인증 완료 상태 저장 (추가 보안 레이어)
         String verifiedKey = REDIS_KEY_VERIFIED_PREFIX + normalizedEmail;
-        redisTemplate.opsForValue().set(verifiedKey, "verified", 10, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(verifiedKey, "verified", tokenValidityMinutes, TimeUnit.MINUTES);
 
         // 원본 인증번호는 삭제 (일회용)
         redisTemplate.delete(redisKey);
 
-        log.info("비밀번호 재설정 인증번호 검증 완료: {}", normalizedEmail);
+        log.info("비밀번호 재설정 인증번호 검증 완료: {}", maskEmail(normalizedEmail));
         
         return sessionToken;
     }
@@ -162,7 +167,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         redisTemplate.delete(tokenKey);
         redisTemplate.delete(verifiedKey);
 
-        log.info("비밀번호 재설정 완료: {}", normalizedEmail);
+        log.info("비밀번호 재설정 완료: {}", maskEmail(normalizedEmail));
     }
 
     private String generateVerificationCode() {
@@ -199,6 +204,19 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("해시 생성 실패", e);
         }
+    }
+    
+    /**
+     * 이메일을 마스킹하여 로그에 기록합니다.
+     * 
+     * @param email 원본 이메일 주소
+     * @return 마스킹된 이메일 (예: g***@naver.com)
+     */
+    private String maskEmail(String email) {
+        if (email == null) return "null";
+        int at = email.indexOf('@');
+        if (at <= 1) return "***";
+        return email.charAt(0) + "***" + email.substring(at);
     }
 }
 
