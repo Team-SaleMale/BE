@@ -5,6 +5,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -36,11 +37,24 @@ public class EmailServiceImpl implements EmailService {
             helper.setText(htmlContent, true);
 
             mailSender.send(message);
-            log.info("비밀번호 재설정 인증번호 이메일 전송 완료: {}", to);
-        } catch (MessagingException e) {
-            log.error("비밀번호 재설정 인증번호 이메일 전송 실패: {}", to, e);
+            log.info("비밀번호 재설정 인증번호 이메일 전송 완료: {}", maskEmail(to));
+        } catch (MessagingException | MailException e) {
+            log.error("비밀번호 재설정 인증번호 이메일 전송 실패: {}", maskEmail(to), e);
             throw new RuntimeException("이메일 전송에 실패했습니다.", e);
         }
+    }
+    
+    /**
+     * 이메일을 마스킹하여 로그에 기록합니다.
+     * 
+     * @param email 원본 이메일 주소
+     * @return 마스킹된 이메일 (예: g***@naver.com)
+     */
+    private String maskEmail(String email) {
+        if (email == null) return "null";
+        int at = email.indexOf('@');
+        if (at <= 1) return "***";
+        return email.charAt(0) + "***" + email.substring(at);
     }
 
     private String buildPasswordResetCodeEmailHtml(String code) {
@@ -76,7 +90,7 @@ public class EmailServiceImpl implements EmailService {
                         </div>
                     </div>
                     <div class="footer">
-                        <p>© 2024 SaleMale. All rights reserved.</p>
+                        <p>© 2025 valuebid. All rights reserved.</p>
                         <p>이 메일은 발신 전용입니다.</p>
                     </div>
                 </div>
