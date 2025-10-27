@@ -1,5 +1,6 @@
 package com.salemale.domain.mypage.dto.response;
 
+import com.salemale.domain.mypage.enums.MyRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -31,6 +32,6 @@ public class MyAuctionItemDTO {
     private LocalDateTime endTime;     // 프론트에서 남은 시간 계산
 
     // 내 역할
-    private String myRole;             // SELLER, BIDDER, WINNER
+    private MyRole myRole;             // SELLER, BIDDER, WINNER
     private Boolean isHighestBidder;   // 내가 현재 최고가 입찰자인지
 }

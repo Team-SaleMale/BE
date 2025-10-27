@@ -1,4 +1,4 @@
-package com.salemale.global.common.enums;
+package com.salemale.domain.mypage.enums;
 
 public enum MyAuctionType {
     ALL,        // 전체 (판매 + 입찰)

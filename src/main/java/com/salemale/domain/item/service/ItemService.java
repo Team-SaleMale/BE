@@ -11,6 +11,8 @@ import com.salemale.domain.item.entity.Item;
 import com.salemale.domain.item.entity.ItemImage;
 import com.salemale.domain.item.entity.ItemTransaction;
 import com.salemale.domain.item.entity.UserLiked;
+import com.salemale.domain.item.enums.AuctionSortType;
+import com.salemale.domain.item.enums.AuctionStatus;
 import com.salemale.domain.item.repository.ItemRepository;
 import com.salemale.domain.item.repository.ItemTransactionRepository;
 import com.salemale.domain.item.repository.UserLikedRepository;

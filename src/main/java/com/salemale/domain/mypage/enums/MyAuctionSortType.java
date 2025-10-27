@@ -1,4 +1,4 @@
-package com.salemale.global.common.enums;
+package com.salemale.domain.mypage.enums;
 
 public enum MyAuctionSortType {
     CREATED_DESC,   // 최신순 (기본)

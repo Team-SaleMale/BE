@@ -2,6 +2,7 @@ package com.salemale.domain.item.converter;
 
 import com.salemale.domain.item.dto.response.AuctionListItemDTO;
 import com.salemale.domain.item.entity.UserLiked;
+import com.salemale.domain.mypage.enums.MyRole;
 import com.salemale.domain.mypage.dto.response.LikedItemDTO;
 import com.salemale.domain.mypage.dto.response.MyAuctionItemDTO;
 import com.salemale.domain.item.dto.response.detail.*;
@@ -52,7 +53,7 @@ public class ItemConverter {
                 .currentPrice(item.getCurrentPrice())
                 .bidIncrement(item.getBidIncrement())
                 .endTime(item.getEndTime())
-                .bidCount(item.getBidCount())  // ⭐ 엔티티에서 직접 조회
+                .bidCount(item.getBidCount())  // 엔티티에서 직접 조회
                 .build();
     }
 
@@ -181,17 +182,16 @@ public class ItemConverter {
     /**
      * Item → MyAuctionItemDTO 변환
      * @param item 상품 엔티티
-     * @param currentUser 현재 로그인한 사용자
+     * @param myRole 사용자 역할 (Service에서 계산된 값)
      * @param isHighestBidder 최고가 입찰자 여부
      * @return MyAuctionItemDTO
      */
     public static MyAuctionItemDTO toMyAuctionItemDTO(
             Item item,
-            User currentUser,
+            MyRole myRole,
             Boolean isHighestBidder
     ) {
         String thumbnailUrl = getThumbnailUrl(item);
-        String myRole = determineMyRole(item, currentUser);
 
         return MyAuctionItemDTO.builder()
                 .itemId(item.getItemId())
@@ -206,29 +206,5 @@ public class ItemConverter {
                 .myRole(myRole)
                 .isHighestBidder(isHighestBidder)
                 .build();
-    }
-
-    /**
-     * 내 역할 판단
-     *
-     * @param item 상품
-     * @param currentUser 현재 사용자
-     * @return SELLER, WINNER, BIDDER
-     */
-    private static String determineMyRole(Item item, User currentUser) {
-        // 1. 낙찰자인지 확인
-        if (item.getWinner() != null &&
-                item.getWinner().getId().equals(currentUser.getId())) {
-            return "WINNER";
-        }
-
-        /// 2. 판매자인지 확인 (null 체크 추가)
-        if (item.getSeller() != null &&
-                item.getSeller().getId().equals(currentUser.getId())) {
-            return "SELLER";
-        }
-
-        // 3. 그 외는 입찰자
-        return "BIDDER";
     }
 }

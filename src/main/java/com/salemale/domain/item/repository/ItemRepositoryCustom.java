@@ -1,6 +1,10 @@
 package com.salemale.domain.item.repository;
 
 import com.salemale.domain.item.entity.Item;
+import com.salemale.domain.item.enums.AuctionSortType;
+import com.salemale.domain.item.enums.AuctionStatus;
+import com.salemale.domain.mypage.enums.MyAuctionSortType;
+import com.salemale.domain.mypage.enums.MyAuctionType;
 import com.salemale.domain.user.entity.User;
 import com.salemale.global.common.enums.*;
 import org.springframework.data.domain.Page;
