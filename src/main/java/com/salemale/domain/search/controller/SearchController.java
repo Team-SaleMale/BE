@@ -28,7 +28,7 @@ import java.util.List;
  * - GET /api/search/regions: 지역 검색 (시/군구/읍면동)
  */
 @RestController // 검색 요청을 받고 검색 결과를 JSON으로 돌려주는 컨트롤러입니다.
-@RequestMapping("/api/search") // 검색 API의 베이스 경로입니다.
+@RequestMapping("/search") // 검색 API의 베이스 경로입니다.
 @RequiredArgsConstructor // 필요한 서비스는 생성자 주입으로 받습니다.
 @Slf4j // 검색어/응답시간 등을 로그로 남겨 추적합니다.
 @Validated // Bean Validation을 활성화하여 메서드 파라미터 검증을 수행합니다.

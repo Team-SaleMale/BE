@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.*; // 스프링 MVC 애노테이�
  * - DELETE /api/regions/{id}: 지역 삭제
  */
 @RestController // HTTP 요청을 받아 JSON 응답으로 돌려주는 컨트롤러입니다.
-@RequestMapping("/api/regions") // 지역 관련 모든 API 경로는 /api/regions로 시작합니다.
+@RequestMapping("/regions") // 지역 관련 모든 API 경로는 /regions로 시작합니다.
 @RequiredArgsConstructor // 필요한 의존성은 생성자 주입으로 받아옵니다.
 @Slf4j // 서버 로그에 정보를 남겨 문제를 추적할 수 있게 합니다.
 @Tag(name = "지역 관리", description = "지역(행정동) 생성, 수정, 삭제 API (관리자용)")

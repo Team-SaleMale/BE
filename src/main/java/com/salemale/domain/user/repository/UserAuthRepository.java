@@ -14,6 +14,9 @@ public interface UserAuthRepository extends JpaRepository<UserAuth, Long> {
     
     // 특정 사용자의 특정 제공자 인증 정보 조회 (비밀번호 변경 등에 사용)
     Optional<UserAuth> findByProviderAndUser(LoginType provider, User user);
+    
+    // 이메일로 인증 정보 조회 (비밀번호 재설정 등에 사용)
+    Optional<UserAuth> findByEmailNormalized(String emailNormalized);
 }
 
 
