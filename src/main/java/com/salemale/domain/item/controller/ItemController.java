@@ -4,14 +4,11 @@ import com.salemale.common.code.status.SuccessStatus;
 import com.salemale.common.response.ApiResponse;
 import com.salemale.domain.item.dto.request.BidRequest;
 import com.salemale.domain.item.dto.request.ItemRegisterRequest;
-import com.salemale.domain.item.dto.response.AuctionListResponse;
-import com.salemale.domain.item.dto.response.BidResponse;
-import com.salemale.domain.item.dto.response.ItemLikeResponse;
-import com.salemale.domain.item.dto.response.ItemRegisterResponse;
+import com.salemale.domain.item.dto.response.*;
 import com.salemale.domain.item.dto.response.detail.ItemDetailResponse;
 import com.salemale.domain.item.service.ItemService;
-import com.salemale.global.common.enums.AuctionSortType;
-import com.salemale.global.common.enums.AuctionStatus;
+import com.salemale.domain.item.enums.AuctionSortType;
+import com.salemale.domain.item.enums.AuctionStatus;
 import com.salemale.global.common.enums.Category;
 import com.salemale.global.security.jwt.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.Operation;
@@ -132,38 +129,6 @@ public class ItemController {
     ) {
         String email = userDetails != null ? userDetails.getUsername() : null;
         ItemDetailResponse response = itemService.getItemDetail(itemId, email, bidHistoryLimit);
-
-        return ResponseEntity.ok(ApiResponse.onSuccess(response));
-    }
-
-    /**
-     * 찜한 상품 목록 조회
-     * GET /auctions/liked
-     * - JWT 인증 필요 (Authorization: Bearer <token>)
-     * - JWT의 subject(UID)를 기반으로 현재 사용자 식별
-     * - 최신 찜한 순으로 고정 정렬
-     */
-    @Operation(
-            summary = "찜한 상품 목록 조회",
-            description = "현재 로그인한 사용자가 찜한 경매 상품 목록을 조회합니다. 최근 찜한 순으로 정렬됩니다.")
-    @GetMapping("/liked")
-    public ResponseEntity<ApiResponse<com.salemale.domain.item.dto.response.LikedItemListResponse>> getLikedItems(
-            @Parameter(hidden = true) HttpServletRequest request,
-            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
-            @RequestParam(required = false, defaultValue = "0") int page,
-            @Parameter(description = "페이지당 아이템 개수", example = "20")
-            @RequestParam(required = false, defaultValue = "20") int size
-    ) {
-        // JWT에서 현재 사용자 ID 추출
-        Long userId = currentUserProvider.getCurrentUserId(request);
-
-        // Pageable 객체 생성 (최신순 고정, sort는 Repository 쿼리에서 처리)
-        org.springframework.data.domain.Pageable pageable =
-                org.springframework.data.domain.PageRequest.of(page, size);
-
-        // 서비스 호출
-        com.salemale.domain.item.dto.response.LikedItemListResponse response =
-                itemService.getLikedItems(userId, pageable);
 
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
     }

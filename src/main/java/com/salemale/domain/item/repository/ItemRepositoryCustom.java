@@ -1,9 +1,12 @@
 package com.salemale.domain.item.repository;
 
 import com.salemale.domain.item.entity.Item;
-import com.salemale.global.common.enums.AuctionSortType;
-import com.salemale.global.common.enums.AuctionStatus;
-import com.salemale.global.common.enums.Category;
+import com.salemale.domain.item.enums.AuctionSortType;
+import com.salemale.domain.item.enums.AuctionStatus;
+import com.salemale.domain.mypage.enums.MyAuctionSortType;
+import com.salemale.domain.mypage.enums.MyAuctionType;
+import com.salemale.domain.user.entity.User;
+import com.salemale.global.common.enums.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -31,6 +34,14 @@ public interface ItemRepositoryCustom {
             Integer minPrice,
             Integer maxPrice,
             AuctionSortType sortType,
+            Pageable pageable
+    );
+
+    // 내 경매 목록 조회
+    Page<Item> findMyAuctions(
+            User user,
+            MyAuctionType type,
+            MyAuctionSortType sortType,
             Pageable pageable
     );
 }

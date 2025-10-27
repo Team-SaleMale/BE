@@ -1,4 +1,4 @@
-package com.salemale.global.common.enums;
+package com.salemale.domain.item.enums;
 
 // 경매 상품 리스트 페이지 상태 필터(추후 추천 페이지도 추가 예정)
 

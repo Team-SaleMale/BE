@@ -1,4 +1,4 @@
-package com.salemale.global.common.enums;
+package com.salemale.domain.item.enums;
 
 // 경매 상품 리스트 상품 정렬 타입
 public enum AuctionSortType {

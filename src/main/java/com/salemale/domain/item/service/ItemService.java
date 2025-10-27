@@ -11,6 +11,8 @@ import com.salemale.domain.item.entity.Item;
 import com.salemale.domain.item.entity.ItemImage;
 import com.salemale.domain.item.entity.ItemTransaction;
 import com.salemale.domain.item.entity.UserLiked;
+import com.salemale.domain.item.enums.AuctionSortType;
+import com.salemale.domain.item.enums.AuctionStatus;
 import com.salemale.domain.item.repository.ItemRepository;
 import com.salemale.domain.item.repository.ItemTransactionRepository;
 import com.salemale.domain.item.repository.UserLikedRepository;
@@ -18,10 +20,7 @@ import com.salemale.domain.region.entity.Region;
 import com.salemale.domain.user.entity.User;
 import com.salemale.domain.user.repository.UserRegionRepository;
 import com.salemale.domain.user.repository.UserRepository;
-import com.salemale.global.common.enums.AuctionSortType;
-import com.salemale.global.common.enums.AuctionStatus;
-import com.salemale.global.common.enums.Category;
-import com.salemale.global.common.enums.ItemStatus;
+import com.salemale.global.common.enums.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.IntStream;
 
 @Service
@@ -303,45 +301,6 @@ public class ItemService {
         return ItemConverter.toItemDetailResponse(
                 item, bidHistory, highestBid, likeCount, isLiked
         );
-    }
-
-    /**
-     * 찜한 상품 목록 조회 (페이징)
-     * - 최신 찜한 순으로 고정 정렬
-     *
-     * @param userId 사용자 ID (JWT에서 추출)
-     * @param pageable 페이징 정보 (page, size)
-     * @return 찜한 상품 목록과 페이징 정보
-     */
-    @Transactional(readOnly = true)
-    public LikedItemListResponse getLikedItems(
-            Long userId,
-            Pageable pageable) {
-
-        // 1. 사용자 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
-
-        // 2. 찜한 상품 목록 조회 (페이징, 최신순 정렬)
-       Page<UserLiked> likedPage =
-                userLikedRepository.findLikedItemsByUser(user, pageable);
-
-        // 3. DTO 변환 (엔티티의 bidCount 사용)
-        List<LikedItemDTO> likedItems =
-                likedPage.getContent().stream()
-                        .map(userLiked -> ItemConverter.toLikedItemDTO(userLiked))  // ⭐ bidCount 파라미터 제거
-                        .toList();
-
-        // 4. 페이징 정보와 함께 응답 DTO 생성
-        return LikedItemListResponse.builder()
-                .likedItems(likedItems)
-                .totalElements(likedPage.getTotalElements())
-                .totalPages(likedPage.getTotalPages())
-                .currentPage(likedPage.getNumber())
-                .size(likedPage.getSize())
-                .hasNext(likedPage.hasNext())
-                .hasPrevious(likedPage.hasPrevious())
-                .build();
     }
 
     /**

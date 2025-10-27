@@ -1,7 +1,10 @@
 package com.salemale.domain.item.converter;
 
 import com.salemale.domain.item.dto.response.AuctionListItemDTO;
-import com.salemale.domain.item.dto.response.LikedItemDTO;
+import com.salemale.domain.item.entity.UserLiked;
+import com.salemale.domain.mypage.enums.MyRole;
+import com.salemale.domain.mypage.dto.response.LikedItemDTO;
+import com.salemale.domain.mypage.dto.response.MyAuctionItemDTO;
 import com.salemale.domain.item.dto.response.detail.*;
 import com.salemale.domain.item.entity.Item;
 import com.salemale.domain.item.entity.ItemImage;
@@ -50,7 +53,7 @@ public class ItemConverter {
                 .currentPrice(item.getCurrentPrice())
                 .bidIncrement(item.getBidIncrement())
                 .endTime(item.getEndTime())
-                .bidCount(item.getBidCount())  // ⭐ 엔티티에서 직접 조회
+                .bidCount(item.getBidCount())  // 엔티티에서 직접 조회
                 .build();
     }
 
@@ -139,15 +142,13 @@ public class ItemConverter {
      * @param userLiked 찜한 상품 엔티티
      * @return 찜한 상품 DTO
      */
-    public static LikedItemDTO toLikedItemDTO(
-            com.salemale.domain.item.entity.UserLiked userLiked
-    ) {
+    public static LikedItemDTO toLikedItemDTO(UserLiked userLiked) {
         Item item = userLiked.getItem();
 
         // 썸네일은 첫 번째 이미지 사용
         String thumbnailUrl = getThumbnailUrl(item);
 
-        return com.salemale.domain.item.dto.response.LikedItemDTO.builder()
+        return LikedItemDTO.builder()
                 .itemId(item.getItemId())
                 .title(item.getTitle())
                 .thumbnailUrl(thumbnailUrl)
@@ -162,13 +163,11 @@ public class ItemConverter {
      * @param item 경매 상품 엔티티
      * @return 경매 상품 리스트 항목 DTO
      */
-    public static AuctionListItemDTO toAuctionListItemDTO(
-            Item item
-    ) {
+    public static AuctionListItemDTO toAuctionListItemDTO(Item item) {
         // 썸네일은 첫 번째 이미지 사용
         String thumbnailUrl = getThumbnailUrl(item);
 
-        return com.salemale.domain.item.dto.response.AuctionListItemDTO.builder()
+        return AuctionListItemDTO.builder()
                 .itemId(item.getItemId())
                 .title(item.getTitle())
                 .thumbnailUrl(thumbnailUrl)
@@ -177,6 +176,35 @@ public class ItemConverter {
                 .endTime(item.getEndTime())
                 .viewCount(item.getViewCount())
                 .itemStatus(item.getItemStatus().name())
+                .build();
+    }
+
+    /**
+     * Item → MyAuctionItemDTO 변환
+     * @param item 상품 엔티티
+     * @param myRole 사용자 역할 (Service에서 계산된 값)
+     * @param isHighestBidder 최고가 입찰자 여부
+     * @return MyAuctionItemDTO
+     */
+    public static MyAuctionItemDTO toMyAuctionItemDTO(
+            Item item,
+            MyRole myRole,
+            Boolean isHighestBidder
+    ) {
+        String thumbnailUrl = getThumbnailUrl(item);
+
+        return MyAuctionItemDTO.builder()
+                .itemId(item.getItemId())
+                .title(item.getTitle())
+                .thumbnailUrl(thumbnailUrl)
+                .viewCount(item.getViewCount())
+                .bidderCount(item.getBidCount())
+                .startPrice(item.getStartPrice())
+                .currentPrice(item.getCurrentPrice())
+                .itemStatus(item.getItemStatus().name())
+                .endTime(item.getEndTime())
+                .myRole(myRole)
+                .isHighestBidder(isHighestBidder)
                 .build();
     }
 }

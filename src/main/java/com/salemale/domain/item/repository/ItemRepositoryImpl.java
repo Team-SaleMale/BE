@@ -3,13 +3,17 @@ package com.salemale.domain.item.repository;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.salemale.domain.item.entity.Item;
-import com.salemale.global.common.enums.AuctionSortType;
-import com.salemale.global.common.enums.AuctionStatus;
-import com.salemale.global.common.enums.Category;
-import com.salemale.global.common.enums.ItemStatus;
+import com.salemale.domain.item.entity.QItemTransaction;
+import com.salemale.domain.item.enums.AuctionSortType;
+import com.salemale.domain.item.enums.AuctionStatus;
+import com.salemale.domain.mypage.enums.MyAuctionSortType;
+import com.salemale.domain.mypage.enums.MyAuctionType;
+import com.salemale.domain.user.entity.User;
+import com.salemale.global.common.enums.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -61,7 +65,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
         if (!itemIds.isEmpty()) {
             content = queryFactory
                     .selectFrom(item)
-                    .leftJoin(item.images).fetchJoin()  // 이제는 안전함!
+                    .leftJoin(item.images).fetchJoin()
                     .where(item.itemId.in(itemIds))
                     .orderBy(getOrderSpecifier(sortType))  // 같은 정렬 유지
                     .fetch();
@@ -169,6 +173,157 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
             case VIEW_COUNT_DESC -> new OrderSpecifier<?>[]{item.viewCount.desc(), item.itemId.asc()};
             case END_TIME_ASC -> new OrderSpecifier<?>[]{item.endTime.asc(), item.itemId.asc()};
             case BID_COUNT_DESC -> new OrderSpecifier<?>[]{item.bidCount.desc(), item.itemId.asc()};
+        };
+    }
+
+    /**
+     * 내 경매 목록 조회
+     *
+     * @param user 사용자
+     * @param type 경매 타입 (ALL, SELLING, BIDDING, WON, FAILED)
+     * @param sortType 정렬 타입 (CREATED_DESC, PRICE_DESC, PRICE_ASC)
+     * @param pageable 페이징 정보
+     * @return 내 경매 목록 (페이징)
+     */
+    @Override
+    public Page<Item> findMyAuctions(
+            User user,
+            MyAuctionType type,
+            MyAuctionSortType sortType,
+            Pageable pageable
+    ) {
+        // Phase 1: ID만 조회 (fetch join 없이)
+        List<Long> itemIds = queryFactory
+                .select(item.itemId)
+                .from(item)
+                .where(myAuctionCondition(user, type))
+                .orderBy(getMyAuctionOrderSpecifier(sortType))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        // Phase 2: 전체 데이터 + 이미지 fetch join
+        List<Item> content = Collections.emptyList();
+        if (!itemIds.isEmpty()) {
+            content = queryFactory
+                    .selectFrom(item)
+                    .leftJoin(item.images).fetchJoin()
+                    .where(item.itemId.in(itemIds))
+                    .orderBy(getMyAuctionOrderSpecifier(sortType))
+                    .fetch();
+        }
+
+        // Count 쿼리
+        JPAQuery<Long> countQuery = queryFactory
+                .select(item.count())
+                .from(item)
+                .where(myAuctionCondition(user, type));
+
+        return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
+    }
+
+    /**
+     * 내 경매 타입별 필터 조건
+     */
+    private BooleanExpression myAuctionCondition(User user, MyAuctionType type) {
+        if (type == null) {
+            type = MyAuctionType.ALL;
+        }
+
+        return switch (type) {
+            case ALL -> myAllAuctions(user);
+            case SELLING -> mySelling(user);
+            case BIDDING -> myBidding(user);
+            case WON -> myWon(user);
+            case FAILED -> myFailed(user);
+        };
+    }
+
+    /**
+     * 전체: 내가 판매하거나 입찰한 모든 상품
+     */
+    private BooleanExpression myAllAuctions(User user) {
+        QItemTransaction transaction = QItemTransaction.itemTransaction;
+
+        // 내가 판매자이거나, 입찰한 상품
+        return item.seller.eq(user)
+                .or(JPAExpressions
+                        .selectOne()
+                        .from(transaction)
+                        .where(
+                                transaction.item.eq(item),
+                                transaction.buyer.eq(user)
+                        )
+                        .exists()
+                );
+    }
+
+    /**
+     * 판매: 내가 판매자인 상품
+     */
+    private BooleanExpression mySelling(User user) {
+        return item.seller.eq(user);
+    }
+
+    /**
+     * 입찰: 내가 입찰한 상품 (판매자가 아닌 상품만)
+     */
+    private BooleanExpression myBidding(User user) {
+        QItemTransaction transaction = QItemTransaction.itemTransaction;
+
+        // 내가 입찰했고, 판매자가 아닌 상품
+        return JPAExpressions
+                .selectOne()
+                .from(transaction)
+                .where(
+                        transaction.item.eq(item),
+                        transaction.buyer.eq(user)
+                )
+                .exists()
+                .and(item.seller.ne(user));  // 판매자는 제외
+    }
+
+    /**
+     * 낙찰: 경매가 종료되고 내가 낙찰자로 확정된 상품
+     * - winner가 나인 경우만 (경매 종료 후 확정)
+     */
+    private BooleanExpression myWon(User user) {
+        // 경매 마감 후 winner가 결정되므로 SUCCESS 상태 확인
+        return item.winner.eq(user)
+                .and(item.itemStatus.eq(ItemStatus.SUCCESS));
+    }
+
+    /**
+     * 유찰: 내가 판매자이고 상태가 FAIL인 상품
+     */
+    private BooleanExpression myFailed(User user) {
+        return item.seller.eq(user)
+                .and(item.itemStatus.eq(ItemStatus.FAIL));
+    }
+
+    /**
+     * 내 경매 정렬 조건
+     * @param sortType 정렬 타입
+     * @return 정렬 조건 배열 (주 정렬 + itemId 보조 정렬)
+     */
+    private OrderSpecifier<?>[] getMyAuctionOrderSpecifier(MyAuctionSortType sortType) {
+        if (sortType == null) {
+            sortType = MyAuctionSortType.CREATED_DESC;
+        }
+
+        return switch (sortType) {
+            case CREATED_DESC -> new OrderSpecifier<?>[]{
+                    item.createdAt.desc(),
+                    item.itemId.asc()
+            };
+            case PRICE_DESC -> new OrderSpecifier<?>[]{
+                    item.currentPrice.desc(),
+                    item.itemId.asc()
+            };
+            case PRICE_ASC -> new OrderSpecifier<?>[]{
+                    item.currentPrice.asc(),
+                    item.itemId.asc()
+            };
         };
     }
 }
