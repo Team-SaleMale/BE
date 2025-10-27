@@ -48,16 +48,20 @@ public class AuthServiceImpl implements AuthService {
      */
     @Override
     public String loginLocal(String email, String rawPassword) {
+        // 이메일 정규화 (대소문자 구분 없이 처리)
         String normalized = email.trim().toLowerCase();
 
+        // LOCAL 타입 인증 정보 조회
         UserAuth auth = userAuthRepository.findByProviderAndEmailNormalized(LoginType.LOCAL, normalized)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.AUTH_INVALID_CREDENTIALS));
 
+        // 비밀번호 검증
         String hash = auth.getPasswordHash();
         if (hash == null || !passwordEncoder.matches(rawPassword, hash)) {
             throw new GeneralException(ErrorStatus.AUTH_INVALID_CREDENTIALS);
         }
 
+        // JWT 토큰 생성 및 반환
         User user = auth.getUser();
         String subjectUserId = String.valueOf(user.getId());
         return jwtTokenProvider.generateToken(subjectUserId);
@@ -71,19 +75,24 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void registerLocal(SignupRequest request) {
+        // 이메일 정규화
         String normalized = request.getEmail().trim().toLowerCase();
 
+        // 중복 이메일 확인
         userAuthRepository.findByProviderAndEmailNormalized(LoginType.LOCAL, normalized)
                 .ifPresent(a -> { throw new GeneralException(ErrorStatus.USER_EMAIL_ALREADY_EXISTS); });
 
+        // 사용자 프로필 생성
         User user = User.builder()
                 .nickname(request.getNickname())
                 .email(request.getEmail())
                 .build();
         user = userRepository.save(user);
 
+        // 비밀번호 해시 처리
         String hash = passwordEncoder.encode(request.getPassword());
 
+        // 인증 정보 저장
         UserAuth auth = UserAuth.builder()
                 .user(user)
                 .provider(LoginType.LOCAL)
