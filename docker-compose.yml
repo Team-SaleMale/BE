@@ -33,11 +33,21 @@ services:
       REDIS_PORT: 6379
       
       # Mail Configuration
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      GOOGLE_EMAIL: ${GOOGLE_EMAIL}
+      GOOGLE_APP_PW: ${GOOGLE_APP_PW}
       
       # Frontend URL
       FRONTEND_URL: ${FRONTEND_URL}
+      
+      # OAuth2 Configuration - Kakao
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
+      KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI}
+      
+      # OAuth2 Configuration - Naver
+      NAVER_CLIENT_ID: ${NAVER_CLIENT_ID}
+      NAVER_CLIENT_SECRET: ${NAVER_CLIENT_SECRET}
+      NAVER_REDIRECT_URI: ${NAVER_REDIRECT_URI}
     depends_on:
       - redis
     healthcheck:

@@ -12,9 +12,11 @@ import org.springframework.security.web.SecurityFilterChain; // 필터 체인 �
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter; // 커스텀 필터 삽입 지점
 import com.salemale.global.security.jwt.JwtAuthenticationFilter; // JWT 인증 필터
 import com.salemale.global.security.jwt.JwtTokenProvider; // 토큰 프로바이더
+import com.salemale.global.security.oauth.OAuth2AuthenticationSuccessHandler; // OAuth2 성공 핸들러
 import org.springframework.web.cors.CorsConfiguration; // CORS 정책 정의
 import org.springframework.web.cors.CorsConfigurationSource; // CORS 설정 소스
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource; // URL 패턴별 CORS 적용
+import jakarta.servlet.http.HttpServletResponse; // 응답 객체
 
 import java.util.Arrays; // 허용 메서드/헤더 나열에 사용
 import java.util.List; // 허용 오리진 목록에 사용
@@ -24,12 +26,15 @@ import java.util.List; // 허용 오리진 목록에 사용
 public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider; // JWT 파서/생성기 주입
-    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;  // 추가
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint; // 인증 실패 엔트리포인트
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler; // OAuth2 성공 핸들러
 
-    // 생성자 수정
-    public SecurityConfig(JwtTokenProvider jwtTokenProvider, CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
+    public SecurityConfig(JwtTokenProvider jwtTokenProvider, 
+                         CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
+                         OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler) {
         this.jwtTokenProvider = jwtTokenProvider;
-        this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;  // 추가
+        this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
+        this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
     }
 
     @Bean
@@ -47,9 +52,20 @@ public class SecurityConfig {
                                 "/api-docs/**",
                                 "/actuator/health", // 헬스체크
                                 "/auth/**",
-                                "/api/auth/**" // 로그인/회원가입/로그아웃 등 인증 경로는 공개(과거 프리픽스 호환)
+                                "/api/auth/**", // 로그인/회원가입/로그아웃 등 인증 경로는 공개(과거 프리픽스 호환)
+                                "/oauth2/authorization/**", // OAuth2 인증 시작 경로
+                                "/login/oauth2/code/**" // OAuth2 콜백 경로
                         ).permitAll()
                         .anyRequest().authenticated() // 그 외는 인증 필요
+                )
+                // OAuth2 로그인 설정
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
+                        .failureHandler((request, response, exception) -> {
+                            // OAuth2 실패 시 로그
+                            exception.printStackTrace();
+                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "OAuth2 로그인 실패");
+                        })
                 )
                 // 로그인 안하고 api 진행했을때 생성되는 에러 응답 추가
                 .exceptionHandling(exception -> exception
