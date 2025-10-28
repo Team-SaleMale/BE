@@ -68,6 +68,10 @@ dependencies {
 
     // CSV 파서 (헤더/인코딩 안정적 처리)
     implementation 'org.apache.commons:commons-csv:1.10.0'
+
+	// AWS S3 SDK
+	implementation platform('software.amazon.awssdk:bom:2.20.26')
+	implementation 'software.amazon.awssdk:s3'
 }
 
 tasks.named('test') {

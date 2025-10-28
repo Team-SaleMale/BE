@@ -50,7 +50,14 @@ public enum ErrorStatus implements BaseErrorCode {
 
     // 입찰 관련 에러 (나중에 추가)
     BID_AMOUNT_TOO_LOW(HttpStatus.BAD_REQUEST, "BID4001", "최소 입찰 금액보다 낮습니다."),
-    BID_SELF_AUCTION(HttpStatus.BAD_REQUEST, "BID4002", "본인 경매에는 입찰할 수 없습니다.")
+    BID_SELF_AUCTION(HttpStatus.BAD_REQUEST, "BID4002", "본인 경매에는 입찰할 수 없습니다."),
+
+    // 이미지 관련 에러
+    IMAGE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "IMAGE4001", "이미지 업로드에 실패했습니다."),
+    IMAGE_COUNT_INVALID(HttpStatus.BAD_REQUEST, "IMAGE4002", "이미지는 1개 이상 10개 이하로 업로드해야 합니다."),
+    IMAGE_EXTENSION_INVALID(HttpStatus.BAD_REQUEST, "IMAGE4003", "지원하지 않는 이미지 형식입니다. (jpg, jpeg, png, gif, webp만 가능)"),
+    IMAGE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "IMAGE4004", "이미지 파일 크기는 10MB를 초과할 수 없습니다."),
+    INVALID_IMAGE_URL(HttpStatus.BAD_REQUEST, "IMAGE4005", "잘못된 이미지 URL입니다.")
     ;
 
     private final HttpStatus httpStatus;

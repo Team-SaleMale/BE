@@ -33,7 +33,13 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
     locations: classpath:db/migration
-  
+
+  # 파일 업로드 설정
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+
   # Gmail SMTP 이메일 설정
   mail:
     host: smtp.gmail.com
@@ -96,3 +102,11 @@ password:
   reset:
     code-validity-minutes: 30  # 인증 코드 유효 시간(분)
     token-validity-minutes: 10  # 세션 토큰 유효 시간(분)
+
+# AWS S3 설정
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET_NAME}
+    region: ${AWS_S3_REGION}
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}

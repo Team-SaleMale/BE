@@ -17,6 +17,7 @@ import com.salemale.domain.item.repository.ItemRepository;
 import com.salemale.domain.item.repository.ItemTransactionRepository;
 import com.salemale.domain.item.repository.UserLikedRepository;
 import com.salemale.domain.region.entity.Region;
+import com.salemale.domain.s3.service.S3Service;
 import com.salemale.domain.user.entity.User;
 import com.salemale.domain.user.repository.UserRegionRepository;
 import com.salemale.domain.user.repository.UserRepository;
@@ -27,6 +28,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
@@ -43,6 +45,7 @@ public class ItemService {
     private final UserLikedRepository userLikedRepository;
     private final UserRegionRepository userRegionRepository;
     private final ItemTransactionRepository itemTransactionRepository;
+    private final S3Service s3Service; // s3 로직
 
     //찜하기
     @Transactional
@@ -107,6 +110,30 @@ public class ItemService {
         return ItemLikeResponse.of(itemId, false);
     }
 
+    /**
+     * 이미지 업로드 (temp 폴더)
+     * @param images 업로드할 이미지 파일들
+     * @return 업로드된 이미지 URL 리스트
+     */
+    //@Transactional -> s3는 트랜잭션과 무관
+    public ImageUploadResponse uploadImages(List<MultipartFile> images) {
+        // 1. 이미지 개수 검증 (1~10개)
+        if (images == null || images.isEmpty()) {
+            throw new GeneralException(ErrorStatus.IMAGE_COUNT_INVALID);
+        }
+        if (images.size() > 10) {
+            throw new GeneralException(ErrorStatus.IMAGE_COUNT_INVALID);
+        }
+
+        // 2. 각 이미지를 S3 temp 폴더에 업로드
+        List<String> tempUrls = images.stream()
+                .map(s3Service::uploadToTemp)
+                .toList();
+
+        // 3. 응답 반환
+        return ImageUploadResponse.of(tempUrls);
+    }
+
     // 경매 상품 등록
     @Transactional
     public ItemRegisterResponse registerItem(Long sellerId, ItemRegisterRequest request) {
@@ -137,6 +164,11 @@ public class ItemService {
             throw new GeneralException(ErrorStatus._BAD_REQUEST); // 잘못된 날짜/시간 형식 처리
         }
 
+        // 상품 등록시 imageUrls 처리: tempURL(임시저장 url)을 items폴더로(영구저장 url로) 이동
+        List<String> finalImageUrls = request.getImageUrls().stream()
+                .map(s3Service::moveToItems)
+                .toList();
+
         // 4. Item 엔티티 생성 및 저장
         Item newItem = Item.builder()
                 .seller(seller)
@@ -158,7 +190,7 @@ public class ItemService {
         List<ItemImage> images = IntStream.range(0, request.getImageUrls().size())
                 .mapToObj(i -> ItemImage.builder()
                         .item(newItem) // Item과의 관계 설정
-                        .imageUrl(request.getImageUrls().get(i))
+                        .imageUrl(finalImageUrls.get(i)) // temp url을 item url로
                         .imageOrder(i)
                         .build())
                 .toList();
