@@ -6,10 +6,10 @@ import com.salemale.domain.item.dto.request.BidRequest;
 import com.salemale.domain.item.dto.request.ItemRegisterRequest;
 import com.salemale.domain.item.dto.response.*;
 import com.salemale.domain.item.dto.response.detail.ItemDetailResponse;
+import com.salemale.domain.item.service.ImageService;
 import com.salemale.domain.item.service.ItemService;
 import com.salemale.domain.item.enums.AuctionSortType;
 import com.salemale.domain.item.enums.AuctionStatus;
-import com.salemale.domain.s3.service.S3Service;
 import com.salemale.global.common.enums.Category;
 import com.salemale.global.security.jwt.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.Operation;
@@ -38,7 +38,7 @@ public class ItemController {
 
     private final ItemService itemService;
     private final CurrentUserProvider currentUserProvider; // JWT에서 UID 추출
-    private final S3Service s3Service;
+    private final ImageService imageService;
 
     /**
      * 경매 상품 찜하기

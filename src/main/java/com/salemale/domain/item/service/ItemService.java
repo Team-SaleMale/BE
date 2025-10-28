@@ -46,6 +46,7 @@ public class ItemService {
     private final UserRegionRepository userRegionRepository;
     private final ItemTransactionRepository itemTransactionRepository;
     private final S3Service s3Service; // s3 로직
+    private final ImageService imageService;
 
     //찜하기
     @Transactional
@@ -125,9 +126,14 @@ public class ItemService {
             throw new GeneralException(ErrorStatus.IMAGE_COUNT_INVALID);
         }
 
-        // 2. 각 이미지를 S3 temp 폴더에 업로드
+        /// 2. 각 이미지를 검증하고 S3 temp 폴더에 업로드
         List<String> tempUrls = images.stream()
-                .map(s3Service::uploadToTemp)
+                .map(image -> {
+                    // ImageService로 파일 검증
+                    imageService.validateFile(image);
+                    // S3Service로 업로드
+                    return s3Service.uploadToTemp(image);
+                })
                 .toList();
 
         // 3. 응답 반환

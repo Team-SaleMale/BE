@@ -12,6 +12,10 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -31,20 +35,12 @@ public class S3Service {
     @Value("${aws.s3.region}")
     private String region;
 
-    // 허용된 이미지 확장자
-    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif", "webp");
-
-    // 최대 파일 크기 (10MB)
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
-
     /**
      * temp 폴더에 이미지 업로드
      * @param file 업로드할 파일
      * @return S3 공개 URL
      */
     public String uploadToTemp(MultipartFile file) {
-        // 1. 파일 검증
-        validateFile(file);
 
         // 2. 파일명 생성 (UUID_원본파일명)
         String originalFilename = file.getOriginalFilename();
@@ -61,7 +57,11 @@ public class S3Service {
                     .contentType(file.getContentType())
                     .build();
 
-            s3Client.putObject(putObjectRequest, RequestBody.fromBytes(file.getBytes()));
+            // 스트리밍 방식으로 변경 (메모리 절약)
+            s3Client.putObject(
+                    putObjectRequest,
+                    RequestBody.fromInputStream(file.getInputStream(), file.getSize())
+            );
 
             // 5. 공개 URL 생성
             return generatePublicUrl(s3Key);
@@ -109,7 +109,16 @@ public class S3Service {
 
             s3Client.copyObject(copyObjectRequest);
 
-            // 6. temp 파일 삭제
+            // 복사 성공 여부 검증 (추가)
+            HeadObjectRequest headRequest = HeadObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(newKey)
+                    .build();
+
+            s3Client.headObject(headRequest); // 파일이 없으면 예외 발생
+            log.info("S3 파일 복사 검증 완료: {}", newKey);
+
+            // 6. temp 파일 삭제 (복사 검증 후에만 삭제)
             deleteFile(tempKey);
 
             // 7. 새 URL 반환
@@ -158,50 +167,19 @@ public class S3Service {
     private String extractS3KeyFromUrl(String url) {
         // https://bucket-name.s3.region.amazonaws.com/temp/uuid_file.jpg
         // → temp/uuid_file.jpg
-        String[] parts = url.split(bucketName + ".s3." + region + ".amazonaws.com/");
-        if (parts.length < 2) {
+        try {
+            URI uri = new URI(url);
+            String path = uri.getPath();
+
+            // URL 디코딩 처리
+            String decodedPath = URLDecoder.decode(path, StandardCharsets.UTF_8);
+
+            // 앞의 슬래시 제거
+            return decodedPath.startsWith("/") ? decodedPath.substring(1) : decodedPath;
+
+        } catch (URISyntaxException e) {
+            log.error("잘못된 URL 형식: {}", url);
             throw new GeneralException(ErrorStatus.INVALID_IMAGE_URL);
         }
-        return parts[1];
-    }
-
-    /**
-     * 파일 검증 (확장자, 크기)
-     * @param file 검증할 파일
-     */
-    private void validateFile(MultipartFile file) {
-        // 1. null 체크
-        if (file == null || file.isEmpty()) {
-            throw new GeneralException(ErrorStatus.IMAGE_UPLOAD_FAILED);
-        }
-
-        // 2. 파일 크기 체크
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new GeneralException(ErrorStatus.IMAGE_SIZE_EXCEEDED);
-        }
-
-        // 3. 확장자 체크
-        String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null) {
-            throw new GeneralException(ErrorStatus.IMAGE_UPLOAD_FAILED);
-        }
-
-        String extension = getFileExtension(originalFilename).toLowerCase();
-        if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new GeneralException(ErrorStatus.IMAGE_EXTENSION_INVALID);
-        }
-    }
-
-    /**
-     * 파일 확장자 추출
-     * @param filename 파일명
-     * @return 확장자 (소문자)
-     */
-    private String getFileExtension(String filename) {
-        int lastDotIndex = filename.lastIndexOf(".");
-        if (lastDotIndex == -1) {
-            return "";
-        }
-        return filename.substring(lastDotIndex + 1);
     }
 }
