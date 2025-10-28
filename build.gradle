@@ -72,6 +72,9 @@ dependencies {
 	// AWS S3 SDK
 	implementation platform('software.amazon.awssdk:bom:2.20.26')
 	implementation 'software.amazon.awssdk:s3'
+
+	// Gemini API 호출을 위한 WebFlux
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 }
 
 tasks.named('test') {
