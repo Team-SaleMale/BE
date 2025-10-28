@@ -57,7 +57,13 @@ public enum ErrorStatus implements BaseErrorCode {
     IMAGE_COUNT_INVALID(HttpStatus.BAD_REQUEST, "IMAGE4002", "이미지는 1개 이상 10개 이하로 업로드해야 합니다."),
     IMAGE_EXTENSION_INVALID(HttpStatus.BAD_REQUEST, "IMAGE4003", "지원하지 않는 이미지 형식입니다. (jpg, jpeg, png, gif, webp만 가능)"),
     IMAGE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "IMAGE4004", "이미지 파일 크기는 10MB를 초과할 수 없습니다."),
-    INVALID_IMAGE_URL(HttpStatus.BAD_REQUEST, "IMAGE4005", "잘못된 이미지 URL입니다.")
+    INVALID_IMAGE_URL(HttpStatus.BAD_REQUEST, "IMAGE4005", "잘못된 이미지 URL입니다."),
+
+    // AI 분석 관련 에러
+    IMAGE_ANALYSIS_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI4001", "이미지 분석에 실패했습니다."),
+    IMAGE_NOT_TEMP_URL(HttpStatus.BAD_REQUEST, "AI4002", "temp 폴더의 이미지 URL이 아닙니다."),
+    GEMINI_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI4003", "Gemini API 호출에 실패했습니다."),
+    IMAGE_DOWNLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI4004", "이미지 다운로드에 실패했습니다.")
     ;
 
     private final HttpStatus httpStatus;
