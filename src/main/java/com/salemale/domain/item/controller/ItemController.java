@@ -6,6 +6,7 @@ import com.salemale.domain.item.dto.request.BidRequest;
 import com.salemale.domain.item.dto.request.ItemRegisterRequest;
 import com.salemale.domain.item.dto.response.*;
 import com.salemale.domain.item.dto.response.detail.ItemDetailResponse;
+import com.salemale.domain.item.service.ImageService;
 import com.salemale.domain.item.service.ItemService;
 import com.salemale.domain.item.enums.AuctionSortType;
 import com.salemale.domain.item.enums.AuctionStatus;
@@ -13,16 +14,19 @@ import com.salemale.global.common.enums.Category;
 import com.salemale.global.security.jwt.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -34,6 +38,7 @@ public class ItemController {
 
     private final ItemService itemService;
     private final CurrentUserProvider currentUserProvider; // JWT에서 UID 추출
+    private final ImageService imageService;
 
     /**
      * 경매 상품 찜하기
@@ -174,5 +179,25 @@ public class ItemController {
         AuctionListResponse response = itemService.getAuctionList(status, categories, minPrice, maxPrice, sort, pageable);
 
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
+    }
+
+    /**
+     * 이미지 업로드 API
+     * 상품 등록 전 이미지를 먼저 업로드하고 temp URL을 받습니다.
+     * @param images 업로드할 이미지 파일들 (최대 10개)
+     * @return 업로드된 이미지들의 temp URL 리스트
+     */
+    @PostMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "이미지 업로드", description = "상품 이미지를 임시 저장소에 업로드합니다. (최대 10개)")
+    public ApiResponse<ImageUploadResponse> uploadImages(
+            @RequestPart("images") @Parameter(
+                    description = "업로드할 이미지 파일들",
+                    content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)
+            ) List<MultipartFile> images
+    ) {
+
+        // 이미지 업로드
+        ImageUploadResponse response = itemService.uploadImages(images);
+        return ApiResponse.onSuccess(response);
     }
 }
