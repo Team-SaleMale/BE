@@ -190,11 +190,16 @@ public class ItemController {
     @PostMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "이미지 업로드", description = "상품 이미지를 임시 저장소에 업로드합니다. (최대 10개)")
     public ApiResponse<ImageUploadResponse> uploadImages(
+            @Parameter(hidden = true) HttpServletRequest request,
             @RequestPart("images") @Parameter(
                     description = "업로드할 이미지 파일들",
                     content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)
             ) List<MultipartFile> images
     ) {
+        // JWT에서 사용자 인증
+        Long userId = currentUserProvider.getCurrentUserId(request);
+
+        // 이미지 업로드
         ImageUploadResponse response = itemService.uploadImages(images);
         return ApiResponse.onSuccess(response);
     }
