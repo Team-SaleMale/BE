@@ -14,6 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.salemale.domain.chat.event.ItemAuctionClosedEvent; //채팅방 생성을 위해 추가
+import org.springframework.context.ApplicationEventPublisher; // 채팅방 생성을 위해 추가
+
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -21,6 +25,8 @@ public class AuctionSchedulerService {
 
     private final ItemRepository itemRepository;
     private final ItemTransactionRepository itemTransactionRepository;
+
+    private final ApplicationEventPublisher publisher; //채팅방 생성을 위해 추가
 
     // 1분마다 종료된 경매 처리 로직
     @Scheduled(fixedRate = 60000) // 60000ms = 1분
@@ -60,6 +66,11 @@ public class AuctionSchedulerService {
                     item.getItemId(),
                     winningBid.getBuyer().getId(),
                     winningBid.getBidPrice());
+
+            // 트랜잭션 커밋 후 채팅 자동 생성, 채팅방 생성을 위해 추가
+            publisher.publishEvent(new ItemAuctionClosedEvent(item.getItemId()));
+
+
         } else {
             // 입찰이 없으면 유찰 처리
             item.failAuction();
