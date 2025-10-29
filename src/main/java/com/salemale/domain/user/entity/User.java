@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor; // 모든 필드를 받는 생성자 자동 �
 import lombok.Builder; // 빌더 패턴 자동 생성
 import lombok.Getter; // 필드에 대한 getter 자동 생성
 import lombok.NoArgsConstructor; // 파라미터 없는 생성자 자동 생성
+import java.time.LocalDateTime; // 삭제시각 처리
 
 @Entity // JPA 엔티티로 매핑됨(테이블 레코드와 1:1 대응)
 @Table(
@@ -148,6 +149,21 @@ public class User extends BaseEntity {
         // 닉네임이 null이거나 빈 문자열이면 변경하지 않습니다.
         if (newNickname != null && !newNickname.trim().isEmpty()) {
             this.nickname = newNickname.trim(); // 앞뒤 공백을 제거하고 저장
+        }
+    }
+
+    /**
+     * 소프트 삭제 플래그를 설정합니다.
+     */
+    public void markDeletedNow() {
+        if (super.getDeletedAt() == null) {
+            try {
+                java.lang.reflect.Field f = com.salemale.global.common.BaseEntity.class.getDeclaredField("deletedAt");
+                f.setAccessible(true);
+                f.set(this, LocalDateTime.now());
+            } catch (Exception ignored) {
+                // 리플렉션 실패 시 무시 (JPA가 set 메서드를 제공하지 않아 최소 침습으로 설정)
+            }
         }
     }
 }

@@ -7,6 +7,12 @@ import com.salemale.domain.auth.dto.request.PasswordResetRequest;
 import com.salemale.domain.auth.dto.request.PasswordResetVerifyRequest;
 import com.salemale.domain.auth.dto.request.PasswordResetConfirmRequest;
 import com.salemale.domain.auth.service.AuthService;
+import com.salemale.domain.user.entity.User;
+import com.salemale.domain.user.entity.UserAuth;
+import com.salemale.domain.user.repository.UserAuthRepository;
+import com.salemale.domain.user.repository.UserRepository;
+import com.salemale.global.common.enums.LoginType;
+import com.salemale.global.security.jwt.CurrentUserProvider;
 import com.salemale.domain.auth.service.PasswordResetService;
 import com.salemale.global.security.jwt.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +27,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -41,14 +48,25 @@ public class AuthController {
     private final AuthService authService;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordResetService passwordResetService;
+    private final CurrentUserProvider currentUserProvider;
+    private final UserRepository userRepository;
+    private final UserAuthRepository userAuthRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Value("${FRONTEND_URL:http://localhost:3000}")
     private String frontendUrl;
 
-    public AuthController(AuthService authService, JwtTokenProvider jwtTokenProvider, PasswordResetService passwordResetService) {
+    public AuthController(AuthService authService, JwtTokenProvider jwtTokenProvider, PasswordResetService passwordResetService,
+                          CurrentUserProvider currentUserProvider, UserRepository userRepository,
+                          UserAuthRepository userAuthRepository,
+                          org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
         this.authService = authService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordResetService = passwordResetService;
+        this.currentUserProvider = currentUserProvider;
+        this.userRepository = userRepository;
+        this.userAuthRepository = userAuthRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Operation(
@@ -86,6 +104,51 @@ public class AuthController {
                 "callback", frontendUrl + "/auth/callback#token={JWT_TOKEN}",
                 "note", "브라우저에서 직접 접속해야 합니다. Swagger UI에서는 테스트할 수 없습니다."
         )));
+    }
+
+    @Operation(
+            summary = "계정 탈퇴(소프트 삭제)",
+            description = "현재 로그인한 사용자의 계정을 소프트 삭제합니다. 로컬 계정은 비밀번호 확인이 필요합니다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "탈퇴 처리 완료"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패 또는 비밀번호 불일치")
+    })
+    @DeleteMapping("/me")
+    public ResponseEntity<ApiResponse<Void>> deleteMe(
+            jakarta.servlet.http.HttpServletRequest request,
+            @Parameter(description = "로컬 계정일 경우 비밀번호", required = false)
+            @RequestParam(name = "password", required = false) String password
+    ) {
+        Long userId = currentUserProvider.getCurrentUserId(request);
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(401).body(ApiResponse.onFailure("COMMON401", "인증이 필요합니다.", null));
+        }
+
+        // 로컬 계정은 비밀번호 확인
+        UserAuth localAuth = userAuthRepository.findByProviderAndUser(LoginType.LOCAL, user).orElse(null);
+        if (localAuth != null) {
+            if (password == null || password.isBlank() || localAuth.getPasswordHash() == null
+                    || !passwordEncoder.matches(password, localAuth.getPasswordHash())) {
+                return ResponseEntity.status(401).body(ApiResponse.onFailure("AUTH_INVALID_CREDENTIALS", "비밀번호가 올바르지 않습니다.", null));
+            }
+        }
+
+        user.markDeletedNow();
+        userRepository.save(user);
+
+        ResponseCookie delete = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, delete.toString())
+                .body(ApiResponse.onSuccess());
     }
 
     @Operation(
