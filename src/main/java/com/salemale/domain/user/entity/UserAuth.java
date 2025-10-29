@@ -52,6 +52,15 @@ public class UserAuth extends BaseEntity { // 인증 레코드(1 user : N auth)
     private java.time.LocalDateTime lastLoginAt;
 
     /**
+     * 최근 로그인 시간을 업데이트합니다.
+     *
+     * @param lastLoginAt 새로운 로그인 시간
+     */
+    public void updateLastLoginAt(java.time.LocalDateTime lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
+    }
+
+    /**
      * 비밀번호 해시를 업데이트합니다.
      *
      * - 비밀번호 변경 시 새로운 해시값으로 교체합니다.
