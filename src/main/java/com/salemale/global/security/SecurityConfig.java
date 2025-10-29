@@ -13,6 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import com.salemale.global.security.jwt.JwtAuthenticationFilter; // JWT 인증 필터
 import com.salemale.global.security.jwt.JwtTokenProvider; // 토큰 프로바이더
 import com.salemale.global.security.oauth.OAuth2AuthenticationSuccessHandler; // OAuth2 성공 핸들러
+import com.salemale.domain.user.repository.UserRepository; // 삭제 계정 확인용
 import org.springframework.web.cors.CorsConfiguration; // CORS 정책 정의
 import org.springframework.web.cors.CorsConfigurationSource; // CORS 설정 소스
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource; // URL 패턴별 CORS 적용
@@ -24,19 +25,21 @@ import java.util.List; // 허용 오리진 목록에 사용
 
 @Configuration // 스프링 구성 클래스
 @EnableWebSecurity // 웹 보안 활성화
-@Slf4j // Lombok: 로깅 지원
 public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider; // JWT 파서/생성기 주입
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint; // 인증 실패 엔트리포인트
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler; // OAuth2 성공 핸들러
+    private final UserRepository userRepository; // JWT 필터 주입
 
     public SecurityConfig(JwtTokenProvider jwtTokenProvider, 
                          CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
-                         OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler) {
+                         OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
+                         UserRepository userRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
         this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
+        this.userRepository = userRepository;
     }
 
     @Bean
@@ -65,7 +68,8 @@ public class SecurityConfig {
                         .successHandler(oAuth2AuthenticationSuccessHandler)
                         .failureHandler((request, response, exception) -> {
                             // OAuth2 실패 시 로그
-                            log.error("OAuth2 로그인 실패: {}", exception.getMessage(), exception);
+                            org.slf4j.LoggerFactory.getLogger(SecurityConfig.class)
+                                    .error("OAuth2 로그인 실패: {}", exception.getMessage(), exception);
                             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "OAuth2 로그인 실패");
                         })
                 )
@@ -76,7 +80,7 @@ public class SecurityConfig {
                 .httpBasic(Customizer.withDefaults()); // httpBasic 기본값(사용 안 해도 무방)
 
         // UsernamePasswordAuthenticationFilter 전에 JWT 인증 필터를 등록
-        http.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, userRepository), UsernamePasswordAuthenticationFilter.class);
 
         return http.build(); // 필터 체인 빌드
     }
