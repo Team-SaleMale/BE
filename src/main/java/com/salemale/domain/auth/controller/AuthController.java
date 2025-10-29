@@ -48,6 +48,44 @@ public class AuthController {
     }
 
     @Operation(
+            summary = "OAuth2 로그인 (카카오/네이버)",
+            description = """
+                    카카오 또는 네이버 계정으로 소셜 로그인합니다.
+                    
+                    ## 사용 방법
+                    1. 브라우저에서 다음 URL로 접속:
+                       - 카카오: `GET /oauth2/authorization/kakao`
+                       - 네이버: `GET /oauth2/authorization/naver`
+                    2. 카카오/네이버 로그인 페이지에서 인증
+                    3. 로그인 성공 후 프론트엔드로 리다이렉트됨: `{FRONTEND_URL}/auth/callback#token={JWT_TOKEN}`
+                    
+                    ## 프론트엔드에서 토큰 추출 방법
+                    ```javascript
+                    // URL fragment에서 토큰 추출 (보안상 fragment 사용)
+                    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                    const token = hashParams.get('token');
+                    ```
+                    
+                    **주의**: 토큰은 URL fragment(`#token=...`)로 전달되므로 서버 로그나 Referer 헤더에 노출되지 않습니다.
+                    query parameter(`?token=...`)가 아닙니다.
+                    """,
+            tags = {"인증"}
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "302", description = "카카오/네이버 로그인 페이지로 리다이렉트"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "OAuth2 로그인 실패")
+    })
+    @GetMapping("/oauth2/login")
+    public ResponseEntity<ApiResponse<Map<String, String>>> oauth2LoginInfo() {
+        return ResponseEntity.ok(ApiResponse.onSuccess(Map.of(
+                "kakao", "GET /oauth2/authorization/kakao - 카카오 로그인",
+                "naver", "GET /oauth2/authorization/naver - 네이버 로그인",
+                "callback", "{FRONTEND_URL}/auth/callback#token={JWT_TOKEN}",
+                "note", "브라우저에서 직접 접속해야 합니다. Swagger UI에서는 테스트할 수 없습니다."
+        )));
+    }
+
+    @Operation(
             summary = "로그인",
             description = "이메일/비밀번호로 로그인하고 JWT 액세스 토큰을 발급받습니다."
     )

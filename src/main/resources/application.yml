@@ -99,8 +99,9 @@ logging:
   level:
     org.hibernate.SQL: INFO
     org.hibernate.type.descriptor.sql: TRACE
-    org.springframework.security.oauth2: DEBUG
-    org.springframework.security: DEBUG
+    # OAuth2 디버그 로깅은 개발 환경에서만 활성화 (보안 정보 누출 방지)
+    org.springframework.security.oauth2: INFO
+    org.springframework.security: INFO
 
 # Swagger 설정
 springdoc:

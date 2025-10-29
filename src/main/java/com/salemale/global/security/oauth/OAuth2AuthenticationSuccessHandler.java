@@ -16,12 +16,10 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * OAuth2 인증 성공 시 호출되는 핸들러
@@ -70,13 +68,11 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         String jwtToken = jwtTokenProvider.generateToken(String.valueOf(user.getId()));
         
         // 리다이렉트 URI 생성 (프론트엔드로 토큰 전달)
-        String redirectUri = UriComponentsBuilder
-                .fromUriString(getRedirectUri())
-                .queryParam("token", jwtToken)
-                .build()
-                .toUriString();
+        // 보안: fragment(#)를 사용하여 토큰이 서버 로그나 Referer 헤더에 노출되지 않도록 함
+        String baseUri = getRedirectUri();
+        String redirectUri = baseUri + "#token=" + jwtToken;
         
-        log.info("OAuth2 인증 완료, 리다이렉트: {}", redirectUri);
+        log.info("OAuth2 인증 완료, 리다이렉트: {}#token=***", baseUri);
         
         getRedirectStrategy().sendRedirect(request, response, redirectUri);
     }
@@ -162,7 +158,12 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                 }
                 // 닉네임이 없으면 이메일 기반 생성
                 String email = extractEmail(attributes, loginType);
-                yield email != null ? "네이버_" + email.substring(0, email.indexOf('@')) : "네이버사용자";
+                if (email != null) {
+                    int atIndex = email.indexOf('@');
+                    String prefix = atIndex > 0 ? email.substring(0, atIndex) : email;
+                    yield "네이버_" + prefix;
+                }
+                yield "네이버사용자";
             }
             default -> "사용자";
         };
@@ -174,6 +175,11 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
      * - 존재하지 않는 경우 User와 UserAuth 모두 생성
      */
     private User findOrCreateUser(String nickname, String email, LoginType loginType, String providerUserId) {
+        // providerUserId 검증
+        if (providerUserId == null || providerUserId.isBlank()) {
+            throw new IllegalArgumentException("providerUserId는 필수입니다.");
+        }
+        
         // 1. UserAuth 조회 (provider + providerUserId)
         UserAuth userAuth = userAuthRepository.findByProviderAndProviderUserId(loginType, providerUserId)
                 .orElse(null);

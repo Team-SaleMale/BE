@@ -17,12 +17,14 @@ import org.springframework.web.cors.CorsConfiguration; // CORS 정책 정의
 import org.springframework.web.cors.CorsConfigurationSource; // CORS 설정 소스
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource; // URL 패턴별 CORS 적용
 import jakarta.servlet.http.HttpServletResponse; // 응답 객체
+import lombok.extern.slf4j.Slf4j; // Lombok: 로깅 지원
 
 import java.util.Arrays; // 허용 메서드/헤더 나열에 사용
 import java.util.List; // 허용 오리진 목록에 사용
 
 @Configuration // 스프링 구성 클래스
 @EnableWebSecurity // 웹 보안 활성화
+@Slf4j // Lombok: 로깅 지원
 public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider; // JWT 파서/생성기 주입
@@ -63,7 +65,7 @@ public class SecurityConfig {
                         .successHandler(oAuth2AuthenticationSuccessHandler)
                         .failureHandler((request, response, exception) -> {
                             // OAuth2 실패 시 로그
-                            exception.printStackTrace();
+                            log.error("OAuth2 로그인 실패: {}", exception.getMessage(), exception);
                             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "OAuth2 로그인 실패");
                         })
                 )
