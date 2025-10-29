@@ -107,7 +107,13 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private String extractProviderUserId(String name, Map<String, Object> attributes, LoginType loginType) {
         return switch (loginType) {
             case KAKAO -> String.valueOf(attributes.get("id"));
-            case NAVER -> (String) ((Map<String, Object>) attributes.get("response")).get("id");
+            case NAVER -> {
+                Object resp = attributes.get("response");
+                if (resp instanceof java.util.Map<?, ?> map && map.get("id") != null) {
+                    yield String.valueOf(map.get("id"));
+                }
+                yield null;
+            }
             default -> name;
         };
     }
