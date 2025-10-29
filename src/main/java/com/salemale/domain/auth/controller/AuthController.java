@@ -9,6 +9,7 @@ import com.salemale.domain.auth.dto.request.PasswordResetConfirmRequest;
 import com.salemale.domain.auth.service.AuthService;
 import com.salemale.domain.auth.service.PasswordResetService;
 import com.salemale.global.security.jwt.JwtTokenProvider;
+import org.springframework.beans.factory.annotation.Value;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -41,6 +42,9 @@ public class AuthController {
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordResetService passwordResetService;
 
+    @Value("${FRONTEND_URL:http://localhost:3000}")
+    private String frontendUrl;
+
     public AuthController(AuthService authService, JwtTokenProvider jwtTokenProvider, PasswordResetService passwordResetService) {
         this.authService = authService;
         this.jwtTokenProvider = jwtTokenProvider;
@@ -72,15 +76,14 @@ public class AuthController {
             tags = {"인증"}
     )
     @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "302", description = "카카오/네이버 로그인 페이지로 리다이렉트"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "OAuth2 로그인 실패")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "OAuth2 로그인 안내 정보 제공")
     })
     @GetMapping("/oauth2/login")
     public ResponseEntity<ApiResponse<Map<String, String>>> oauth2LoginInfo() {
         return ResponseEntity.ok(ApiResponse.onSuccess(Map.of(
                 "kakao", "GET /oauth2/authorization/kakao - 카카오 로그인",
                 "naver", "GET /oauth2/authorization/naver - 네이버 로그인",
-                "callback", "{FRONTEND_URL}/auth/callback#token={JWT_TOKEN}",
+                "callback", frontendUrl + "/auth/callback#token={JWT_TOKEN}",
                 "note", "브라우저에서 직접 접속해야 합니다. Swagger UI에서는 테스트할 수 없습니다."
         )));
     }

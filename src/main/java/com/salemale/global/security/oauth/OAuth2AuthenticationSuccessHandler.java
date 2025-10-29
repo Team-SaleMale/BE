@@ -25,7 +25,7 @@ import java.util.Map;
  * OAuth2 인증 성공 시 호출되는 핸들러
  * 
  * - 카카오/네이버 로그인 성공 시 사용자 정보를 DB에 저장/업데이트하고
- * - JWT 토큰을 발급하여 쿼리 파라미터로 프론트엔드에 전달합니다.
+ * - JWT 토큰을 발급하여 URL fragment(#token=...)로 프론트엔드에 전달합니다.
  */
 @Slf4j
 @Component
