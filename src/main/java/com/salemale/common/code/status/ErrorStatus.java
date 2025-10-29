@@ -31,6 +31,7 @@ public enum ErrorStatus implements BaseErrorCode {
     // 인증 관련 에러
     AUTH_INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "AUTH4011", "아이디 또는 비밀번호가 올바르지 않습니다."),
     AUTH_NOT_LOCAL_ACCOUNT(HttpStatus.FORBIDDEN, "AUTH4031", "소셜 로그인 계정은 비밀번호를 변경할 수 없습니다."),
+    MISSING_PASSWORD(HttpStatus.BAD_REQUEST, "AUTH4001", "로컬 계정은 비밀번호가 필요합니다."),
     
     // 지역 관련 에러
     REGION_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION4001", "지역을 찾을 수 없습니다."),

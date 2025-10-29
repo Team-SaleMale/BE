@@ -61,8 +61,13 @@ public class AuthServiceImpl implements AuthService {
             throw new GeneralException(ErrorStatus.AUTH_INVALID_CREDENTIALS);
         }
 
-        // JWT 토큰 생성 및 반환
+        // 소프트 삭제 계정은 로그인 불가
         User user = auth.getUser();
+        if (user.getDeletedAt() != null) {
+            throw new GeneralException(ErrorStatus.AUTH_INVALID_CREDENTIALS);
+        }
+
+        // JWT 토큰 생성 및 반환
         String subjectUserId = String.valueOf(user.getId());
         return jwtTokenProvider.generateToken(subjectUserId);
     }

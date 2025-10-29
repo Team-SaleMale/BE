@@ -16,12 +16,16 @@ import org.springframework.web.filter.OncePerRequestFilter; // 요청당 1회 �
 import java.io.IOException; // IO 예외
 import java.util.Collections; // 빈 권한 컬렉션
 
+import com.salemale.domain.user.repository.UserRepository;
+
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider; // 토큰 파싱/검증기
+    private final UserRepository userRepository; // 삭제 여부 확인용
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, UserRepository userRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -35,8 +39,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 // 토큰 유효성/서명 검증 + subject 추출 (subject = 사용자 ID)
                 String subject = jwtTokenProvider.getSubject(token);
-                // 간단한 인증 주체 생성 (username에 사용자 ID를 넣음, 권한은 추후 확장 가능)
-                UserDetails principal = User.withUsername(subject).password("").authorities(Collections.emptyList()).build();
+
+                // 삭제 계정 즉시 차단: subject가 숫자(userId) 또는 이메일 모두 처리
+                boolean deleted = false;
+                try {
+                    long userId = Long.parseLong(subject);
+                    com.salemale.domain.user.entity.User u = userRepository.findById(userId).orElse(null);
+                    deleted = (u != null && u.getDeletedAt() != null);
+                } catch (NumberFormatException nfe) {
+                    // subject를 이메일로 간주
+                    com.salemale.domain.user.entity.User u = userRepository.findByEmail(subject.trim().toLowerCase()).orElse(null);
+                    deleted = (u != null && u.getDeletedAt() != null);
+                }
+                if (deleted) {
+                    SecurityContextHolder.clearContext();
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
+                // 간단한 인증 주체 생성 (username에 subject를 넣음, 권한은 추후 확장 가능)
+                UserDetails principal = org.springframework.security.core.userdetails.User
+                        .withUsername(subject)
+                        .password("")
+                        .authorities(Collections.emptyList())
+                        .build();
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         principal,
                         null,

@@ -64,6 +64,14 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         // 사용자 저장/업데이트
         User user = findOrCreateUser(nickname, email, loginType, providerUserId);
         
+        // 소프트 삭제 계정은 로그인 불가 처리: 에러 코드로 리다이렉트
+        if (user.getDeletedAt() != null) {
+            String errorUri = getRedirectUri() + "#error=account_deleted";
+            log.info("소프트 삭제 계정 로그인 시도: userId={}, provider={}", user.getId(), loginType);
+            getRedirectStrategy().sendRedirect(request, response, errorUri);
+            return;
+        }
+
         // JWT 토큰 생성
         String jwtToken = jwtTokenProvider.generateToken(String.valueOf(user.getId()));
         
