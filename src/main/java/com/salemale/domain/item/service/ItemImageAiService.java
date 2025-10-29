@@ -1,4 +1,4 @@
-package com.salemale.domain.gemini.service;
+package com.salemale.domain.item.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,15 +19,18 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class GeminiService {
+public class ItemImageAiService {
 
     private final WebClient.Builder webClientBuilder;
     private final S3Client s3Client;
@@ -116,7 +119,7 @@ public class GeminiService {
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .block();
+                    .block(Duration.ofSeconds(30)); // 30초 timeout 추가
 
             return response;
 
@@ -245,17 +248,36 @@ public class GeminiService {
      */
     private String extractS3KeyFromUrl(String url) {
         try {
-            // URL 디코딩 (한글 파일명 처리)
+            // URL 디코딩
             String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
 
-            // Virtual-hosted-style URL: bucket.s3.region.amazonaws.com/key
-            String pattern = bucketName + ".s3." + region + ".amazonaws.com/";
+            log.debug("S3 URL 파싱 시작 - URL: {}", decodedUrl);
 
-            if (decodedUrl.contains(pattern)) {
-                String[] parts = decodedUrl.split(pattern);
-                if (parts.length >= 2) {
-                    return parts[1];
-                }
+            // 정규식을 사용한 안전한 파싱
+            // Virtual-hosted-style: https://bucket.s3.region.amazonaws.com/key
+            String virtualHostedPattern = "https?://" + Pattern.quote(bucketName) +
+                    "\\.s3\\." + Pattern.quote(region) + "\\.amazonaws\\.com/(.+)";
+
+            Pattern pattern = Pattern.compile(virtualHostedPattern);
+            Matcher matcher = pattern.matcher(decodedUrl);
+
+            if (matcher.find()) {
+                String key = matcher.group(1);
+                log.debug("추출된 S3 Key: {}", key);
+                return key;
+            }
+
+            // Path-style: https://s3.region.amazonaws.com/bucket/key
+            String pathStylePattern = "https?://s3\\." + Pattern.quote(region) +
+                    "\\.amazonaws\\.com/" + Pattern.quote(bucketName) + "/(.+)";
+
+            pattern = Pattern.compile(pathStylePattern);
+            matcher = pattern.matcher(decodedUrl);
+
+            if (matcher.find()) {
+                String key = matcher.group(1);
+                log.debug("추출된 S3 Key (Path-style): {}", key);
+                return key;
             }
 
             // 파싱 실패
@@ -263,8 +285,10 @@ public class GeminiService {
                     decodedUrl, bucketName, region);
             throw new GeneralException(ErrorStatus.INVALID_IMAGE_URL);
 
+        } catch (GeneralException e) {
+            throw e;  // 이미 처리된 예외는 그대로 전달
         } catch (Exception e) {
-            log.error("URL 파싱 중 에러: {}", e.getMessage());
+            log.error("URL 파싱 중 예상치 못한 에러: {}", e.getMessage());
             throw new GeneralException(ErrorStatus.INVALID_IMAGE_URL);
         }
     }

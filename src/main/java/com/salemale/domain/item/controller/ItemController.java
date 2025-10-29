@@ -2,13 +2,12 @@ package com.salemale.domain.item.controller;
 
 import com.salemale.common.code.status.SuccessStatus;
 import com.salemale.common.response.ApiResponse;
-import com.salemale.domain.gemini.service.GeminiService;
+import com.salemale.domain.item.service.ItemImageAiService;
 import com.salemale.domain.item.dto.request.BidRequest;
 import com.salemale.domain.item.dto.request.ImageAnalysisRequest;
 import com.salemale.domain.item.dto.request.ItemRegisterRequest;
 import com.salemale.domain.item.dto.response.*;
 import com.salemale.domain.item.dto.response.detail.ItemDetailResponse;
-import com.salemale.domain.item.service.ImageService;
 import com.salemale.domain.item.service.ItemService;
 import com.salemale.domain.item.enums.AuctionSortType;
 import com.salemale.domain.item.enums.AuctionStatus;
@@ -40,7 +39,7 @@ public class ItemController {
 
     private final ItemService itemService;
     private final CurrentUserProvider currentUserProvider; // JWT에서 UID 추출
-    private final GeminiService geminiService;
+    private final ItemImageAiService geminiService;
 
     /**
      * 경매 상품 찜하기
@@ -209,7 +208,7 @@ public class ItemController {
      * @param request 분석할 이미지 URL
      * @return AI가 분석한 상품 정보
      */
-    @PostMapping("/analyze")
+    @PostMapping("/registration/suggest-title")
     @Operation(summary = "이미지 AI 분석", description = "업로드된 이미지를 AI로 분석하여 상품명, 브랜드, 카테고리 등을 추천받습니다.")
     public ApiResponse<ProductAnalysisResponse> analyzeImage(
             @Valid @RequestBody ImageAnalysisRequest request
