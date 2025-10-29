@@ -115,28 +115,39 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패 또는 비밀번호 불일치")
     })
     @DeleteMapping("/me")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<ApiResponse<Void>> deleteMe(
             jakarta.servlet.http.HttpServletRequest request,
             @Parameter(description = "로컬 계정일 경우 비밀번호", required = false)
             @RequestParam(name = "password", required = false) String password
     ) {
         Long userId = currentUserProvider.getCurrentUserId(request);
-        User user = userRepository.findById(userId).orElse(null);
-        if (user == null) {
-            return ResponseEntity.status(401).body(ApiResponse.onFailure("COMMON401", "인증이 필요합니다.", null));
-        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("User not found for authenticated userId: " + userId));
 
         // 로컬 계정은 비밀번호 확인
         UserAuth localAuth = userAuthRepository.findByProviderAndUser(LoginType.LOCAL, user).orElse(null);
         if (localAuth != null) {
-            if (password == null || password.isBlank() || localAuth.getPasswordHash() == null
-                    || !passwordEncoder.matches(password, localAuth.getPasswordHash())) {
-                return ResponseEntity.status(401).body(ApiResponse.onFailure("AUTH_INVALID_CREDENTIALS", "비밀번호가 올바르지 않습니다.", null));
+            if (password == null || password.isBlank()) {
+                var err = com.salemale.common.code.status.ErrorStatus.MISSING_PASSWORD;
+                return ResponseEntity.status(err.getHttpStatus())
+                        .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
+            }
+            if (localAuth.getPasswordHash() == null || !passwordEncoder.matches(password, localAuth.getPasswordHash())) {
+                var err = com.salemale.common.code.status.ErrorStatus.AUTH_INVALID_CREDENTIALS;
+                return ResponseEntity.status(err.getHttpStatus())
+                        .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
             }
         }
 
         user.markDeletedNow();
         userRepository.save(user);
+
+        // 연결된 UserAuth도 소프트 삭제 처리
+        for (UserAuth ua : userAuthRepository.findAllByUser(user)) {
+            ua.markDeletedNow();
+            userAuthRepository.save(ua);
+        }
 
         ResponseCookie delete = ResponseCookie.from("refreshToken", "")
                 .httpOnly(true)
