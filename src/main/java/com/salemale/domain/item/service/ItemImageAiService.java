@@ -6,7 +6,6 @@ import com.salemale.common.code.status.ErrorStatus;
 import com.salemale.common.exception.GeneralException;
 import com.salemale.domain.item.dto.response.ProductAnalysisResponse;
 import com.salemale.global.common.enums.Category;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -29,10 +28,9 @@ import java.util.regex.Pattern;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ItemImageAiService {
 
-    private final WebClient.Builder webClientBuilder;
+    private final WebClient webClient; // WebClient를 인스턴스 필드로 재사용
     private final S3Client s3Client;
     private final ObjectMapper objectMapper;
 
@@ -50,6 +48,23 @@ public class ItemImageAiService {
 
     @Value("${aws.s3.region}")
     private String region;
+
+    // 생성자에서 WebClient 설정 (DI로 생성)
+    public ItemImageAiService(WebClient.Builder webClientBuilder, S3Client s3Client, ObjectMapper objectMapper,
+                              @Value("${gemini.api-key}") String apiKey,
+                              @Value("${gemini.api-url}") String apiUrl) {
+        this.s3Client = s3Client;
+        this.objectMapper = objectMapper;
+        this.apiKey = apiKey;
+        this.apiUrl = apiUrl;
+
+        // baseUrl과 기본 헤더 설정
+        this.webClient = webClientBuilder
+                .baseUrl(apiUrl)
+                .defaultHeader("x-goog-api-key", apiKey)
+                .defaultHeader("Content-Type", "application/json")
+                .build();
+    }
 
     /**
      * 이미지 URL을 받아 상품 정보를 분석합니다.
@@ -106,20 +121,15 @@ public class ItemImageAiService {
      */
     private String callGeminiApi(String base64Image) {
         try {
-            // 요청 본문 생성
             Map<String, Object> requestBody = createGeminiRequestBody(base64Image);
 
-            // WebClient로 API 호출
-            WebClient webClient = webClientBuilder.build();
-
+            // 인스턴스의 webClient 사용
             String response = webClient.post()
-                    .uri(apiUrl + "/" + model + ":generateContent")  // key 제거
-                    .header("x-goog-api-key", apiKey)  // 헤더로 전달
-                    .header("Content-Type", "application/json")
+                    .uri("/" + model + ":generateContent") // baseUrl 이후 경로만 지정
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .block(Duration.ofSeconds(30)); // 30초 timeout 추가
+                    .block(Duration.ofSeconds(30)); // 동기 호출 유지
 
             return response;
 
