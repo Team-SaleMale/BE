@@ -56,11 +56,11 @@ spring:
           timeout: 5000
           writetimeout: 5000
   
-  # Redis 설정 (하드코딩)
+  # Redis 설정
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
       timeout: 3000
       lettuce:
         pool:

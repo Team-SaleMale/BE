@@ -29,8 +29,9 @@ services:
       JWT_REFRESH_TOKEN_VALIDITY: ${JWT_REFRESH_TOKEN_VALIDITY}
       
       # Redis Configuration
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      
       
       # Mail Configuration
       GOOGLE_EMAIL: ${GOOGLE_EMAIL}
