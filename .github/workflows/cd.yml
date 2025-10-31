@@ -76,6 +76,8 @@ jobs:
           JWT_ACCESS_TOKEN_VALIDITY=${{ secrets.JWT_ACCESS_TOKEN_VALIDITY }}
           JWT_REFRESH_TOKEN_VALIDITY=${{ secrets.JWT_REFRESH_TOKEN_VALIDITY }}
           DOCKERHUB_USERNAME=${{ secrets.DOCKER_USERNAME }}
+          REDIS_HOST=${{ secrets.REDIS_HOST }}
+          REDIS_PORT=${{ secrets.REDIS_PORT }}
           GOOGLE_EMAIL=${{ secrets.GOOGLE_EMAIL }}
           GOOGLE_APP_PW=${{ secrets.GOOGLE_APP_PW }}
           FRONTEND_URL=${{ secrets.FRONTEND_URL }}
