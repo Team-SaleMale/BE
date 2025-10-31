@@ -16,7 +16,16 @@ public class SwaggerConfig {
     public OpenAPI SalemaleAPI() {
         Info info = new Info()
                 .title("우리 동네 실시간 경매 API")
-                .description("우리 동네 실시간 경매 플랫폼 API 명세서")
+                .description("""
+                        우리 동네 실시간 경매 플랫폼 API 명세서
+                        
+                        ## OAuth2 로그인 안내
+                        - 카카오 로그인: `GET /oauth2/authorization/kakao`
+                        - 네이버 로그인: `GET /oauth2/authorization/naver`
+                        - 로그인 성공 후: `{FRONTEND_URL}/auth/callback#token={JWT_TOKEN}`
+                        - **토큰은 URL fragment로 전달됩니다** (프론트엔드에서 `window.location.hash`로 추출)
+                        - 자세한 내용은 `/auth/oauth2/login` 엔드포인트 참조
+                        """)
                 .version("1.0.0");
 
         String jwtSchemeName = "JWT TOKEN";

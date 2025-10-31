@@ -4,6 +4,7 @@ import com.salemale.global.common.BaseEntity; // 공통 엔티티(생성/수정 
 import com.salemale.global.common.enums.LoginType; // 인증 제공자 타입(LOCAL/KAKAO/NAVER)
 import jakarta.persistence.*; // JPA 매핑 애노테이션 전반
 import lombok.*; // 롬복(보일러플레이트 제거)
+import org.hibernate.annotations.Where; // 소프트 삭제 전역 필터
 
 @Entity // JPA 엔티티 선언
 @Table(
@@ -13,10 +14,12 @@ import lombok.*; // 롬복(보일러플레이트 제거)
                 @UniqueConstraint(name = "uk_user_auth_provider_email", columnNames = {"provider", "email_normalized"})
         },
         indexes = {
-                @Index(name = "idx_user_auth_provider_email", columnList = "provider,email_normalized")
+                @Index(name = "idx_user_auth_provider_email", columnList = "provider,email_normalized"),
+                @Index(name = "idx_user_auth_email_normalized", columnList = "email_normalized")
         }
 )
 @Getter
+@Where(clause = "deleted_at IS NULL")
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -49,6 +52,15 @@ public class UserAuth extends BaseEntity { // 인증 레코드(1 user : N auth)
 
     @Column(name = "last_login_at") // 최근 로그인 시간 기록(보안/통계용)
     private java.time.LocalDateTime lastLoginAt;
+
+    /**
+     * 최근 로그인 시간을 업데이트합니다.
+     *
+     * @param lastLoginAt 새로운 로그인 시간
+     */
+    public void updateLastLoginAt(java.time.LocalDateTime lastLoginAt) {
+        this.lastLoginAt = lastLoginAt;
+    }
 
     /**
      * 비밀번호 해시를 업데이트합니다.
@@ -93,6 +105,13 @@ public class UserAuth extends BaseEntity { // 인증 레코드(1 user : N auth)
         // 3) BCrypt 해시는 공백이 포함되면 안 되므로 trim하지 않고 그대로 저장합니다.
         //    - BCrypt 해시는 정확히 60자이고, 공백이 있으면 위 정규식에서 이미 거부됩니다.
         this.passwordHash = newPasswordHash;
+    }
+
+    /**
+     * 소프트 삭제 표기
+     */
+    public void markDeletedNow() {
+        markAsDeleted();
     }
 }
 

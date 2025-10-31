@@ -25,4 +25,14 @@ public abstract class BaseEntity {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    /**
+     * 이 엔티티를 소프트 삭제 상태로 표시합니다.
+     * 동일 트랜잭션 내에서 JPA dirty checking으로 반영됩니다.
+     */
+    protected void markAsDeleted() {
+        if (this.deletedAt == null) {
+            this.deletedAt = LocalDateTime.now();
+        }
+    }
 }

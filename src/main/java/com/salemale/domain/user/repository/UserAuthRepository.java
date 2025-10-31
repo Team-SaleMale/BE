@@ -6,6 +6,7 @@ import com.salemale.global.common.enums.LoginType; // 제공자 타입
 import org.springframework.data.jpa.repository.JpaRepository; // JPA 표준 리포지토리
 
 import java.util.Optional; // Optional 반환으로 존재 여부 명확화
+import java.util.List;
 
 public interface UserAuthRepository extends JpaRepository<UserAuth, Long> {
     Optional<UserAuth> findByProviderAndEmailNormalized(LoginType provider, String emailNormalized);
@@ -14,6 +15,12 @@ public interface UserAuthRepository extends JpaRepository<UserAuth, Long> {
     
     // 특정 사용자의 특정 제공자 인증 정보 조회 (비밀번호 변경 등에 사용)
     Optional<UserAuth> findByProviderAndUser(LoginType provider, User user);
+    
+    // 이메일로 인증 정보 조회 (비밀번호 재설정 등에 사용)
+    Optional<UserAuth> findByEmailNormalized(String emailNormalized);
+
+    // 특정 사용자에 연결된 모든 인증 정보 조회
+    List<UserAuth> findAllByUser(User user);
 }
 
 

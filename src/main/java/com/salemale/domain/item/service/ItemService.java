@@ -5,27 +5,30 @@ import com.salemale.common.exception.GeneralException;
 import com.salemale.domain.item.converter.ItemConverter;
 import com.salemale.domain.item.dto.request.BidRequest;
 import com.salemale.domain.item.dto.request.ItemRegisterRequest;
-import com.salemale.domain.item.dto.response.BidResponse;
-import com.salemale.domain.item.dto.response.ItemLikeResponse;
-import com.salemale.domain.item.dto.response.ItemRegisterResponse;
+import com.salemale.domain.item.dto.response.*;
 import com.salemale.domain.item.dto.response.detail.ItemDetailResponse;
 import com.salemale.domain.item.entity.Item;
 import com.salemale.domain.item.entity.ItemImage;
 import com.salemale.domain.item.entity.ItemTransaction;
 import com.salemale.domain.item.entity.UserLiked;
+import com.salemale.domain.item.enums.AuctionSortType;
+import com.salemale.domain.item.enums.AuctionStatus;
 import com.salemale.domain.item.repository.ItemRepository;
 import com.salemale.domain.item.repository.ItemTransactionRepository;
 import com.salemale.domain.item.repository.UserLikedRepository;
 import com.salemale.domain.region.entity.Region;
+import com.salemale.domain.s3.service.S3Service;
 import com.salemale.domain.user.entity.User;
 import com.salemale.domain.user.repository.UserRegionRepository;
 import com.salemale.domain.user.repository.UserRepository;
-import com.salemale.global.common.enums.ItemStatus;
+import com.salemale.global.common.enums.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
@@ -42,6 +45,8 @@ public class ItemService {
     private final UserLikedRepository userLikedRepository;
     private final UserRegionRepository userRegionRepository;
     private final ItemTransactionRepository itemTransactionRepository;
+    private final S3Service s3Service; // s3 로직
+    private final ImageService imageService;
 
     //찜하기
     @Transactional
@@ -106,6 +111,35 @@ public class ItemService {
         return ItemLikeResponse.of(itemId, false);
     }
 
+    /**
+     * 이미지 업로드 (temp 폴더)
+     * @param images 업로드할 이미지 파일들
+     * @return 업로드된 이미지 URL 리스트
+     */
+    //@Transactional -> s3는 트랜잭션과 무관
+    public ImageUploadResponse uploadImages(List<MultipartFile> images) {
+        // 1. 이미지 개수 검증 (1~10개)
+        if (images == null || images.isEmpty()) {
+            throw new GeneralException(ErrorStatus.IMAGE_COUNT_INVALID);
+        }
+        if (images.size() > 10) {
+            throw new GeneralException(ErrorStatus.IMAGE_COUNT_INVALID);
+        }
+
+        /// 2. 각 이미지를 검증하고 S3 temp 폴더에 업로드
+        List<String> tempUrls = images.stream()
+                .map(image -> {
+                    // ImageService로 파일 검증
+                    imageService.validateFile(image);
+                    // S3Service로 업로드
+                    return s3Service.uploadToTemp(image);
+                })
+                .toList();
+
+        // 3. 응답 반환
+        return ImageUploadResponse.of(tempUrls);
+    }
+
     // 경매 상품 등록
     @Transactional
     public ItemRegisterResponse registerItem(Long sellerId, ItemRegisterRequest request) {
@@ -136,6 +170,11 @@ public class ItemService {
             throw new GeneralException(ErrorStatus._BAD_REQUEST); // 잘못된 날짜/시간 형식 처리
         }
 
+        // 상품 등록시 imageUrls 처리: tempURL(임시저장 url)을 items폴더로(영구저장 url로) 이동
+        List<String> finalImageUrls = request.getImageUrls().stream()
+                .map(s3Service::moveToItems)
+                .toList();
+
         // 4. Item 엔티티 생성 및 저장
         Item newItem = Item.builder()
                 .seller(seller)
@@ -157,7 +196,7 @@ public class ItemService {
         List<ItemImage> images = IntStream.range(0, request.getImageUrls().size())
                 .mapToObj(i -> ItemImage.builder()
                         .item(newItem) // Item과의 관계 설정
-                        .imageUrl(request.getImageUrls().get(i))
+                        .imageUrl(finalImageUrls.get(i)) // temp url을 item url로
                         .imageOrder(i)
                         .build())
                 .toList();
@@ -213,11 +252,9 @@ public class ItemService {
 
         // 6. Item의 현재가 업데이트
         item.updateCurrentPrice(request.getBidPrice());
+        item.incrementBidCount();
 
-        // 7. 입찰 수 조회
-        Long bidCount = itemTransactionRepository.countByItem(item);
-
-        // 8. 응답 DTO 생성
+        // 7. 응답 DTO 생성
         return BidResponse.builder()
                 .transactionId(savedTransaction.getTransactionId())
                 .itemId(item.getItemId())
@@ -226,7 +263,7 @@ public class ItemService {
                 .previousPrice(previousPrice)
                 .currentHighestPrice(request.getBidPrice())
                 .bidIncrement(item.getBidIncrement())
-                .bidCount(bidCount)
+                .bidCount(item.getBidCount())
                 .bidTime(savedTransaction.getCreatedAt())
                 .endTime(item.getEndTime())
                 .build();
@@ -286,9 +323,6 @@ public class ItemService {
                 .findTopByItemOrderByBidPriceDescCreatedAtAsc(item)
                 .orElse(null);
 
-        // 4. 입찰 수 조회
-        Long bidCount = itemTransactionRepository.countByItem(item);
-
         // 5. 찜 개수 조회
         Long likeCount = userLikedRepository.countByItem(item);
 
@@ -303,50 +337,49 @@ public class ItemService {
 
         // 7. Converter를 통해 DTO 변환
         return ItemConverter.toItemDetailResponse(
-                item, bidHistory, highestBid, bidCount, likeCount, isLiked
+                item, bidHistory, highestBid, likeCount, isLiked
         );
     }
 
     /**
-     * 찜한 상품 목록 조회 (페이징)
-     * - 최신 찜한 순으로 고정 정렬
+     * 경매 상품 리스트 조회
      *
-     * @param userId 사용자 ID (JWT에서 추출)
-     * @param pageable 페이징 정보 (page, size)
-     * @return 찜한 상품 목록과 페이징 정보
+     * @param status 상태 필터 (BIDDING, COMPLETED, POPULAR)
+     * @param categories 카테고리 필터(다중선택 가능)
+     * @param minPrice 최소 가격
+     * @param maxPrice 최대 가격
+     * @param sortType 정렬 타입
+     * @param pageable 페이징 정보
+     * @return 경매 상품 리스트와 페이징 정보
      */
     @Transactional(readOnly = true)
-    public com.salemale.domain.item.dto.response.LikedItemListResponse getLikedItems(
-            Long userId,
-            org.springframework.data.domain.Pageable pageable) {
+    public AuctionListResponse getAuctionList(
+            AuctionStatus status,
+            List<Category> categories,
+            Integer minPrice,
+            Integer maxPrice,
+            AuctionSortType sortType,
+            Pageable pageable
+    ) {
+        // 1. QueryDSL로 동적 쿼리 실행 (이미 DB에서 정렬됨)
+        Page<Item> itemPage = itemRepository.findAuctionList(
+                status, categories, minPrice, maxPrice, sortType, pageable
+        );
 
-        // 1. 사용자 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+        // 2. DTO 변환 (엔티티의 bidCount 사용)
+        List<AuctionListItemDTO> items = itemPage.getContent().stream()
+                .map(item -> ItemConverter.toAuctionListItemDTO(item))
+                .toList();
 
-        // 2. 찜한 상품 목록 조회 (페이징, 최신순 정렬)
-        org.springframework.data.domain.Page<UserLiked> likedPage =
-                userLikedRepository.findLikedItemsByUser(user, pageable);
-
-        // 3. 각 상품의 입찰 수 조회 후 DTO 변환
-        List<com.salemale.domain.item.dto.response.LikedItemDTO> likedItems =
-                likedPage.getContent().stream()
-                        .map(userLiked -> {
-                            Item item = userLiked.getItem();
-                            Long bidCount = itemTransactionRepository.countByItem(item);
-                            return ItemConverter.toLikedItemDTO(userLiked, bidCount);
-                        })
-                        .toList();
-
-        // 4. 페이징 정보와 함께 응답 DTO 생성
-        return com.salemale.domain.item.dto.response.LikedItemListResponse.builder()
-                .likedItems(likedItems)
-                .totalElements(likedPage.getTotalElements())
-                .totalPages(likedPage.getTotalPages())
-                .currentPage(likedPage.getNumber())
-                .size(likedPage.getSize())
-                .hasNext(likedPage.hasNext())
-                .hasPrevious(likedPage.hasPrevious())
+        // 3. 페이징 정보와 함께 응답 DTO 생성
+        return AuctionListResponse.builder()
+                .items(items)
+                .totalElements(itemPage.getTotalElements())
+                .totalPages(itemPage.getTotalPages())
+                .currentPage(itemPage.getNumber())
+                .size(itemPage.getSize())
+                .hasNext(itemPage.hasNext())
+                .hasPrevious(itemPage.hasPrevious())
                 .build();
     }
 }

@@ -25,10 +25,13 @@ repositories {
 }
 
 dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'org.postgresql:postgresql'
 	testRuntimeOnly 'com.h2database:h2'
@@ -66,6 +69,13 @@ dependencies {
 
     // CSV 파서 (헤더/인코딩 안정적 처리)
     implementation 'org.apache.commons:commons-csv:1.10.0'
+
+	// AWS S3 SDK
+	implementation platform('software.amazon.awssdk:bom:2.33.11')
+	implementation 'software.amazon.awssdk:s3'
+
+	// Gemini API 호출을 위한 WebFlux
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 }
 
 tasks.named('test') {

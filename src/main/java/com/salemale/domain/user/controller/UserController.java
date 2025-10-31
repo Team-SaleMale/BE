@@ -41,7 +41,7 @@ import java.util.List; // 리스트 컬렉션
  * - 지역 관련 엔드포인트도 여기에 통합되어 있습니다.
  */
 @RestController // HTTP 요청을 받아 JSON 응답으로 돌려주는 컨트롤러입니다.
-@RequestMapping("/api/users") // 사용자 관련 모든 API 경로는 /api/users로 시작합니다.
+@RequestMapping("/users") // 사용자 관련 모든 API 경로는 /users로 시작합니다.
 @RequiredArgsConstructor // 필요한 서비스를 생성자로 주입받습니다.
 @Slf4j // 문제 상황을 기록해 추적에 도움을 줍니다.
 @Tag(name = "사용자 관리", description = "사용자 프로필, 설정, 지역 관리 API")

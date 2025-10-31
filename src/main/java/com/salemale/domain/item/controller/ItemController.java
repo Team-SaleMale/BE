@@ -2,24 +2,34 @@ package com.salemale.domain.item.controller;
 
 import com.salemale.common.code.status.SuccessStatus;
 import com.salemale.common.response.ApiResponse;
+import com.salemale.domain.item.service.ItemImageAiService;
 import com.salemale.domain.item.dto.request.BidRequest;
+import com.salemale.domain.item.dto.request.ImageAnalysisRequest;
 import com.salemale.domain.item.dto.request.ItemRegisterRequest;
-import com.salemale.domain.item.dto.response.BidResponse;
-import com.salemale.domain.item.dto.response.ItemLikeResponse;
-import com.salemale.domain.item.dto.response.ItemRegisterResponse;
+import com.salemale.domain.item.dto.response.*;
 import com.salemale.domain.item.dto.response.detail.ItemDetailResponse;
 import com.salemale.domain.item.service.ItemService;
+import com.salemale.domain.item.enums.AuctionSortType;
+import com.salemale.domain.item.enums.AuctionStatus;
+import com.salemale.global.common.enums.Category;
 import com.salemale.global.security.jwt.CurrentUserProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 
 @RestController
@@ -29,11 +39,11 @@ public class ItemController {
 
     private final ItemService itemService;
     private final CurrentUserProvider currentUserProvider; // JWT에서 UID 추출
+    private final ItemImageAiService geminiService;
 
     /**
      * 경매 상품 찜하기
      * POST /auctions/{itemId}/liked
-     * 
      * - JWT 인증 필요 (Authorization: Bearer <token>)
      * - JWT의 subject(UID)를 기반으로 현재 사용자 식별
      */
@@ -53,7 +63,6 @@ public class ItemController {
     /**
      * 경매 상품 찜 취소
      * DELETE /auctions/{itemId}/liked
-     * 
      * - JWT 인증 필요 (Authorization: Bearer <token>)
      * - JWT의 subject(UID)를 기반으로 현재 사용자 식별
      */
@@ -73,7 +82,6 @@ public class ItemController {
     /**
      * 경매 상품 등록 API
      * POST /auctions/registration
-     * 
      * - JWT 인증 필요 (Authorization: Bearer <token>)
      * - JWT의 subject(UID)를 기반으로 현재 사용자(판매자) 식별
      */
@@ -97,7 +105,6 @@ public class ItemController {
     /**
      * 경매 상품 입찰
      * POST /auctions/{itemId}/bid
-     * 
      * - JWT 인증 필요 (Authorization: Bearer <token>)
      * - JWT의 subject(UID)를 기반으로 현재 사용자(입찰자) 식별
      */
@@ -133,35 +140,80 @@ public class ItemController {
     }
 
     /**
-     * 찜한 상품 목록 조회
-     * GET /auctions/liked
-     *
-     * - JWT 인증 필요 (Authorization: Bearer <token>)
-     * - JWT의 subject(UID)를 기반으로 현재 사용자 식별
-     * - 최신 찜한 순으로 고정 정렬
+     * 경매 상품 리스트 조회
+     * GET /auctions
+     * - 상태별, 카테고리별, 가격별 필터링 지원
+     * - 다양한 정렬 옵션 지원
+     * - 페이징 지원
      */
-    @Operation(
-            summary = "찜한 상품 목록 조회",
-            description = "현재 로그인한 사용자가 찜한 경매 상품 목록을 조회합니다. 최근 찜한 순으로 정렬됩니다.")
-    @GetMapping("/liked")
-    public ResponseEntity<ApiResponse<com.salemale.domain.item.dto.response.LikedItemListResponse>> getLikedItems(
-            @Parameter(hidden = true) HttpServletRequest request,
+    @Operation(summary = "경매 상품 리스트 조회", description = "경매 상품 목록을 조회합니다. 상태, 카테고리, 가격 범위로 필터링하고 다양한 기준으로 정렬할 수 있습니다.")
+    @GetMapping
+    public ResponseEntity<ApiResponse<AuctionListResponse>> getAuctions(
+            @Parameter(description = "상태 필터 (기본값: BIDDING - 진행중)", example = "BIDDING")
+            @RequestParam(required = false, defaultValue = "BIDDING")  // ← 기본값 추가!
+            AuctionStatus status,
+
+            @Parameter(description = "카테고리 필터", example = "DIGITAL")
+            @RequestParam(required = false) List<Category> categories,
+
+            @Parameter(description = "최소 가격", example = "10000")
+            @RequestParam(required = false) Integer minPrice,
+
+            @Parameter(description = "최대 가격", example = "500000")
+            @RequestParam(required = false) Integer maxPrice,
+
+            @Parameter(description = "정렬 기준 (CREATED_DESC: 최신순, BID_COUNT_DESC: 입찰많은순, PRICE_ASC: 낮은가격순, PRICE_DESC: 높은가격순, VIEW_COUNT_DESC: 조회수많은순, END_TIME_ASC: 마감임박순)",
+                    example = "CREATED_DESC")
+            @RequestParam(required = false, defaultValue = "CREATED_DESC")
+            AuctionSortType sort,
+
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
             @RequestParam(required = false, defaultValue = "0") int page,
+
             @Parameter(description = "페이지당 아이템 개수", example = "20")
             @RequestParam(required = false, defaultValue = "20") int size
     ) {
-        // JWT에서 현재 사용자 ID 추출
-        Long userId = currentUserProvider.getCurrentUserId(request);
-
-        // Pageable 객체 생성 (최신순 고정, sort는 Repository 쿼리에서 처리)
-        org.springframework.data.domain.Pageable pageable =
-                org.springframework.data.domain.PageRequest.of(page, size);
+        // Pageable 객체 생성
+        Pageable pageable = PageRequest.of(page, size);
 
         // 서비스 호출
-        com.salemale.domain.item.dto.response.LikedItemListResponse response =
-                itemService.getLikedItems(userId, pageable);
+        AuctionListResponse response = itemService.getAuctionList(status, categories, minPrice, maxPrice, sort, pageable);
 
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
+    }
+
+    /**
+     * 이미지 업로드 API
+     * 상품 등록 전 이미지를 먼저 업로드하고 temp URL을 받습니다.
+     * @param images 업로드할 이미지 파일들 (최대 10개)
+     * @return 업로드된 이미지들의 temp URL 리스트
+     */
+    @PostMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "이미지 업로드", description = "상품 이미지를 임시 저장소에 업로드합니다. (최대 10개)")
+    public ApiResponse<ImageUploadResponse> uploadImages(
+            @RequestPart("images") @Parameter(
+                    description = "업로드할 이미지 파일들",
+                    content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)
+            ) List<MultipartFile> images
+    ) {
+
+        // 이미지 업로드
+        ImageUploadResponse response = itemService.uploadImages(images);
+        return ApiResponse.onSuccess(response);
+    }
+
+    /**
+     * 이미지 분석 API
+     * 업로드된 이미지를 AI로 분석하여 상품 정보를 추천받습니다.
+     * @param request 분석할 이미지 URL
+     * @return AI가 분석한 상품 정보
+     */
+    @PostMapping("/registration/suggest-title")
+    @Operation(summary = "이미지 AI 분석", description = "업로드된 이미지를 AI로 분석하여 상품명, 브랜드, 카테고리 등을 추천받습니다.")
+    public ApiResponse<ProductAnalysisResponse> analyzeImage(
+            @Valid @RequestBody ImageAnalysisRequest request
+    ) {
+        ProductAnalysisResponse response = geminiService.analyzeProductImage(request.getImageUrl());
+        return ApiResponse.onSuccess(response);
     }
 }

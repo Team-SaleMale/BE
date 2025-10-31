@@ -31,6 +31,7 @@ public enum ErrorStatus implements BaseErrorCode {
     // 인증 관련 에러
     AUTH_INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "AUTH4011", "아이디 또는 비밀번호가 올바르지 않습니다."),
     AUTH_NOT_LOCAL_ACCOUNT(HttpStatus.FORBIDDEN, "AUTH4031", "소셜 로그인 계정은 비밀번호를 변경할 수 없습니다."),
+    MISSING_PASSWORD(HttpStatus.BAD_REQUEST, "AUTH4001", "로컬 계정은 비밀번호가 필요합니다."),
     
     // 지역 관련 에러
     REGION_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION4001", "지역을 찾을 수 없습니다."),
@@ -50,7 +51,20 @@ public enum ErrorStatus implements BaseErrorCode {
 
     // 입찰 관련 에러 (나중에 추가)
     BID_AMOUNT_TOO_LOW(HttpStatus.BAD_REQUEST, "BID4001", "최소 입찰 금액보다 낮습니다."),
-    BID_SELF_AUCTION(HttpStatus.BAD_REQUEST, "BID4002", "본인 경매에는 입찰할 수 없습니다.")
+    BID_SELF_AUCTION(HttpStatus.BAD_REQUEST, "BID4002", "본인 경매에는 입찰할 수 없습니다."),
+
+    // 이미지 관련 에러
+    IMAGE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "IMAGE4001", "이미지 업로드에 실패했습니다."),
+    IMAGE_COUNT_INVALID(HttpStatus.BAD_REQUEST, "IMAGE4002", "이미지는 1개 이상 10개 이하로 업로드해야 합니다."),
+    IMAGE_EXTENSION_INVALID(HttpStatus.BAD_REQUEST, "IMAGE4003", "지원하지 않는 이미지 형식입니다. (jpg, jpeg, png, gif, webp만 가능)"),
+    IMAGE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "IMAGE4004", "이미지 파일 크기는 10MB를 초과할 수 없습니다."),
+    INVALID_IMAGE_URL(HttpStatus.BAD_REQUEST, "IMAGE4005", "잘못된 이미지 URL입니다."),
+
+    // AI 분석 관련 에러
+    IMAGE_ANALYSIS_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI4001", "이미지 분석에 실패했습니다."),
+    IMAGE_NOT_TEMP_URL(HttpStatus.BAD_REQUEST, "AI4002", "temp 폴더의 이미지 URL이 아닙니다."),
+    GEMINI_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI4003", "Gemini API 호출에 실패했습니다."),
+    IMAGE_DOWNLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI4004", "이미지 다운로드에 실패했습니다.")
     ;
 
     private final HttpStatus httpStatus;
