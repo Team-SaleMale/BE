@@ -76,6 +76,21 @@ jobs:
           JWT_ACCESS_TOKEN_VALIDITY=${{ secrets.JWT_ACCESS_TOKEN_VALIDITY }}
           JWT_REFRESH_TOKEN_VALIDITY=${{ secrets.JWT_REFRESH_TOKEN_VALIDITY }}
           DOCKERHUB_USERNAME=${{ secrets.DOCKER_USERNAME }}
+          GOOGLE_EMAIL=${{ secrets.GOOGLE_EMAIL }}
+          GOOGLE_APP_PW=${{ secrets.GOOGLE_APP_PW }}
+          FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+          KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
+          KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
+          KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}
+          NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }}
+          NAVER_REDIRECT_URI=${{ secrets.NAVER_REDIRECT_URI }}
+          AWS_S3_BUCKET_NAME=${{ secrets.AWS_S3_BUCKET_NAME }}
+          AWS_S3_REGION=${{ secrets.AWS_S3_REGION }}
+          AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          RECOMMENDATION_API_URL=${{ secrets.RECOMMENDATION_API_URL }}
           EOF
           
           # Docker Compose v2/v1 자동 감지
