@@ -23,21 +23,17 @@ public class ChatController {
     /**
      채팅방 목록 조회 API
      - 내가 참여 중인 모든 채팅방을 불러오기
-     - 필터(unread), 정렬(sort), 페이징(page, size)
+     - chatId 리스트 반환
+     예) GET /chats?page=0&size=50
      */
     @GetMapping("/chats")
-    public ResponseEntity<List<ChatSummary>> getChats(
-            // @AuthenticationPrincipal AuthUser user, // 실제 인증 객체 (테스트 전까지 주석)
-            @RequestHeader("USER_ID") Long me, // 임시 사용자 ID (헤더로 전달)
-            @RequestParam(required = false) String filter, // 필터: unread 등
-            @RequestParam(required = false) String sort, // 정렬 기준
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+    public ResponseEntity<List<Long>> getChats(
+           @RequestHeader("USER_ID") Long me,           // USER가 속한 방들만
+           @RequestParam(defaultValue = "0") int page,  // 오프셋 페이징
+           @RequestParam(defaultValue = "50") int size
     ) {
-        boolean onlyUnread = "unread".equalsIgnoreCase(filter); // 필터 조건
-        return ResponseEntity.ok(chatService.getChatList(me, onlyUnread, page, size));
+        return ResponseEntity.ok(chatService.getMyChatIds(me, page, size));
     }
-
     /**
      낙찰된 itemId만으로 채팅 자동 생성/재사용
      - item.seller / item.winner 를 Chat에 매핑

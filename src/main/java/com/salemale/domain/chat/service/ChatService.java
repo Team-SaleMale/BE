@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
-import org.springframework.data.domain.PageRequest;
+
 import org.springframework.data.domain.Pageable;
 
 /*
@@ -35,10 +35,11 @@ public class ChatService {
     private final ItemRepository itemRepository; // 상품 정보 조회
 
     /*
-     채팅방 목록 조회
+     기존 채팅방 목록 조회
      - 내가 판매자 또는 구매(buyer==winner)로 참여 중인 채팅방 모두 조회
      - 읽지 않은 메시지 개수(unreadCount) 계산 포함
      */
+    /*
     public List<ChatSummary> getChatList(Long me, boolean onlyUnread, int page, int size) {
         Page<Chat> chats = chatRepository
                 .findBySeller_IdOrBuyer_IdOrderByLastMessageAtDesc(me, me, PageRequest.of(page, size));
@@ -72,6 +73,19 @@ public class ChatService {
                 .filter(dto -> dto != null)
                 .toList();
     }
+
+    */
+
+    /**
+     * 채팅방 목록 조회
+     * USER_ID로 내가 속한 채팅방의 chatId들만 반환(soft delete 제외, 최신 메시지 순)
+     * */
+    public List<Long> getMyChatIds(Long me, int page, int size) {
+        return chatRepository
+                .findChatIdsByUserOrderByLastMessageAtDesc(me, PageRequest.of(page, size))
+                .getContent();
+    }
+
 
     /*
      채팅방 생성(수동)
@@ -143,7 +157,7 @@ public class ChatService {
                     .buyer(chat.getBuyer())
                     .item(chat.getItem())
                     .lastMessageAt(chat.getLastMessageAt())
-                    .sellerDeletedAt(now)
+                    .sellerDeletedAt(now) //나간 시점 기록
                     .buyerDeletedAt(chat.getBuyerDeletedAt())
                     .build();
         } else if (chat.getBuyer().getId().equals(me)) {
@@ -154,7 +168,7 @@ public class ChatService {
                     .item(chat.getItem())
                     .lastMessageAt(chat.getLastMessageAt())
                     .sellerDeletedAt(chat.getSellerDeletedAt())
-                    .buyerDeletedAt(now)
+                    .buyerDeletedAt(now) //나간 시점 기록
                     .build();
         } else {
             throw new IllegalStateException("대화 참여자가 아닙니다.");
@@ -238,5 +252,7 @@ public class ChatService {
                 .messages(messages)
                 .build();
     }
+
+
 
 }
