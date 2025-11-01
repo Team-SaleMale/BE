@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
         name = "chat",
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_chat_item_seller_buyer",
-                columnNames = {"item_id", "seller_id", "winner_id"}
+                columnNames = {"item_id", "seller_id", "buyer_id"}
         )
 )
 @Getter
