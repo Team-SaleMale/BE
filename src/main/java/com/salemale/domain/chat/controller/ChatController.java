@@ -45,9 +45,10 @@ public class ChatController {
      */
     @PostMapping("/items/{itemId}/chat")
     public ResponseEntity<ChatResponse> createChatForWinner(
+            @RequestHeader("USER_ID") Long me,
             @PathVariable Long itemId
     ) {
-        ChatResponse resp = chatService.createChatForItemWinner(itemId);
+        ChatResponse resp = chatService.createChatForItemWinner(me, itemId);
         // 201 + Location 헤더로 반환
         return ResponseEntity.created(URI.create("/chats/" + resp.getChatId()))
                 .body(resp);
