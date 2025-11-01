@@ -1,6 +1,7 @@
 package com.salemale.domain.chat.service; // 채팅 비즈니스 로직 계층
 
 import com.salemale.domain.chat.dto.ChatDtos.*; // DTO
+import com.salemale.domain.chat.dto.MessageDtos;
 import com.salemale.domain.chat.entity.Chat; // 채팅 엔티티
 import com.salemale.domain.chat.entity.Message; //메시지 엔티티
 import com.salemale.domain.chat.repository.ChatRepository; // 채팅 리포지토리
@@ -17,10 +18,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.data.domain.Pageable;
 
-/*
+/**
  ChatService
  - 채팅방 생성, 조회, 나가기 로직 담당
  */
@@ -80,10 +83,34 @@ public class ChatService {
      * 채팅방 목록 조회
      * USER_ID로 내가 속한 채팅방의 chatId들만 반환(soft delete 제외, 최신 메시지 순)
      * */
-    public List<Long> getMyChatIds(Long me, int page, int size) {
-        return chatRepository
-                .findChatIdsByUserOrderByLastMessageAtDesc(me, PageRequest.of(page, size))
-                .getContent();
+    public List<ChatIdUnread> getMyChatIds(Long me, int page, int size) { // [CHANGED] 구현 교체
+        // 1) 내 채팅방 id들만 (soft delete 제외 + 최신순) 페이징 조회
+        var idPage = chatRepository.findChatIdsByUserOrderByLastMessageAtDesc(
+                me, PageRequest.of(page, size)
+        );
+        List<Long> chatIds = idPage.getContent();
+        if (chatIds.isEmpty()) return List.of();
+
+        // 2) 해당 chatId들의 미읽음 개수를 한 번에 집계 (상대가 보낸 & isRead=false)
+        //    MessageRepository에 아래 JPQL이 있어야 합니다:
+        //    List<Object[]> findUnreadCountsByChatIds(Long uid, List<Long> chatIds)
+        var rows = messageRepository.findUnreadCountsByChatIds(me, chatIds);
+
+        // (chatId -> count) 매핑
+        Map<Long, Long> countMap = new HashMap<>();
+        for (Object[] r : rows) {
+            Long chatId = (Long) r[0];
+            Long cnt = (r[1] == null) ? 0L : ((Number) r[1]).longValue();
+            countMap.put(chatId, cnt);
+        }
+
+        // 3) 정렬된 chatIds 순서 유지하며 DTO로 변환
+        return chatIds.stream()
+                .map(id -> ChatIdUnread.builder()
+                        .chatId(id)
+                        .unreadCount(countMap.getOrDefault(id, 0L))
+                        .build())
+                .toList();
     }
 
 
@@ -139,7 +166,7 @@ public class ChatService {
 
      */
 
-    /*
+    /**
      채팅방 나가기(삭제)
      - sellerDeletedAt 또는 buyerDeletedAt에 시간 기록
      - 실제 DB 삭제는 하지 않음 (Soft Delete)
@@ -253,6 +280,26 @@ public class ChatService {
                 .build();
     }
 
+    // (변경) 채팅방 단위로 '내가 안 읽은' 메시지 전체 읽음 처리
+    @Transactional
+    public MessageDtos.ReadAllResponse markAllReadInChat(Long me, Long chatId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new EntityNotFoundException("채팅방이 없습니다."));
 
+        if (!chat.getSeller().getId().equals(me) && !chat.getBuyer().getId().equals(me)) {
+            throw new IllegalStateException("대화 참여자가 아닙니다.");
+        }
+
+        int updated = messageRepository.markAllReadInChat(chatId, me); // 일괄 업데이트
+        int unreadAfter = (int) messageRepository
+                .countByChat_ChatIdAndSender_IdNotAndIsReadFalse(chatId, me);
+
+        return MessageDtos.ReadAllResponse.builder()
+                .chatId(chatId)
+                .readerId(me)
+                .updatedCount(updated)
+                .unreadCountAfter(unreadAfter)
+                .build();
+    }
 
 }

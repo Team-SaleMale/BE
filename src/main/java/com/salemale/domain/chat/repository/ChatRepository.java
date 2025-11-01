@@ -11,19 +11,22 @@ import org.springframework.data.repository.query.Param;
 
 public interface ChatRepository extends JpaRepository<Chat, Long> {
 
-    // 내 채팅방들(판매자거나 구매자인 방)
-    Page<Chat> findBySeller_IdOrBuyer_IdOrderByLastMessageAtDesc(Long sellerId, Long buyerId, Pageable pageable);
-
     // 아이템/판매자/구매자 조합으로 중복 생성 방지
     Optional<Chat> findByItem_ItemIdAndSeller_IdAndBuyer_Id(Long itemId, Long sellerId, Long buyerId);
 
-    //USER_ID가 속한(soft delete 제외) 채팅방의 chatId만, 최근 대화 순서로 반환
+    //USER_ID가 속한(soft delete 제외) 채팅방의 chatId와 읽지 않은 메시지의 개수만, 최근 대화 순서로 반환
     @Query("""
-        select c.chatId
-          from Chat c
-         where (c.seller.id = :uid and c.sellerDeletedAt is null)
-            or (c.buyer.id  = :uid and c.buyerDeletedAt  is null)
-         order by c.lastMessageAt desc
-    """)
+    select c.chatId
+      from Chat c
+     where (c.seller.id = :uid and c.sellerDeletedAt is null)
+        or (c.buyer.id  = :uid and c.buyerDeletedAt  is null)
+     order by c.lastMessageAt desc
+""")
     Page<Long> findChatIdsByUserOrderByLastMessageAtDesc(@Param("uid") Long uid, Pageable pageable);
+    /*
+    Page<ChatIdUnreadProjection> findChatIdsWithUnreadByUser(
+            @Param("uid") Long uid,
+            Pageable pageable
+    );
+     */
 }

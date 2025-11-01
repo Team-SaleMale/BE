@@ -41,11 +41,18 @@ public class MessageService {
             throw new IllegalStateException("참여자가 아닙니다.");
         }
 
-        // 나간 사용자는 전송 불가
+        /* (변경 전)나간 사용자는 전송 불가
         if (chat.getSeller().getId().equals(me) && chat.getSellerDeletedAt() != null)
             throw new IllegalStateException("판매자가 대화를 나갔습니다.");
         if (chat.getBuyer().getId().equals(me) && chat.getBuyerDeletedAt() != null)
             throw new IllegalStateException("구매자가 대화를 나갔습니다.");
+
+         */
+
+        // 어느 한쪽이라도 나가면 전체 전송 차단
+        if (chat.getSellerDeletedAt() != null || chat.getBuyerDeletedAt() != null) {
+            throw new IllegalStateException("이 대화는 종료되었습니다.");
+        }
 
         User sender = userRepository.findById(me)
                 .orElseThrow(() -> new EntityNotFoundException("보내는 사용자가 없습니다."));
@@ -123,26 +130,4 @@ public class MessageService {
     }
 
      */
-
-    // (변경) 채팅방 단위로 '내가 안 읽은' 메시지 전체 읽음 처리
-    @Transactional
-    public ReadAllResponse markAllReadInChat(Long me, Long chatId) {
-        Chat chat = chatRepository.findById(chatId)
-                .orElseThrow(() -> new EntityNotFoundException("채팅방이 없습니다."));
-
-        if (!chat.getSeller().getId().equals(me) && !chat.getBuyer().getId().equals(me)) {
-            throw new IllegalStateException("대화 참여자가 아닙니다.");
-        }
-
-        int updated = messageRepository.markAllReadInChat(chatId, me); // 일괄 업데이트
-        int unreadAfter = (int) messageRepository
-                .countByChat_ChatIdAndSender_IdNotAndIsReadFalse(chatId, me);
-
-        return ReadAllResponse.builder()
-                .chatId(chatId)
-                .readerId(me)
-                .updatedCount(updated)
-                .unreadCountAfter(unreadAfter)
-                .build();
-    }
 }

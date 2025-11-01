@@ -13,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 //채팅방 입장시 메세지 조회를 위함
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import java.util.List;
 
 public interface MessageRepository extends JpaRepository<Message, Long> {
     //채팅방의 최근 메세지 조회
@@ -33,4 +34,17 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
            and m.sender.id <> :me
     """)
     int markAllReadInChat(@Param("chatId") Long chatId, @Param("me") Long me);
+
+    // [ADDED] 특정 chatId들의 미읽음 개수 한 번에 조회 (상대가 보낸 & isRead=false)
+    @Query("""
+        select m.chat.chatId as chatId,
+               sum(case when (m.isRead = false and m.sender.id <> :uid) then 1 else 0 end) as unreadCount
+          from Message m
+         where m.chat.chatId in :chatIds
+         group by m.chat.chatId
+    """)
+    List<Object[]> findUnreadCountsByChatIds(
+            @Param("uid") Long uid,
+            @Param("chatIds") List<Long> chatIds
+    );
 }
