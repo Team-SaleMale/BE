@@ -73,6 +73,7 @@ public class ChatDtos {
         private long totalElements;
         private int totalPages;
         private List<MessageBrief> messages;
+        private boolean canSend;   // 메시지 전송 가능 여부
     }
 
     // 입장 시 반환할 메시지 간략 DTO (오름차순)

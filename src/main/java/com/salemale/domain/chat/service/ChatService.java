@@ -247,6 +247,9 @@ public class ChatService {
             throw new IllegalStateException("대화 참여자가 아닙니다.");
         }
 
+        // 한쪽이라도 나갔으면 입력 비활성
+        boolean canSend = (chat.getSellerDeletedAt() == null && chat.getBuyerDeletedAt() == null);
+
         // 메시지는 오래된→최신 오름차순으로 아래로 쌓이도록
         // 1) 읽지 않은 메세지 일괄 읽음 처리
         int updated = messageRepository.markAllReadInChat(chatId, me);
@@ -277,6 +280,7 @@ public class ChatService {
                 .totalElements(pageResult.getTotalElements())
                 .totalPages(pageResult.getTotalPages())
                 .messages(messages)
+                .canSend(canSend)
                 .build();
     }
 
