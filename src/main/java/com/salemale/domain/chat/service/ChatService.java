@@ -2,6 +2,7 @@ package com.salemale.domain.chat.service; // 채팅 비즈니스 로직 계층
 
 import com.salemale.domain.chat.dto.ChatDtos.*; // DTO
 import com.salemale.domain.chat.entity.Chat; // 채팅 엔티티
+import com.salemale.domain.chat.entity.Message; //메시지 엔티티
 import com.salemale.domain.chat.repository.ChatRepository; // 채팅 리포지토리
 import com.salemale.domain.chat.repository.MessageRepository; // 메시지 리포지토리
 import com.salemale.domain.item.entity.Item; // 아이템 엔티티
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 /*
  ChatService
@@ -34,7 +37,7 @@ public class ChatService {
     /*
      채팅방 목록 조회
      - 내가 판매자 또는 구매(buyer==winner)로 참여 중인 채팅방 모두 조회
-     - 미읽은 메시지 개수(unreadCount) 계산 포함
+     - 읽지 않은 메시지 개수(unreadCount) 계산 포함
      */
     public List<ChatSummary> getChatList(Long me, boolean onlyUnread, int page, int size) {
         Page<Chat> chats = chatRepository
@@ -52,7 +55,7 @@ public class ChatService {
                     return false;
                 })
                 .map(chat -> {
-                    // 미읽은 메시지 수 계산 (내가 아닌 상대가 보낸 메시지 중 isRead=false)
+                    // 읽지 않은 메시지 수 계산 (내가 아닌 상대가 보낸 메시지 중 isRead=false)
                     long unread = messageRepository
                             .countByChat_ChatIdAndSender_IdNotAndIsReadFalse(chat.getChatId(), me);
                     // 필터 조건이 unread일 경우, 안 읽은 메시지가 없는 방은 제외
@@ -154,7 +157,7 @@ public class ChatService {
                     .buyerDeletedAt(now)
                     .build();
         } else {
-            throw new IllegalStateException("참여자가 아닙니다.");
+            throw new IllegalStateException("대화 참여자가 아닙니다.");
         }
         chatRepository.save(chat);
     }
@@ -191,6 +194,49 @@ public class ChatService {
                 .build());
 
         return new ChatResponse(saved.getChatId());
+    }
+
+    @Transactional
+    public ChatEnterResponse enter(Long me, Long chatId, int page, int size) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new EntityNotFoundException("채팅방이 존재하지 않습니다."));
+
+        // 참여자 검증
+        if (!chat.getSeller().getId().equals(me) && !chat.getBuyer().getId().equals(me)) {
+            throw new IllegalStateException("대화 참여자가 아닙니다.");
+        }
+
+        // 메시지는 오래된→최신 오름차순으로 아래로 쌓이도록
+        // 1) 읽지 않은 메세지 일괄 읽음 처리
+        int updated = messageRepository.markAllReadInChat(chatId, me);
+        int unreadAfter = (int) messageRepository.countByChat_ChatIdAndSender_IdNotAndIsReadFalse(chatId, me);
+
+        // 메시지 조회 (페이징)
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Message> pageResult = messageRepository.findByChat_ChatIdOrderBySentAtAsc(chatId, pageable);
+
+        List<MessageBrief> messages = pageResult.getContent().stream()
+                .map(m -> MessageBrief.builder()
+                        .messageId(m.getMessageId())
+                        .senderId(m.getSender().getId())
+                        .content(m.getContent())
+                        .type(m.getType())
+                        .read(m.isRead())
+                        .sentAt(m.getSentAt())
+                        .build())
+                .toList();
+
+        return ChatEnterResponse.builder()
+                .chatId(chatId)
+                .readerId(me)
+                .updatedCount(updated)
+                .unreadCountAfter(unreadAfter)
+                .page(pageResult.getNumber())
+                .size(pageResult.getSize())
+                .totalElements(pageResult.getTotalElements())
+                .totalPages(pageResult.getTotalPages())
+                .messages(messages)
+                .build();
     }
 
 }

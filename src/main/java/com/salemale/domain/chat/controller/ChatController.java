@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*; // REST API용 어노테이션
 import java.util.List; // 리스트 응답용
 import java.net.URI; //응답 헤더 생성
 
-/*
+/**
  채팅방 관련 API 컨트롤러
  - 채팅방 목록 조회
  - 낙찰된 itemId로 채팅 자동 생성/재사용
@@ -20,7 +20,7 @@ public class ChatController {
 
     private final ChatService chatService; // 채팅 서비스 의존성
 
-    /*
+    /**
      채팅방 목록 조회 API
      - 내가 참여 중인 모든 채팅방을 불러오기
      - 필터(unread), 정렬(sort), 페이징(page, size)
@@ -38,7 +38,7 @@ public class ChatController {
         return ResponseEntity.ok(chatService.getChatList(me, onlyUnread, page, size));
     }
 
-    /*
+    /**
      낙찰된 itemId만으로 채팅 자동 생성/재사용
      - item.seller / item.winner 를 Chat에 매핑
      - 이미 있으면 기존 chatId 반환
@@ -71,7 +71,7 @@ public class ChatController {
 
     */
 
-    /*
+    /**
      채팅방 나가기 API
      - 실제 삭제는 아니고, 각 사용자별 "삭제 시간"만 기록 (soft delete)
      */
@@ -82,5 +82,20 @@ public class ChatController {
     ) {
         chatService.exitChat(me, chatId);
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     채팅방 입장 API
+     - 읽지 않은 메세지 전체 읽음 처리 + 메시지 오름차순 목록 반환
+     - 프론트는 받은 리스트를 그대로 아래로 붙이면 새 메시지가 아래로 쌓임
+     */
+    @PostMapping("/chats/{chatId}/enter")
+    public ResponseEntity<ChatEnterResponse> enter(
+            @RequestHeader("USER_ID") Long me,
+            @PathVariable Long chatId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size
+    ) {
+        return ResponseEntity.ok(chatService.enter(me, chatId, page, size));
     }
 }

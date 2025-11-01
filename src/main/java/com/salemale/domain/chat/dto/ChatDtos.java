@@ -1,7 +1,9 @@
 package com.salemale.domain.chat.dto; // 채팅 관련 요청/응답 데이터를 담는 DTO 클래스 모음
 
+import com.salemale.domain.chat.entity.Message.MessageType;
 import lombok.*; // 게터 등 생성
 import java.time.LocalDateTime; // 날짜와 시간을 다루기 위함
+import java.util.List;
 
 /*
  ChatDtos
@@ -46,5 +48,30 @@ public class ChatDtos {
     @Getter @NoArgsConstructor @AllArgsConstructor @Builder
     public static class ChatResponse {
         private Long chatId; // 생성된 채팅방 ID
+    }
+
+    // 채팅방 입장 응답: 미읽음 일괄 처리 결과 + 메시지 목록(오름차순)
+    @Getter @NoArgsConstructor @AllArgsConstructor @Builder
+    public static class ChatEnterResponse {
+        private Long chatId;
+        private Long readerId;
+        private int updatedCount;        // 이번에 읽음 처리된 개수
+        private int unreadCountAfter;    // 처리 후 남은 미읽음(보통 0)
+        private int page;
+        private int size;
+        private long totalElements;
+        private int totalPages;
+        private List<MessageBrief> messages;
+    }
+
+    // 입장 시 반환할 메시지 간략 DTO (오름차순)
+    @Getter @NoArgsConstructor @AllArgsConstructor @Builder
+    public static class MessageBrief {
+        private Long messageId;
+        private Long senderId;
+        private String content;
+        private MessageType type;
+        private boolean read;
+        private LocalDateTime sentAt;
     }
 }

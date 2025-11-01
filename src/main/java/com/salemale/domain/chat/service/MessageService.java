@@ -89,9 +89,10 @@ public class MessageService {
     }
 
     /*
-     메시지 읽음 처리
+      기존 메시지 읽음 처리
      - 수신자가 해당 메시지를 읽은 시점에 isRead=true로 변경
      */
+    /*
     @Transactional
     public void markRead(Long me, Long messageId) {
         Message msg = messageRepository.findById(messageId)
@@ -101,7 +102,7 @@ public class MessageService {
 
         // 참여자 검증
         if (!chat.getSeller().getId().equals(me) && !chat.getBuyer().getId().equals(me)) {
-            throw new IllegalStateException("참여자가 아닙니다.");
+            throw new IllegalStateException("대화 참여자가 아닙니다.");
         }
 
         // 본인이 보낸 메시지는 읽음 처리 안 함
@@ -119,5 +120,29 @@ public class MessageService {
                     .build();
             messageRepository.save(updated);
         }
+    }
+
+     */
+
+    // (변경) 채팅방 단위로 '내가 안 읽은' 메시지 전체 읽음 처리
+    @Transactional
+    public ReadAllResponse markAllReadInChat(Long me, Long chatId) {
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new EntityNotFoundException("채팅방이 없습니다."));
+
+        if (!chat.getSeller().getId().equals(me) && !chat.getBuyer().getId().equals(me)) {
+            throw new IllegalStateException("대화 참여자가 아닙니다.");
+        }
+
+        int updated = messageRepository.markAllReadInChat(chatId, me); // 일괄 업데이트
+        int unreadAfter = (int) messageRepository
+                .countByChat_ChatIdAndSender_IdNotAndIsReadFalse(chatId, me);
+
+        return ReadAllResponse.builder()
+                .chatId(chatId)
+                .readerId(me)
+                .updatedCount(updated)
+                .unreadCountAfter(unreadAfter)
+                .build();
     }
 }

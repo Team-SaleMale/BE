@@ -41,4 +41,14 @@ public class MessageController {
         messageService.markRead(me, id);
         return ResponseEntity.ok().build();
     }
+
+    // 채팅방 입장 시: 해당 방의 '내가 안 읽은' 메시지 전체 읽음 처리
+    @PatchMapping("/chats/{chatId}/read")
+    public ResponseEntity<ReadAllResponse> readAllInChat(
+            @RequestHeader("USER_ID") Long me,
+            @PathVariable Long chatId
+    ) {
+        ReadAllResponse res = messageService.markAllReadInChat(me, chatId);
+        return ResponseEntity.ok(res);
+    }
 }
