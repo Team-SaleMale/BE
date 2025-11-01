@@ -23,7 +23,7 @@ public class MessageController {
      */
     @PostMapping("/messages")
     public ResponseEntity<MessageResponse> sendMessage(
-            @RequestHeader("USER_ID") Long me,
+            @RequestHeader("EX_USER_ID") Long me,
             @RequestBody SendMessageRequest request
     ) {
         return ResponseEntity.ok(messageService.send(me, request));
@@ -35,7 +35,7 @@ public class MessageController {
      */
     @PatchMapping("/messages/{id}/read")
     public ResponseEntity<Void> readMessage(
-            @RequestHeader("USER_ID") Long me,
+            @RequestHeader("EX_USER_ID") Long me,
             @PathVariable Long id
     ) {
         messageService.markRead(me, id);
