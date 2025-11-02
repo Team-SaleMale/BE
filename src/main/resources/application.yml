@@ -18,7 +18,7 @@ spring:
   # JPA/Hibernate 설정
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate  # update에서 변경: 파이썬 서버와 Lock 충돌 방지
     show-sql: true
     properties:
       hibernate:
@@ -154,3 +154,8 @@ gemini:
   api-key: ${GEMINI_API_KEY}
   model: gemini-2.5-flash
   api-url: https://generativelanguage.googleapis.com/v1beta/models
+
+# 추천 API 설정 (파이썬 FastAPI)
+recommendation:
+  api:
+    url: ${RECOMMENDATION_API_URL}
