@@ -164,18 +164,22 @@ public class ItemConverter {
      * @return 경매 상품 리스트 항목 DTO
      */
     public static AuctionListItemDTO toAuctionListItemDTO(Item item) {
-        // 썸네일은 첫 번째 이미지 사용
-        String thumbnailUrl = getThumbnailUrl(item);
+        // 전체 이미지 사용
+        List<String> imageUrls = item.getImages().stream()
+                .map(ItemImage::getImageUrl)
+                .collect(Collectors.toList());
 
         return AuctionListItemDTO.builder()
                 .itemId(item.getItemId())
                 .title(item.getTitle())
-                .thumbnailUrl(thumbnailUrl)
+                .imageUrls(imageUrls)
                 .currentPrice(item.getCurrentPrice())
                 .bidderCount(item.getBidCount())
                 .endTime(item.getEndTime())
                 .viewCount(item.getViewCount())
                 .itemStatus(item.getItemStatus().name())
+                .startPrice(item.getStartPrice())  // 시작가
+                .createdAt(item.getCreatedAt())    // 시작날짜
                 .build();
     }
 

@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 경매 상품 리스트 항목 DTO
@@ -24,8 +25,8 @@ public class AuctionListItemDTO {
     @Schema(description = "상품 제목", example = "루테인 지아잔틴 (60캡슐)")
     private String title;
 
-    @Schema(description = "썸네일 이미지 URL", example = "https://example.com/images/item123.jpg")
-    private String thumbnailUrl;
+    @Schema(description = "해당 경매상품의 모든 이미지 URL")
+    private List<String> imageUrls;      // 모든 이미지 URL
 
     @Schema(description = "현재 입찰가", example = "850000")
     private Integer currentPrice;
@@ -41,4 +42,10 @@ public class AuctionListItemDTO {
 
     @Schema(description = "상품 상태", example = "BIDDING")
     private String itemStatus;
+
+    @Schema(description = "경매 시작가")
+    private Integer startPrice;          // 시작가 추가
+
+    @Schema(description = "경매 시작 날짜")
+    private LocalDateTime createdAt;     // 생성일(경매 시작날짜) 추가
 }
