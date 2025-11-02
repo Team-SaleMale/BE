@@ -154,3 +154,8 @@ gemini:
   api-key: ${GEMINI_API_KEY}
   model: gemini-2.5-flash
   api-url: https://generativelanguage.googleapis.com/v1beta/models
+
+# 추천 API 설정 (파이썬 FastAPI)
+recommendation:
+  api:
+    url: ${RECOMMENDATION_API_URL}

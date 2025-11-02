@@ -59,4 +59,15 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
 
     // 특정 상태의 상품 개수
     Long countBySellerAndItemStatus(User seller, ItemStatus itemStatus);
+
+    /**
+     * 여러 ID로 상품 조회 (이미지 fetch join)
+     * 추천 상품 조회 시 사용
+     * DISTINCT 제거: PostgreSQL JSON 타입은 equality operator가 없어서 DISTINCT 사용 불가
+     * 대신 Java에서 중복 제거
+     */
+    @Query("SELECT i FROM Item i " +
+            "LEFT JOIN FETCH i.images " +
+            "WHERE i.itemId IN :itemIds")
+    List<Item> findAllByItemIdInWithImages(@Param("itemIds") List<Long> itemIds);
 }
