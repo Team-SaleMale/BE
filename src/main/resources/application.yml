@@ -18,7 +18,7 @@ spring:
   # JPA/Hibernate 설정
   jpa:
     hibernate:
-      ddl-auto: validate  # update에서 변경: 파이썬 서버와 Lock 충돌 방지
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
