@@ -39,4 +39,13 @@ public class MessageDtos {
         private boolean read;           // 읽음 여부
         private LocalDateTime sentAt;   // 메시지 전송 시각
     }
+
+    // 채팅방 단위로 읽음 처리 결과 응답
+    @Getter @NoArgsConstructor @AllArgsConstructor @Builder
+    public static class ReadAllResponse {
+        private Long chatId;           // 읽음 처리한 채팅방 ID
+        private Long readerId;         // 읽은 사용자 ID
+        private int updatedCount;      // 이번에 true 로 바뀐 메시지 수
+        private int unreadCountAfter;  // 처리 후 남은 미읽음 수(보통 0)
+    }
 }

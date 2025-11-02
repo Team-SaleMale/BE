@@ -2,6 +2,7 @@ package com.salemale.domain.chat.controller; // 메시지 관련 컨트롤러
 
 import com.salemale.domain.chat.dto.MessageDtos.*; // 메시지 요청/응답 DTO 묶음
 import com.salemale.domain.chat.service.MessageService; // 메시지 비즈니스 로직 서비스
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor; // 생성자 자동 생성
 import org.springframework.http.ResponseEntity; // HTTP 응답 객체
 import org.springframework.web.bind.annotation.*; // REST 매핑용 어노테이션
@@ -21,24 +22,27 @@ public class MessageController {
      메시지 전송 API
      - 클라이언트에서 채팅방 ID, 내용, 타입(TEXT/IMAGE)을 받아 메시지를 생성한다.
      */
+    @Operation(summary = "메시지 보내기", description = "채팅방(chatId)으로 메시지를 보냅니다.")
     @PostMapping("/messages")
     public ResponseEntity<MessageResponse> sendMessage(
-            @RequestHeader("EX_USER_ID") Long me,
+            @RequestHeader("USER_ID") Long me,
             @RequestBody SendMessageRequest request
     ) {
         return ResponseEntity.ok(messageService.send(me, request));
     }
 
     /*
-     메시지 읽음 처리 API
+     (변경 전)메시지 읽음 처리 API
      - 특정 메시지 ID 기준으로, 읽음 상태로 업데이트한다.
-     */
+
     @PatchMapping("/messages/{id}/read")
     public ResponseEntity<Void> readMessage(
-            @RequestHeader("EX_USER_ID") Long me,
+            @RequestHeader("USER_ID") Long me,
             @PathVariable Long id
     ) {
         messageService.markRead(me, id);
         return ResponseEntity.ok().build();
     }
+
+     */
 }

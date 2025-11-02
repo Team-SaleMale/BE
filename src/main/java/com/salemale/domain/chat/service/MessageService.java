@@ -34,21 +34,28 @@ public class MessageService {
     @Transactional
     public MessageResponse send(Long me, SendMessageRequest req) {
         Chat chat = chatRepository.findById(req.getChatId())
-                .orElseThrow(() -> new EntityNotFoundException("채팅방 없음"));
+                .orElseThrow(() -> new EntityNotFoundException("채팅방이 존재하지 않습니다."));
 
         // 참여자 검증
         if (!chat.getSeller().getId().equals(me) && !chat.getBuyer().getId().equals(me)) {
-            throw new IllegalStateException("참여자가 아님");
+            throw new IllegalStateException("참여자가 아닙니다.");
         }
 
-        // 나간 사용자는 전송 불가
+        /* (변경 전)나간 사용자는 전송 불가
         if (chat.getSeller().getId().equals(me) && chat.getSellerDeletedAt() != null)
-            throw new IllegalStateException("판매자 나감");
+            throw new IllegalStateException("판매자가 대화를 나갔습니다.");
         if (chat.getBuyer().getId().equals(me) && chat.getBuyerDeletedAt() != null)
-            throw new IllegalStateException("구매자 나감");
+            throw new IllegalStateException("구매자가 대화를 나갔습니다.");
+
+         */
+
+        // 어느 한쪽이라도 나가면 전체 전송 차단
+        if (chat.getSellerDeletedAt() != null || chat.getBuyerDeletedAt() != null) {
+            throw new IllegalStateException("이 대화는 종료되었습니다.");
+        }
 
         User sender = userRepository.findById(me)
-                .orElseThrow(() -> new EntityNotFoundException("보내는 사용자 없음"));
+                .orElseThrow(() -> new EntityNotFoundException("보내는 사용자가 없습니다."));
 
         // 메시지 생성
         Message msg = Message.builder()
@@ -89,19 +96,20 @@ public class MessageService {
     }
 
     /*
-     메시지 읽음 처리
+      기존 메시지 읽음 처리
      - 수신자가 해당 메시지를 읽은 시점에 isRead=true로 변경
      */
+    /*
     @Transactional
     public void markRead(Long me, Long messageId) {
         Message msg = messageRepository.findById(messageId)
-                .orElseThrow(() -> new EntityNotFoundException("메시지 없음"));
+                .orElseThrow(() -> new EntityNotFoundException("메시지가 없습니다."));
 
         Chat chat = msg.getChat();
 
         // 참여자 검증
         if (!chat.getSeller().getId().equals(me) && !chat.getBuyer().getId().equals(me)) {
-            throw new IllegalStateException("참여자가 아님");
+            throw new IllegalStateException("대화 참여자가 아닙니다.");
         }
 
         // 본인이 보낸 메시지는 읽음 처리 안 함
@@ -120,4 +128,6 @@ public class MessageService {
             messageRepository.save(updated);
         }
     }
+
+     */
 }
