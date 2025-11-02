@@ -23,6 +23,7 @@ import com.salemale.domain.user.repository.UserRegionRepository;
 import com.salemale.domain.user.repository.UserRepository;
 import com.salemale.global.common.enums.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,9 +33,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -47,6 +50,7 @@ public class ItemService {
     private final ItemTransactionRepository itemTransactionRepository;
     private final S3Service s3Service; // s3 로직
     private final ImageService imageService;
+    private final RecommendationService recommendationService;
 
     //찜하기
     @Transactional
@@ -380,6 +384,67 @@ public class ItemService {
                 .size(itemPage.getSize())
                 .hasNext(itemPage.hasNext())
                 .hasPrevious(itemPage.hasPrevious())
+                .build();
+    }
+
+    /**
+     * 개인화 추천 경매 상품 리스트 조회
+     *
+     * @param userId 사용자 ID
+     * @param pageable 페이징 정보
+     * @return 추천 경매 상품 리스트 (페이징 포함)
+     */
+    @Transactional(readOnly = true)
+    public AuctionListResponse getRecommendedAuctionList(Long userId, Pageable pageable) {
+        log.info("[추천 상품 조회] 사용자 ID: {}, 페이지: {}", userId, pageable.getPageNumber());
+
+        // 1. 파이썬 추천 API 호출
+        List<Long> recommendedItemIds = recommendationService.getRecommendedItemIds(userId);
+
+        // 2. 추천 결과가 없으면 인기 상품으로 대체
+        if (recommendedItemIds.isEmpty()) {
+            log.info("[추천 대체] 사용자 ID: {}, 인기 상품으로 대체", userId);
+            return getAuctionList(AuctionStatus.POPULAR, null, null, null,
+                    AuctionSortType.BID_COUNT_DESC, pageable);
+        }
+
+        // 3. 페이징 처리
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), recommendedItemIds.size());
+
+        // 4. 페이지 범위를 벗어나면 빈 결과 반환
+        if (start >= recommendedItemIds.size()) {
+            return AuctionListResponse.builder()
+                    .items(Collections.emptyList())
+                    .totalElements((long) recommendedItemIds.size())
+                    .totalPages((int) Math.ceil((double) recommendedItemIds.size() / pageable.getPageSize()))
+                    .currentPage(pageable.getPageNumber())
+                    .size(0)
+                    .hasNext(false)
+                    .hasPrevious(start > 0)
+                    .build();
+        }
+
+        List<Long> pagedItemIds = recommendedItemIds.subList(start, end);
+
+        // 5. 실제 상품 정보 조회
+        List<AuctionListItemDTO> items = recommendationService.getRecommendedItems(pagedItemIds);
+
+        // 6. 페이징 정보와 함께 응답 반환
+        int totalElements = recommendedItemIds.size();
+        int totalPages = (int) Math.ceil((double) totalElements / pageable.getPageSize());
+
+        log.info("[추천 상품 조회 완료] 사용자 ID: {}, 총 추천: {}개, 반환: {}개",
+                userId, totalElements, items.size());
+
+        return AuctionListResponse.builder()
+                .items(items)
+                .totalElements((long) totalElements)
+                .totalPages(totalPages)
+                .currentPage(pageable.getPageNumber())
+                .size(items.size())
+                .hasNext(end < recommendedItemIds.size())
+                .hasPrevious(start > 0)
                 .build();
     }
 }

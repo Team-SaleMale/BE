@@ -5,5 +5,6 @@ package com.salemale.domain.item.enums;
 public enum AuctionStatus {
     BIDDING,    // 진행중 (입찰 가능)
     COMPLETED,  // 진행완료 (낙찰/유찰)
-    POPULAR     // 인기 (최근 3일 내 입찰 많은 상품)
+    POPULAR,     // 인기 (최근 3일 내 입찰 많은 상품)
+    RECOMMENDED   // 추천 (AI 기반 개인화 추천)
 }

@@ -149,6 +149,8 @@ public class ItemController {
     @Operation(summary = "경매 상품 리스트 조회", description = "경매 상품 목록을 조회합니다. 상태, 카테고리, 가격 범위로 필터링하고 다양한 기준으로 정렬할 수 있습니다.")
     @GetMapping
     public ResponseEntity<ApiResponse<AuctionListResponse>> getAuctions(
+            @Parameter(hidden = true) HttpServletRequest request,
+
             @Parameter(description = "상태 필터 (기본값: BIDDING - 진행중)", example = "BIDDING")
             @RequestParam(required = false, defaultValue = "BIDDING")  // ← 기본값 추가!
             AuctionStatus status,
@@ -175,6 +177,13 @@ public class ItemController {
     ) {
         // Pageable 객체 생성
         Pageable pageable = PageRequest.of(page, size);
+
+        // 추가: RECOMMENDED 상태일 때는 별도 처리
+        if (status == AuctionStatus.RECOMMENDED) {
+            Long userId = currentUserProvider.getCurrentUserId(request);
+            AuctionListResponse response = itemService.getRecommendedAuctionList(userId, pageable);
+            return ResponseEntity.ok(ApiResponse.onSuccess(response));
+        }
 
         // 서비스 호출
         AuctionListResponse response = itemService.getAuctionList(status, categories, minPrice, maxPrice, sort, pageable);
