@@ -41,5 +41,12 @@ public interface AuthService {
      * @return true이면 이미 사용 중, false이면 사용 가능
      */
     boolean existsNickname(String nickname);
+
+    /**
+     * 소셜 회원가입 최종 확정: 사용자/대표지역/UserAuth를 생성합니다.
+     */
+    void completeSocialSignup(String email, String nickname, Long regionId,
+                              com.salemale.global.common.enums.LoginType provider,
+                              String providerUserId);
 }
 

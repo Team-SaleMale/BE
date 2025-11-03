@@ -12,5 +12,12 @@ public interface EmailService {
      * @param code 6자리 인증번호
      */
     void sendPasswordResetCode(String to, String code);
+
+    /**
+     * 회원가입 이메일 인증용 인증번호를 전송합니다.
+     * @param to 수신자 이메일
+     * @param code 6자리 인증번호
+     */
+    void sendSignupVerificationCode(String to, String code);
 }
 

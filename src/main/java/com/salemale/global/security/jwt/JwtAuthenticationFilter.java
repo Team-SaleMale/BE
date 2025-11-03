@@ -18,6 +18,12 @@ import java.util.Collections; // 빈 권한 컬렉션
 
 import com.salemale.domain.user.repository.UserRepository;
 
+/**
+ * JWT 인증 필터.
+ * <p>
+ * - Authorization: Bearer 토큰에서 subject 추출 후 SecurityContext에 인증 주체 저장
+ * - 소프트 삭제된 사용자(deleted_at != null)는 즉시 인증 차단(기존 토큰도 무효화 효과)
+ */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider; // 토큰 파싱/검증기

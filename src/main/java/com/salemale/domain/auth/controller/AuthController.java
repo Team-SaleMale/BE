@@ -13,6 +13,12 @@ import com.salemale.domain.user.repository.UserAuthRepository;
 import com.salemale.domain.user.repository.UserRepository;
 import com.salemale.global.common.enums.LoginType;
 import com.salemale.global.security.jwt.CurrentUserProvider;
+import com.salemale.domain.auth.service.SignupVerificationService;
+import com.salemale.domain.auth.service.SocialSignupSessionService;
+import com.salemale.domain.region.entity.Region;
+import com.salemale.domain.region.repository.RegionRepository;
+import com.salemale.domain.user.entity.UserRegion;
+import com.salemale.domain.user.repository.UserRegionRepository;
 import com.salemale.domain.auth.service.PasswordResetService;
 import com.salemale.global.security.jwt.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,6 +58,10 @@ public class AuthController {
     private final UserRepository userRepository;
     private final UserAuthRepository userAuthRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final SignupVerificationService signupVerificationService;
+    private final SocialSignupSessionService socialSignupSessionService;
+    private final RegionRepository regionRepository;
+    private final UserRegionRepository userRegionRepository;
 
     @Value("${FRONTEND_URL:http://localhost:3000}")
     private String frontendUrl;
@@ -59,7 +69,11 @@ public class AuthController {
     public AuthController(AuthService authService, JwtTokenProvider jwtTokenProvider, PasswordResetService passwordResetService,
                           CurrentUserProvider currentUserProvider, UserRepository userRepository,
                           UserAuthRepository userAuthRepository,
-                          org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
+                          org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
+                          SignupVerificationService signupVerificationService,
+                          SocialSignupSessionService socialSignupSessionService,
+                          RegionRepository regionRepository,
+                          UserRegionRepository userRegionRepository) {
         this.authService = authService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordResetService = passwordResetService;
@@ -67,6 +81,10 @@ public class AuthController {
         this.userRepository = userRepository;
         this.userAuthRepository = userAuthRepository;
         this.passwordEncoder = passwordEncoder;
+        this.signupVerificationService = signupVerificationService;
+        this.socialSignupSessionService = socialSignupSessionService;
+        this.regionRepository = regionRepository;
+        this.userRegionRepository = userRegionRepository;
     }
 
     @Operation(
@@ -104,6 +122,40 @@ public class AuthController {
                 "callback", frontendUrl + "/auth/callback#token={JWT_TOKEN}",
                 "note", "브라우저에서 직접 접속해야 합니다. Swagger UI에서는 테스트할 수 없습니다."
         )));
+    }
+
+    @Operation(
+            summary = "회원가입 이메일 인증코드 발송",
+            description = "로컬 회원가입 전 이메일로 6자리 인증코드를 보냅니다. 기존 계정 존재 여부는 응답에서 노출하지 않습니다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "발송 요청 접수")
+    })
+    @PostMapping("/email/verify/request")
+    public ResponseEntity<ApiResponse<Map<String, String>>> requestSignupEmail(@RequestParam("email") String email) {
+        // 회원가입 정책: 미가입 이메일만 허용
+        if (authService.existsLocalEmail(email)) {
+            return ResponseEntity.status(400).body(ApiResponse.onFailure("USER_EMAIL_ALREADY_EXISTS", "이미 가입된 이메일입니다.", null));
+        }
+        signupVerificationService.sendSignupCode(email);
+        return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("message", "인증코드가 이메일로 발송되었습니다.")));
+    }
+
+    @Operation(
+            summary = "회원가입 이메일 인증코드 검증",
+            description = "이메일과 6자리 코드를 검증하여 단기 세션 토큰을 반환합니다. 이후 회원가입 요청 시 제출하세요."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "검증 성공, 세션 토큰 반환"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "코드가 유효하지 않음/만료됨")
+    })
+    @PostMapping("/email/verify/confirm")
+    public ResponseEntity<ApiResponse<Map<String, String>>> confirmSignupEmail(
+            @RequestParam("email") String email,
+            @RequestParam("code") String code
+    ) {
+        String sessionToken = signupVerificationService.verifySignupCode(email, code);
+        return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("sessionToken", sessionToken)));
     }
 
     @Operation(
@@ -198,8 +250,85 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "이미 가입된 이메일 또는 유효하지 않은 입력")
     })
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody SignupRequest request) {
+    public ResponseEntity<ApiResponse<Void>> register(
+            @Valid @RequestBody SignupRequest request,
+            @org.springframework.web.bind.annotation.RequestHeader(value = "X-Email-Verify-Token", required = false) String token
+    ) {
+        // 이메일 인증 토큰 필수: 미제공/검증실패 시 가입 거부
+        if (token == null || !signupVerificationService.validateSignupToken(request.getEmail(), token)) {
+            return ResponseEntity.status(400).body(ApiResponse.onFailure("EMAIL_VERIFICATION_REQUIRED", "이메일 인증을 완료해주세요.", null));
+        }
+
+        // 닉네임/지역 필수 및 중복 검사
+        if (request.getNickname() == null || request.getNickname().trim().isEmpty()) {
+            var err = com.salemale.common.code.status.ErrorStatus.NICKNAME_NOT_EXIST;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
+        }
+        if (authService.existsNickname(request.getNickname().trim())) {
+            var err = com.salemale.common.code.status.ErrorStatus.NICKNAME_ALREADY_EXISTS;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
+        }
+        if (request.getRegionId() == null) {
+            var err = com.salemale.common.code.status.ErrorStatus.REGION_NOT_FOUND;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
+        }
+
         authService.registerLocal(request);
+        return ResponseEntity.ok(ApiResponse.onSuccess());
+    }
+
+    @Operation(summary = "소셜 회원가입 최종 확정", description = "OAuth2 성공 후 signupToken, 닉네임, 지역을 받아 User/UserRegion/UserAuth를 생성합니다.")
+    @PostMapping("/social/complete")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<ApiResponse<Void>> completeSocialSignup(
+            @RequestParam("signupToken") String signupToken,
+            @RequestParam("nickname") String nickname,
+            @RequestParam("regionId") Long regionId
+    ) {
+        var session = socialSignupSessionService.get(signupToken);
+        if (session == null) {
+            var err = com.salemale.common.code.status.ErrorStatus.SOCIAL_SIGNUP_SESSION_INVALID;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
+        }
+
+        // 닉네임 검증
+        if (nickname == null || nickname.trim().isEmpty()) {
+            var err = com.salemale.common.code.status.ErrorStatus.NICKNAME_NOT_EXIST;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
+        }
+        if (authService.existsNickname(nickname.trim())) {
+            var err = com.salemale.common.code.status.ErrorStatus.NICKNAME_ALREADY_EXISTS;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
+        }
+        if (regionId == null) {
+            var err = com.salemale.common.code.status.ErrorStatus.REGION_NOT_FOUND;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
+        }
+
+        // 이메일 중복 확인(있으면 가입 거부)
+        if (session.email() != null && authService.existsLocalEmail(session.email())) {
+            var err = com.salemale.common.code.status.ErrorStatus.USER_EMAIL_ALREADY_EXISTS;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
+        }
+
+        // 서비스로 일원화하여 생성
+        authService.completeSocialSignup(
+                session.email(),
+                nickname,
+                regionId,
+                session.provider(),
+                session.providerUserId()
+        );
+
+        socialSignupSessionService.consume(signupToken);
         return ResponseEntity.ok(ApiResponse.onSuccess());
     }
 
