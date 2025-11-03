@@ -3,6 +3,14 @@ package com.salemale.domain.search.controller; // 검색 전용 컨트롤러
 import com.salemale.common.response.ApiResponse;
 import com.salemale.domain.search.dto.RegionSearchResponse;
 import com.salemale.domain.search.service.RegionSearchService;
+import com.salemale.domain.search.service.NearbyItemSearchService;
+import com.salemale.domain.search.service.KeywordItemSearchService;
+import com.salemale.domain.item.dto.response.AuctionListItemDTO;
+import com.salemale.domain.search.dto.NearbyItemsResponse;
+import com.salemale.global.security.jwt.CurrentUserProvider;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import io.swagger.v3.oas.annotations.Operation; // Swagger: API 설명
 import io.swagger.v3.oas.annotations.Parameter; // Swagger: 파라미터 설명
 import io.swagger.v3.oas.annotations.responses.ApiResponses; // Swagger: 여러 응답 설명
@@ -36,6 +44,9 @@ import java.util.List;
 public class SearchController {
 
     private final RegionSearchService regionSearchService;
+    private final NearbyItemSearchService nearbyItemSearchService;
+    private final KeywordItemSearchService keywordItemSearchService;
+    private final CurrentUserProvider currentUserProvider;
 
     /**
      * 지역 검색: 시도/시군구/읍면동 이름으로 지역을 검색합니다.
@@ -96,6 +107,58 @@ public class SearchController {
 
         // 3) ApiResponse.onSuccess: 성공 응답으로 감싸서 반환
         return ApiResponse.onSuccess(results);
+    }
+
+
+    @Operation(
+            summary = "내 주변 아이템 검색",
+            description = "사용자의 대표 지역과 거리 설정(range)에 기반해 반경 내 BIDDING 아이템을 조회합니다."
+    )
+    @GetMapping("/items/nearby")
+    public ApiResponse<NearbyItemsResponse> nearbyItems(
+            HttpServletRequest request,
+            @Parameter(description = "페이지 번호 (0부터)", example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "페이지 크기", example = "20") @RequestParam(defaultValue = "20") int size
+    ) {
+        Long userId = currentUserProvider.getCurrentUserId(request);
+        Page<AuctionListItemDTO> result = nearbyItemSearchService.findNearbyItemsForUser(userId, PageRequest.of(Math.max(page,0), Math.max(size,1)));
+        NearbyItemsResponse body = NearbyItemsResponse.builder()
+                .items(result.getContent())
+                .totalElements(result.getTotalElements())
+                .totalPages(result.getTotalPages())
+                .currentPage(result.getNumber())
+                .size(result.getSize())
+                .hasNext(result.hasNext())
+                .hasPrevious(result.hasPrevious())
+                .build();
+        return ApiResponse.onSuccess(body);
+    }
+
+    @Operation(
+            summary = "키워드 검색(옵션: 반경 필터)",
+            description = "q(필수)로 제목/이름 부분일치 검색. includeOutside=true면 거리 무시, false면 사용자 range 또는 distanceKm 사용"
+    )
+    @GetMapping("/items")
+    public ApiResponse<NearbyItemsResponse> searchItems(
+            HttpServletRequest request,
+            @Parameter(description = "검색 키워드", example = "아이폰", required = true) @RequestParam String q,
+            @Parameter(description = "거리 무시하고 전국 검색", example = "false") @RequestParam(defaultValue = "false") boolean includeOutside,
+            @Parameter(description = "거리(km) 오버라이드(미지정 시 사용자 설정)", example = "5") @RequestParam(required = false) Double distanceKm,
+            @Parameter(description = "페이지 번호", example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "페이지 크기", example = "20") @RequestParam(defaultValue = "20") int size
+    ) {
+        Long userId = currentUserProvider.getCurrentUserId(request);
+        Page<AuctionListItemDTO> result = keywordItemSearchService.search(userId, q, includeOutside, distanceKm, PageRequest.of(Math.max(page,0), Math.max(size,1)));
+        NearbyItemsResponse body = NearbyItemsResponse.builder()
+                .items(result.getContent())
+                .totalElements(result.getTotalElements())
+                .totalPages(result.getTotalPages())
+                .currentPage(result.getNumber())
+                .size(result.getSize())
+                .hasNext(result.hasNext())
+                .hasPrevious(result.hasPrevious())
+                .build();
+        return ApiResponse.onSuccess(body);
     }
 }
 
