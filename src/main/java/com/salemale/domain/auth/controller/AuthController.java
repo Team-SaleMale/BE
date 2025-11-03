@@ -14,6 +14,11 @@ import com.salemale.domain.user.repository.UserRepository;
 import com.salemale.global.common.enums.LoginType;
 import com.salemale.global.security.jwt.CurrentUserProvider;
 import com.salemale.domain.auth.service.SignupVerificationService;
+import com.salemale.domain.auth.service.SocialSignupSessionService;
+import com.salemale.domain.region.entity.Region;
+import com.salemale.domain.region.repository.RegionRepository;
+import com.salemale.domain.user.entity.UserRegion;
+import com.salemale.domain.user.repository.UserRegionRepository;
 import com.salemale.domain.auth.service.PasswordResetService;
 import com.salemale.global.security.jwt.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,6 +59,9 @@ public class AuthController {
     private final UserAuthRepository userAuthRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final SignupVerificationService signupVerificationService;
+    private final SocialSignupSessionService socialSignupSessionService;
+    private final RegionRepository regionRepository;
+    private final UserRegionRepository userRegionRepository;
 
     @Value("${FRONTEND_URL:http://localhost:3000}")
     private String frontendUrl;
@@ -62,7 +70,10 @@ public class AuthController {
                           CurrentUserProvider currentUserProvider, UserRepository userRepository,
                           UserAuthRepository userAuthRepository,
                           org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
-                          SignupVerificationService signupVerificationService) {
+                          SignupVerificationService signupVerificationService,
+                          SocialSignupSessionService socialSignupSessionService,
+                          RegionRepository regionRepository,
+                          UserRegionRepository userRegionRepository) {
         this.authService = authService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordResetService = passwordResetService;
@@ -71,6 +82,9 @@ public class AuthController {
         this.userAuthRepository = userAuthRepository;
         this.passwordEncoder = passwordEncoder;
         this.signupVerificationService = signupVerificationService;
+        this.socialSignupSessionService = socialSignupSessionService;
+        this.regionRepository = regionRepository;
+        this.userRegionRepository = userRegionRepository;
     }
 
     @Operation(
@@ -257,6 +271,46 @@ public class AuthController {
         }
 
         authService.registerLocal(request);
+        return ResponseEntity.ok(ApiResponse.onSuccess());
+    }
+
+    @Operation(summary = "소셜 회원가입 최종 확정", description = "OAuth2 성공 후 signupToken, 닉네임, 지역을 받아 User/UserRegion/UserAuth를 생성합니다.")
+    @PostMapping("/social/complete")
+    public ResponseEntity<ApiResponse<Void>> completeSocialSignup(
+            @RequestParam("signupToken") String signupToken,
+            @RequestParam("nickname") String nickname,
+            @RequestParam("regionId") Long regionId
+    ) {
+        var session = socialSignupSessionService.get(signupToken);
+        if (session == null) {
+            return ResponseEntity.status(400).body(ApiResponse.onFailure("SOCIAL_SIGNUP_SESSION_INVALID", "세션이 유효하지 않거나 만료되었습니다.", null));
+        }
+
+        // 이메일이 이미 로컬/소셜로 존재하는지 등은 내부 서비스 정책에 맞게 확인 가능
+        var user = com.salemale.domain.user.entity.User.builder()
+                .nickname(nickname)
+                .email(session.email())
+                .build();
+        user = userRepository.save(user);
+
+        Region region = regionRepository.findById(regionId)
+                .orElseThrow(() -> new com.salemale.common.exception.GeneralException(com.salemale.common.code.status.ErrorStatus.REGION_NOT_FOUND));
+        UserRegion ur = UserRegion.builder()
+                .user(user)
+                .region(region)
+                .isPrimary(true)
+                .build();
+        userRegionRepository.save(ur);
+
+        com.salemale.domain.user.entity.UserAuth auth = com.salemale.domain.user.entity.UserAuth.builder()
+                .user(user)
+                .provider(session.provider())
+                .providerUserId(session.providerUserId())
+                .emailNormalized(session.email() == null ? null : session.email().toLowerCase())
+                .build();
+        userAuthRepository.save(auth);
+
+        socialSignupSessionService.consume(signupToken);
         return ResponseEntity.ok(ApiResponse.onSuccess());
     }
 

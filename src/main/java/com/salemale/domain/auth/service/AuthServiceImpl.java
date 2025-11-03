@@ -2,9 +2,13 @@ package com.salemale.domain.auth.service;
 
 import com.salemale.domain.user.entity.UserAuth;
 import com.salemale.domain.user.entity.User;
+import com.salemale.domain.user.entity.UserRegion;
+import com.salemale.domain.region.entity.Region;
 import com.salemale.domain.auth.dto.request.SignupRequest;
 import com.salemale.domain.user.repository.UserRepository;
 import com.salemale.domain.user.repository.UserAuthRepository;
+import com.salemale.domain.user.repository.UserRegionRepository;
+import com.salemale.domain.region.repository.RegionRepository;
 import com.salemale.global.common.enums.LoginType;
 import com.salemale.global.security.jwt.JwtTokenProvider;
 import com.salemale.common.exception.GeneralException;
@@ -25,17 +29,23 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserRegionRepository userRegionRepository;
+    private final RegionRepository regionRepository;
 
     public AuthServiceImpl(
             UserAuthRepository userAuthRepository,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            JwtTokenProvider jwtTokenProvider
+            JwtTokenProvider jwtTokenProvider,
+            UserRegionRepository userRegionRepository,
+            RegionRepository regionRepository
     ) {
         this.userAuthRepository = userAuthRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.userRegionRepository = userRegionRepository;
+        this.regionRepository = regionRepository;
     }
 
     /**
@@ -93,6 +103,16 @@ public class AuthServiceImpl implements AuthService {
                 .email(request.getEmail())
                 .build();
         user = userRepository.save(user);
+
+        // 대표 지역 연결 생성 (필수)
+        Region region = regionRepository.findById(request.getRegionId())
+                .orElseThrow(() -> new GeneralException(ErrorStatus.REGION_NOT_FOUND));
+        UserRegion userRegion = UserRegion.builder()
+                .user(user)
+                .region(region)
+                .isPrimary(true)
+                .build();
+        userRegionRepository.save(userRegion);
 
         // 비밀번호 해시 처리
         String hash = passwordEncoder.encode(request.getPassword());
