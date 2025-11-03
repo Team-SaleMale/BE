@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -46,6 +48,120 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
     int incrementViewCount(@Param("itemId") Long itemId);
 
     // 내가 판매자인 모든 상품 개수 (모든 상태 포함)
+
+    /**
+     * 중심 좌표(lat, lon)로부터 distanceKm 이내의 아이템을 조회합니다(하버사인).
+     * - Postgres 기준 native SQL 사용, Region의 latitude/longitude는 numeric이라 double로 캐스팅합니다.
+     */
+    @Query(value = """
+            SELECT i.*
+            FROM item i
+            JOIN region r ON i.region_id = r.region_id
+            WHERE i.item_status = CAST(:status AS varchar)
+              AND (
+                6371 * acos(
+                  LEAST(1, GREATEST(-1,
+                    cos(radians(:lat)) * cos(radians(CAST(r.latitude AS double precision))) *
+                    cos(radians(CAST(r.longitude AS double precision)) - radians(:lon)) +
+                    sin(radians(:lat)) * sin(radians(CAST(r.latitude AS double precision)))
+                  ))
+                )
+              ) <= :distanceKm
+            ORDER BY i.created_at DESC
+            """,
+            countQuery = """
+            SELECT count(1)
+            FROM item i
+            JOIN region r ON i.region_id = r.region_id
+            WHERE i.item_status = CAST(:status AS varchar)
+              AND (
+                6371 * acos(
+                  LEAST(1, GREATEST(-1,
+                    cos(radians(:lat)) * cos(radians(CAST(r.latitude AS double precision))) *
+                    cos(radians(CAST(r.longitude AS double precision)) - radians(:lon)) +
+                    sin(radians(:lat)) * sin(radians(CAST(r.latitude AS double precision)))
+                  ))
+                )
+              ) <= :distanceKm
+            """,
+            nativeQuery = true)
+    Page<Item> findNearbyItems(
+            @Param("status") String status,
+            @Param("lat") double centerLat,
+            @Param("lon") double centerLon,
+            @Param("distanceKm") double distanceKm,
+            Pageable pageable
+    );
+
+    /**
+     * 키워드로 제목/이름을 부분일치 검색(JPQL) — 거리 필터 없음.
+     */
+    @Query("""
+            SELECT i FROM Item i
+            WHERE i.itemStatus = :status
+              AND (
+                LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                 OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              )
+            ORDER BY i.createdAt DESC
+            """)
+    Page<Item> searchItemsByKeyword(
+            @Param("status") com.salemale.global.common.enums.ItemStatus status,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
+    /**
+     * 키워드 + 반경 검색(네이티브, 하버사인)
+     */
+    @Query(value = """
+            SELECT i.*
+            FROM item i
+            JOIN region r ON i.region_id = r.region_id
+            WHERE i.item_status = CAST(:status AS varchar)
+              AND (
+                LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                 OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              )
+              AND (
+                6371 * acos(
+                  LEAST(1, GREATEST(-1,
+                    cos(radians(:lat)) * cos(radians(CAST(r.latitude AS double precision))) *
+                    cos(radians(CAST(r.longitude AS double precision)) - radians(:lon)) +
+                    sin(radians(:lat)) * sin(radians(CAST(r.latitude AS double precision)))
+                  ))
+                )
+              ) <= :distanceKm
+            ORDER BY i.created_at DESC
+            """,
+            countQuery = """
+            SELECT count(1)
+            FROM item i
+            JOIN region r ON i.region_id = r.region_id
+            WHERE i.item_status = CAST(:status AS varchar)
+              AND (
+                LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                 OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              )
+              AND (
+                6371 * acos(
+                  LEAST(1, GREATEST(-1,
+                    cos(radians(:lat)) * cos(radians(CAST(r.latitude AS double precision))) *
+                    cos(radians(CAST(r.longitude AS double precision)) - radians(:lon)) +
+                    sin(radians(:lat)) * sin(radians(CAST(r.latitude AS double precision)))
+                  ))
+                )
+              ) <= :distanceKm
+            """,
+            nativeQuery = true)
+    Page<Item> findNearbyItemsByKeyword(
+            @Param("status") String status,
+            @Param("keyword") String keyword,
+            @Param("lat") double centerLat,
+            @Param("lon") double centerLon,
+            @Param("distanceKm") double distanceKm,
+            Pageable pageable
+    );
     Long countBySeller(User seller);
 
     // 낙찰받은 상품 개수 (낙찰 되었으면 상태는 무조건 success임)
