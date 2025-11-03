@@ -48,6 +48,43 @@ public class AuthServiceImpl implements AuthService {
         this.regionRepository = regionRepository;
     }
 
+    @org.springframework.transaction.annotation.Transactional
+    @Override
+    public void completeSocialSignup(String email, String nickname, Long regionId,
+                                     com.salemale.global.common.enums.LoginType provider,
+                                     String providerUserId) {
+        // 이메일 중복 체크(로컬/소셜 통합 기준: UserAuth의 emailNormalized)
+        if (email != null && userAuthRepository.findByEmailNormalized(email.toLowerCase()).isPresent()) {
+            throw new GeneralException(ErrorStatus.USER_EMAIL_ALREADY_EXISTS);
+        }
+
+        // 사용자 생성
+        User user = User.builder()
+                .nickname(nickname)
+                .email(email)
+                .build();
+        user = userRepository.save(user);
+
+        // 대표 지역 연결
+        Region region = regionRepository.findById(regionId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.REGION_NOT_FOUND));
+        UserRegion ur = UserRegion.builder()
+                .user(user)
+                .region(region)
+                .isPrimary(true)
+                .build();
+        userRegionRepository.save(ur);
+
+        // 인증 수단 생성
+        com.salemale.domain.user.entity.UserAuth auth = com.salemale.domain.user.entity.UserAuth.builder()
+                .user(user)
+                .provider(provider)
+                .providerUserId(providerUserId)
+                .emailNormalized(email == null ? null : email.toLowerCase())
+                .build();
+        userAuthRepository.save(auth);
+    }
+
     /**
      * 로컬 로그인: 사용자가 입력한 자격 증명을 검증하고 JWT 토큰을 발급합니다.
      *

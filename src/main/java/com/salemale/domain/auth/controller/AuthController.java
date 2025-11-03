@@ -312,29 +312,21 @@ public class AuthController {
                     .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
 
-        // 이메일이 이미 로컬/소셜로 존재하는지 등은 내부 서비스 정책에 맞게 확인 가능
-        var user = com.salemale.domain.user.entity.User.builder()
-                .nickname(nickname)
-                .email(session.email())
-                .build();
-        user = userRepository.save(user);
+        // 이메일 중복 확인(있으면 가입 거부)
+        if (session.email() != null && authService.existsLocalEmail(session.email())) {
+            var err = com.salemale.common.code.status.ErrorStatus.USER_EMAIL_ALREADY_EXISTS;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
+        }
 
-        Region region = regionRepository.findById(regionId)
-                .orElseThrow(() -> new com.salemale.common.exception.GeneralException(com.salemale.common.code.status.ErrorStatus.REGION_NOT_FOUND));
-        UserRegion ur = UserRegion.builder()
-                .user(user)
-                .region(region)
-                .isPrimary(true)
-                .build();
-        userRegionRepository.save(ur);
-
-        com.salemale.domain.user.entity.UserAuth auth = com.salemale.domain.user.entity.UserAuth.builder()
-                .user(user)
-                .provider(session.provider())
-                .providerUserId(session.providerUserId())
-                .emailNormalized(session.email() == null ? null : session.email().toLowerCase())
-                .build();
-        userAuthRepository.save(auth);
+        // 서비스로 일원화하여 생성
+        authService.completeSocialSignup(
+                session.email(),
+                nickname,
+                regionId,
+                session.provider(),
+                session.providerUserId()
+        );
 
         socialSignupSessionService.consume(signupToken);
         return ResponseEntity.ok(ApiResponse.onSuccess());
