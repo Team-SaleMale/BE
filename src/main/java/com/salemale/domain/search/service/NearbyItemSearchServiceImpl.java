@@ -32,7 +32,7 @@ public class NearbyItemSearchServiceImpl implements NearbyItemSearchService {
         UserRegion primary = userRegionRepository.findByPrimaryUser(user)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.REGION_NOT_SET));
 
-        double km = user.getRangeInKilometers();
+        double km = user.getRangeInKilometers(); // 기본값 보장(NEAR=5km)
         double lat = primary.getRegion().getLatitude().doubleValue();
         double lon = primary.getRegion().getLongitude().doubleValue();
 

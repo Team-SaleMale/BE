@@ -60,9 +60,11 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             WHERE i.item_status = CAST(:status AS varchar)
               AND (
                 6371 * acos(
-                  cos(radians(:lat)) * cos(radians(CAST(r.latitude AS double precision))) *
-                  cos(radians(CAST(r.longitude AS double precision)) - radians(:lon)) +
-                  sin(radians(:lat)) * sin(radians(CAST(r.latitude AS double precision)))
+                  LEAST(1, GREATEST(-1,
+                    cos(radians(:lat)) * cos(radians(CAST(r.latitude AS double precision))) *
+                    cos(radians(CAST(r.longitude AS double precision)) - radians(:lon)) +
+                    sin(radians(:lat)) * sin(radians(CAST(r.latitude AS double precision)))
+                  ))
                 )
               ) <= :distanceKm
             ORDER BY i.created_at DESC
@@ -74,9 +76,11 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             WHERE i.item_status = CAST(:status AS varchar)
               AND (
                 6371 * acos(
-                  cos(radians(:lat)) * cos(radians(CAST(r.latitude AS double precision))) *
-                  cos(radians(CAST(r.longitude AS double precision)) - radians(:lon)) +
-                  sin(radians(:lat)) * sin(radians(CAST(r.latitude AS double precision)))
+                  LEAST(1, GREATEST(-1,
+                    cos(radians(:lat)) * cos(radians(CAST(r.latitude AS double precision))) *
+                    cos(radians(CAST(r.longitude AS double precision)) - radians(:lon)) +
+                    sin(radians(:lat)) * sin(radians(CAST(r.latitude AS double precision)))
+                  ))
                 )
               ) <= :distanceKm
             """,
@@ -121,9 +125,11 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
               )
               AND (
                 6371 * acos(
-                  cos(radians(:lat)) * cos(radians(CAST(r.latitude AS double precision))) *
-                  cos(radians(CAST(r.longitude AS double precision)) - radians(:lon)) +
-                  sin(radians(:lat)) * sin(radians(CAST(r.latitude AS double precision)))
+                  LEAST(1, GREATEST(-1,
+                    cos(radians(:lat)) * cos(radians(CAST(r.latitude AS double precision))) *
+                    cos(radians(CAST(r.longitude AS double precision)) - radians(:lon)) +
+                    sin(radians(:lat)) * sin(radians(CAST(r.latitude AS double precision)))
+                  ))
                 )
               ) <= :distanceKm
             ORDER BY i.created_at DESC
@@ -139,9 +145,11 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
               )
               AND (
                 6371 * acos(
-                  cos(radians(:lat)) * cos(radians(CAST(r.latitude AS double precision))) *
-                  cos(radians(CAST(r.longitude AS double precision)) - radians(:lon)) +
-                  sin(radians(:lat)) * sin(radians(CAST(r.latitude AS double precision)))
+                  LEAST(1, GREATEST(-1,
+                    cos(radians(:lat)) * cos(radians(CAST(r.latitude AS double precision))) *
+                    cos(radians(CAST(r.longitude AS double precision)) - radians(:lon)) +
+                    sin(radians(:lat)) * sin(radians(CAST(r.latitude AS double precision)))
+                  ))
                 )
               ) <= :distanceKm
             """,

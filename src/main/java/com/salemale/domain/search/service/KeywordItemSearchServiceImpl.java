@@ -42,7 +42,11 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
         UserRegion primary = userRegionRepository.findByPrimaryUser(user)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.REGION_NOT_SET));
 
-        double km = distanceKmOverride != null ? Math.max(distanceKmOverride, 0.1) : user.getRangeInKilometers();
+        Double effective = distanceKmOverride != null ? Math.max(distanceKmOverride, 0.1) : user.getRangeInKilometers();
+        if (effective == null || effective <= 0) {
+            throw new GeneralException(ErrorStatus.USER_REGION_NOT_SET);
+        }
+        double km = effective;
         double lat = primary.getRegion().getLatitude().doubleValue();
         double lon = primary.getRegion().getLongitude().doubleValue();
 
