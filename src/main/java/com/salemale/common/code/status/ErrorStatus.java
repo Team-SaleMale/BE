@@ -35,6 +35,7 @@ public enum ErrorStatus implements BaseErrorCode {
     
     // 지역 관련 에러
     REGION_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION4001", "지역을 찾을 수 없습니다."),
+    SOCIAL_SIGNUP_SESSION_INVALID(HttpStatus.BAD_REQUEST, "SOCIAL4001", "세션이 유효하지 않거나 만료되었습니다."),
 
     // 경매 물품 관련 에러
     ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ITEM4001", "경매 물품을 찾을 수 없습니다."),

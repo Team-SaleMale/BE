@@ -261,13 +261,19 @@ public class AuthController {
 
         // 닉네임/지역 필수 및 중복 검사
         if (request.getNickname() == null || request.getNickname().trim().isEmpty()) {
-            return ResponseEntity.status(400).body(ApiResponse.onFailure("USER4002", "닉네임은 필수입니다.", null));
+            var err = com.salemale.common.code.status.ErrorStatus.NICKNAME_NOT_EXIST;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
         if (authService.existsNickname(request.getNickname().trim())) {
-            return ResponseEntity.status(400).body(ApiResponse.onFailure("USER4004", "이미 사용 중인 닉네임입니다.", null));
+            var err = com.salemale.common.code.status.ErrorStatus.NICKNAME_ALREADY_EXISTS;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
         if (request.getRegionId() == null) {
-            return ResponseEntity.status(400).body(ApiResponse.onFailure("REGION4001", "지역을 찾을 수 없습니다.", null));
+            var err = com.salemale.common.code.status.ErrorStatus.REGION_NOT_FOUND;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
 
         authService.registerLocal(request);
@@ -276,6 +282,7 @@ public class AuthController {
 
     @Operation(summary = "소셜 회원가입 최종 확정", description = "OAuth2 성공 후 signupToken, 닉네임, 지역을 받아 User/UserRegion/UserAuth를 생성합니다.")
     @PostMapping("/social/complete")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<ApiResponse<Void>> completeSocialSignup(
             @RequestParam("signupToken") String signupToken,
             @RequestParam("nickname") String nickname,
@@ -283,7 +290,26 @@ public class AuthController {
     ) {
         var session = socialSignupSessionService.get(signupToken);
         if (session == null) {
-            return ResponseEntity.status(400).body(ApiResponse.onFailure("SOCIAL_SIGNUP_SESSION_INVALID", "세션이 유효하지 않거나 만료되었습니다.", null));
+            var err = com.salemale.common.code.status.ErrorStatus.SOCIAL_SIGNUP_SESSION_INVALID;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
+        }
+
+        // 닉네임 검증
+        if (nickname == null || nickname.trim().isEmpty()) {
+            var err = com.salemale.common.code.status.ErrorStatus.NICKNAME_NOT_EXIST;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
+        }
+        if (authService.existsNickname(nickname.trim())) {
+            var err = com.salemale.common.code.status.ErrorStatus.NICKNAME_ALREADY_EXISTS;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
+        }
+        if (regionId == null) {
+            var err = com.salemale.common.code.status.ErrorStatus.REGION_NOT_FOUND;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
 
         // 이메일이 이미 로컬/소셜로 존재하는지 등은 내부 서비스 정책에 맞게 확인 가능

@@ -43,8 +43,8 @@ public class SignupVerificationServiceImpl implements SignupVerificationService 
         ValueOperations<String, String> ops = stringRedisTemplate.opsForValue();
         ops.set(KEY_CODE + normalized, code, CODE_TTL);
 
-        // 메일 발송(템플릿 재사용: 제목/내용은 비밀번호 재설정과 동일 스타일)
-        emailService.sendPasswordResetCode(email, code);
+        // 가입 전용 템플릿 사용
+        emailService.sendSignupVerificationCode(email, code);
         log.info("[signup] code issued to {} (ttl={}s)", mask(email), CODE_TTL.toSeconds());
     }
 
