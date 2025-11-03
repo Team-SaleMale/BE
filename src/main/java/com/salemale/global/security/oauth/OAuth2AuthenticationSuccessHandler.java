@@ -1,9 +1,6 @@
 package com.salemale.global.security.oauth;
 
-import com.salemale.domain.user.entity.User;
-import com.salemale.domain.user.entity.UserAuth;
-import com.salemale.domain.user.repository.UserRepository;
-import com.salemale.domain.user.repository.UserAuthRepository;
+import com.salemale.domain.auth.service.SocialSignupSessionService;
 import com.salemale.global.common.enums.LoginType;
 import com.salemale.global.security.jwt.JwtTokenProvider;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,8 +30,7 @@ import java.util.Map;
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final UserRepository userRepository;
-    private final UserAuthRepository userAuthRepository;
+    private final SocialSignupSessionService socialSignupSessionService;
     
     @Value("${FRONTEND_URL}")
     private String frontendUrl;
@@ -61,27 +57,11 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         log.debug("파싱된 사용자 정보: provider={}, providerUserId={}, email={}, nickname={}", 
                   loginType, providerUserId, email, nickname);
         
-        // 사용자 저장/업데이트
-        User user = findOrCreateUser(nickname, email, loginType, providerUserId);
-        
-        // 소프트 삭제 계정은 로그인 불가 처리: 에러 코드로 리다이렉트
-        if (user.getDeletedAt() != null) {
-            String errorUri = getRedirectUri() + "#error=account_deleted";
-            log.info("소프트 삭제 계정 로그인 시도: userId={}, provider={}", user.getId(), loginType);
-            getRedirectStrategy().sendRedirect(request, response, errorUri);
-            return;
-        }
-
-        // JWT 토큰 생성
-        String jwtToken = jwtTokenProvider.generateToken(String.valueOf(user.getId()));
-        
-        // 리다이렉트 URI 생성 (프론트엔드로 토큰 전달)
-        // 보안: fragment(#)를 사용하여 토큰이 서버 로그나 Referer 헤더에 노출되지 않도록 함
+        // 즉시 사용자 생성 대신 '가입 확정' 세션 발급 → 프론트에서 닉네임/지역 입력 후 완료 호출
+        String signupToken = socialSignupSessionService.create(loginType, providerUserId, email);
         String baseUri = getRedirectUri();
-        String redirectUri = baseUri + "#token=" + jwtToken;
-        
-        log.info("OAuth2 인증 완료, 리다이렉트: {}#token=***", baseUri);
-        
+        String redirectUri = baseUri + "#social=1&provider=" + registrationId + "&signupToken=" + signupToken;
+        log.info("OAuth2 인증 완료(미확정), 리다이렉트: {}#social=1&provider={}&signupToken=***", baseUri, registrationId);
         getRedirectStrategy().sendRedirect(request, response, redirectUri);
     }
     
@@ -183,65 +163,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         };
     }
     
-    /**
-     * 사용자 조회 또는 생성
-     * - 이미 존재하는 경우 UserAuth와 lastLoginAt만 업데이트
-     * - 존재하지 않는 경우 User와 UserAuth 모두 생성
-     */
-    private User findOrCreateUser(String nickname, String email, LoginType loginType, String providerUserId) {
-        // providerUserId 검증
-        if (providerUserId == null || providerUserId.isBlank()) {
-            throw new IllegalArgumentException("providerUserId는 필수입니다.");
-        }
-        
-        // 1. UserAuth 조회 (provider + providerUserId)
-        UserAuth userAuth = userAuthRepository.findByProviderAndProviderUserId(loginType, providerUserId)
-                .orElse(null);
-        
-        if (userAuth != null) {
-            // 기존 사용자: lastLoginAt 업데이트
-            userAuth.updateLastLoginAt(LocalDateTime.now());
-            userAuthRepository.save(userAuth);
-            return userAuth.getUser();
-        }
-        
-        // 2. 신규 사용자: User 생성
-        User user = User.builder()
-                .nickname(ensureUniqueNickname(nickname))
-                .email(email)
-                .build();
-        user = userRepository.save(user);
-        
-        // 3. UserAuth 생성
-        UserAuth auth = UserAuth.builder()
-                .user(user)
-                .provider(loginType)
-                .providerUserId(providerUserId)
-                .emailNormalized(email != null ? email.toLowerCase() : null)
-                .lastLoginAt(LocalDateTime.now())
-                .build();
-        userAuthRepository.save(auth);
-        
-        log.info("새로운 OAuth2 사용자 생성: id={}, nickname={}, provider={}", 
-                 user.getId(), user.getNickname(), loginType);
-        
-        return user;
-    }
-    
-    /**
-     * 닉네임 중복 체크 및 고유한 닉네임 생성
-     */
-    private String ensureUniqueNickname(String nickname) {
-        String uniqueNickname = nickname;
-        int suffix = 1;
-        
-        while (userRepository.existsByNickname(uniqueNickname)) {
-            uniqueNickname = nickname + suffix;
-            suffix++;
-        }
-        
-        return uniqueNickname;
-    }
+    // 기존 즉시 생성 로직은 제거. 최종 확정은 컨트롤러의 /auth/social/complete에서 수행
     
     /**
      * 리다이렉트 URI (프론트엔드 URL)
