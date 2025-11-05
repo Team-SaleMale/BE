@@ -8,6 +8,9 @@ import com.salemale.domain.search.service.KeywordItemSearchService;
 import com.salemale.domain.item.dto.response.AuctionListItemDTO;
 import com.salemale.domain.search.dto.NearbyItemsResponse;
 import com.salemale.domain.user.entity.User; // RangeSetting(enum) 사용
+import com.salemale.domain.item.enums.AuctionStatus;
+import com.salemale.domain.item.enums.AuctionSortType;
+import com.salemale.global.common.enums.Category;
 import com.salemale.global.security.jwt.CurrentUserProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
@@ -143,23 +146,19 @@ public class SearchController {
     public ApiResponse<NearbyItemsResponse> searchItems(
             HttpServletRequest request,
             @Parameter(description = "검색 키워드", example = "아이폰", required = true) @RequestParam String q,
-            @Parameter(description = "거리 무시하고 전국 검색", example = "false") @RequestParam(defaultValue = "false") boolean includeOutside,
-            @Parameter(description = "거리(km) 오버라이드(미지정 시 사용자 설정)", example = "5") @RequestParam(required = false) Double distanceKm,
             @Parameter(description = "표시 반경 Enum(사용자 기본값 대체)", example = "NEAR") @RequestParam(required = false) User.RangeSetting radius,
+            @Parameter(description = "상태 필터 (기본값: BIDDING - 진행중)", example = "BIDDING") @RequestParam(required = false, defaultValue = "BIDDING") AuctionStatus status,
+            @Parameter(description = "카테고리 필터", example = "DIGITAL") @RequestParam(required = false) java.util.List<Category> categories,
+            @Parameter(description = "최소 가격", example = "10000") @RequestParam(required = false) Integer minPrice,
+            @Parameter(description = "최대 가격", example = "500000") @RequestParam(required = false) Integer maxPrice,
+            @Parameter(description = "정렬 기준 (CREATED_DESC: 최신순, BID_COUNT_DESC: 입찰많은순, PRICE_ASC: 낮은가격순, PRICE_DESC: 높은가격순, VIEW_COUNT_DESC: 조회수많은순, END_TIME_ASC: 마감임박순)", example = "CREATED_DESC")
+            @RequestParam(required = false, defaultValue = "CREATED_DESC") AuctionSortType sort,
             @Parameter(description = "페이지 번호", example = "0") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 크기", example = "20") @RequestParam(defaultValue = "20") int size
     ) {
         Long userId = currentUserProvider.getCurrentUserId(request);
-        // radius가 주어지면 distanceKm를 Enum 기준 km로 대체
-        Double effectiveDistanceKm = distanceKm;
-        if (radius != null) {
-            effectiveDistanceKm = radius.toKilometers();
-        }
         Page<AuctionListItemDTO> result = keywordItemSearchService.search(
-                userId,
-                q,
-                includeOutside,
-                effectiveDistanceKm,
+                userId, q, radius, status, categories, minPrice, maxPrice, sort,
                 PageRequest.of(Math.max(page,0), Math.max(size,1))
         );
         NearbyItemsResponse body = NearbyItemsResponse.builder()
