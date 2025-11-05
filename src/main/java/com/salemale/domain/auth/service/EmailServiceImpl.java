@@ -40,7 +40,11 @@ public class EmailServiceImpl implements EmailService {
             log.info("비밀번호 재설정 인증번호 이메일 전송 완료: {}", maskEmail(to));
         } catch (MessagingException | MailException e) {
             log.error("비밀번호 재설정 인증번호 이메일 전송 실패: {}", maskEmail(to), e);
-            throw new RuntimeException("이메일 전송에 실패했습니다.", e);
+            log.error("이메일 전송 실패 상세: {}", e.getMessage(), e);
+            if (e.getCause() != null) {
+                log.error("이메일 전송 실패 원인: {}", e.getCause().getMessage());
+            }
+            throw new RuntimeException("이메일 전송에 실패했습니다: " + e.getMessage(), e);
         }
     }
 
@@ -61,7 +65,11 @@ public class EmailServiceImpl implements EmailService {
             log.info("회원가입 인증번호 이메일 전송 완료: {}", maskEmail(to));
         } catch (MessagingException | MailException e) {
             log.error("회원가입 인증번호 이메일 전송 실패: {}", maskEmail(to), e);
-            throw new RuntimeException("이메일 전송에 실패했습니다.", e);
+            log.error("이메일 전송 실패 상세: {}", e.getMessage(), e);
+            if (e.getCause() != null) {
+                log.error("이메일 전송 실패 원인: {}", e.getCause().getMessage());
+            }
+            throw new RuntimeException("이메일 전송에 실패했습니다: " + e.getMessage(), e);
         }
     }
     
