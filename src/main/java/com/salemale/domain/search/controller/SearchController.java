@@ -7,6 +7,7 @@ import com.salemale.domain.search.service.NearbyItemSearchService;
 import com.salemale.domain.search.service.KeywordItemSearchService;
 import com.salemale.domain.item.dto.response.AuctionListItemDTO;
 import com.salemale.domain.search.dto.NearbyItemsResponse;
+import com.salemale.domain.user.entity.User; // RangeSetting(enum) 사용
 import com.salemale.global.security.jwt.CurrentUserProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
@@ -144,11 +145,23 @@ public class SearchController {
             @Parameter(description = "검색 키워드", example = "아이폰", required = true) @RequestParam String q,
             @Parameter(description = "거리 무시하고 전국 검색", example = "false") @RequestParam(defaultValue = "false") boolean includeOutside,
             @Parameter(description = "거리(km) 오버라이드(미지정 시 사용자 설정)", example = "5") @RequestParam(required = false) Double distanceKm,
+            @Parameter(description = "표시 반경 Enum(사용자 기본값 대체)", example = "NEAR") @RequestParam(required = false) User.RangeSetting radius,
             @Parameter(description = "페이지 번호", example = "0") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 크기", example = "20") @RequestParam(defaultValue = "20") int size
     ) {
         Long userId = currentUserProvider.getCurrentUserId(request);
-        Page<AuctionListItemDTO> result = keywordItemSearchService.search(userId, q, includeOutside, distanceKm, PageRequest.of(Math.max(page,0), Math.max(size,1)));
+        // radius가 주어지면 distanceKm를 Enum 기준 km로 대체
+        Double effectiveDistanceKm = distanceKm;
+        if (radius != null) {
+            effectiveDistanceKm = radius.toKilometers();
+        }
+        Page<AuctionListItemDTO> result = keywordItemSearchService.search(
+                userId,
+                q,
+                includeOutside,
+                effectiveDistanceKm,
+                PageRequest.of(Math.max(page,0), Math.max(size,1))
+        );
         NearbyItemsResponse body = NearbyItemsResponse.builder()
                 .items(result.getContent())
                 .totalElements(result.getTotalElements())
