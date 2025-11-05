@@ -54,8 +54,9 @@ public class AuthServiceImpl implements AuthService {
                                      com.salemale.global.common.enums.LoginType provider,
                                      String providerUserId) {
         // providerUserId 중복 체크 (같은 소셜 계정으로 이미 가입된 경우)
+        // 이미 존재하면 회원가입을 건너뛰고 성공 처리 (로그인으로 처리)
         if (userAuthRepository.findByProviderAndProviderUserId(provider, providerUserId).isPresent()) {
-            throw new GeneralException(ErrorStatus.USER_EMAIL_ALREADY_EXISTS);
+            return; // 이미 가입된 회원이므로 회원가입 스킵
         }
 
         // 사용자 생성 (소셜 회원가입은 이메일 없음)
