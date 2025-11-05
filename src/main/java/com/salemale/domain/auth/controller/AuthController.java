@@ -132,12 +132,13 @@ public class AuthController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "발송 요청 접수")
     })
     @PostMapping("/email/verify/request")
-    public ResponseEntity<ApiResponse<Map<String, String>>> requestSignupEmail(@RequestParam("email") String email) {
+    public ResponseEntity<ApiResponse<Map<String, String>>> requestSignupEmail(
+            @Valid @RequestBody com.salemale.domain.auth.dto.request.EmailVerificationRequest request) {
         // 회원가입 정책: 미가입 이메일만 허용
-        if (authService.existsLocalEmail(email)) {
+        if (authService.existsLocalEmail(request.getEmail())) {
             return ResponseEntity.status(400).body(ApiResponse.onFailure("USER_EMAIL_ALREADY_EXISTS", "이미 가입된 이메일입니다.", null));
         }
-        signupVerificationService.sendSignupCode(email);
+        signupVerificationService.sendSignupCode(request.getEmail());
         return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("message", "인증코드가 이메일로 발송되었습니다.")));
     }
 
@@ -151,10 +152,9 @@ public class AuthController {
     })
     @PostMapping("/email/verify/confirm")
     public ResponseEntity<ApiResponse<Map<String, String>>> confirmSignupEmail(
-            @RequestParam("email") String email,
-            @RequestParam("code") String code
+            @Valid @RequestBody com.salemale.domain.auth.dto.request.EmailVerificationConfirmRequest request
     ) {
-        String sessionToken = signupVerificationService.verifySignupCode(email, code);
+        String sessionToken = signupVerificationService.verifySignupCode(request.getEmail(), request.getCode());
         return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("sessionToken", sessionToken)));
     }
 
@@ -312,16 +312,8 @@ public class AuthController {
                     .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
 
-        // 이메일 중복 확인(있으면 가입 거부)
-        if (session.email() != null && authService.existsLocalEmail(session.email())) {
-            var err = com.salemale.common.code.status.ErrorStatus.USER_EMAIL_ALREADY_EXISTS;
-            return ResponseEntity.status(err.getHttpStatus())
-                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
-        }
-
-        // 서비스로 일원화하여 생성
+        // 서비스로 일원화하여 생성 (소셜 회원가입은 이메일 없음)
         authService.completeSocialSignup(
-                session.email(),
                 nickname,
                 regionId,
                 session.provider(),
