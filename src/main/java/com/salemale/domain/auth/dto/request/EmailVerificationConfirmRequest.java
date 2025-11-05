@@ -3,12 +3,15 @@ package com.salemale.domain.auth.dto.request;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * EmailVerificationConfirmRequest: 이메일 인증번호 검증 요청 DTO
  */
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class EmailVerificationConfirmRequest {
 
     @Email(message = "올바른 이메일 형식이 아닙니다.")
