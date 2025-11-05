@@ -50,18 +50,18 @@ public class AuthServiceImpl implements AuthService {
 
     @org.springframework.transaction.annotation.Transactional
     @Override
-    public void completeSocialSignup(String email, String nickname, Long regionId,
+    public void completeSocialSignup(String nickname, Long regionId,
                                      com.salemale.global.common.enums.LoginType provider,
                                      String providerUserId) {
-        // 이메일 중복 체크(로컬/소셜 통합 기준: UserAuth의 emailNormalized)
-        if (email != null && userAuthRepository.findByEmailNormalized(email.toLowerCase()).isPresent()) {
+        // providerUserId 중복 체크 (같은 소셜 계정으로 이미 가입된 경우)
+        if (userAuthRepository.findByProviderAndProviderUserId(provider, providerUserId).isPresent()) {
             throw new GeneralException(ErrorStatus.USER_EMAIL_ALREADY_EXISTS);
         }
 
-        // 사용자 생성
+        // 사용자 생성 (소셜 회원가입은 이메일 없음)
         User user = User.builder()
                 .nickname(nickname)
-                .email(email)
+                .email(null) // 소셜 회원가입은 이메일 없음
                 .build();
         user = userRepository.save(user);
 
@@ -75,12 +75,12 @@ public class AuthServiceImpl implements AuthService {
                 .build();
         userRegionRepository.save(ur);
 
-        // 인증 수단 생성
+        // 인증 수단 생성 (소셜 회원가입은 이메일 없음)
         com.salemale.domain.user.entity.UserAuth auth = com.salemale.domain.user.entity.UserAuth.builder()
                 .user(user)
                 .provider(provider)
                 .providerUserId(providerUserId)
-                .emailNormalized(email == null ? null : email.toLowerCase())
+                .emailNormalized(null) // 소셜 회원가입은 이메일 없음
                 .build();
         userAuthRepository.save(auth);
     }

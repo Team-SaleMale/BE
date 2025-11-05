@@ -1,5 +1,5 @@
 # Multi-stage build for Spring Boot application
-FROM openjdk:17-jdk-slim AS builder
+FROM eclipse-temurin:17-jdk AS builder
 
 # Set working directory
 WORKDIR /app
