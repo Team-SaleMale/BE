@@ -312,16 +312,8 @@ public class AuthController {
                     .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
 
-        // 이메일 중복 확인(있으면 가입 거부)
-        if (session.email() != null && authService.existsLocalEmail(session.email())) {
-            var err = com.salemale.common.code.status.ErrorStatus.USER_EMAIL_ALREADY_EXISTS;
-            return ResponseEntity.status(err.getHttpStatus())
-                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
-        }
-
-        // 서비스로 일원화하여 생성
+        // 서비스로 일원화하여 생성 (소셜 회원가입은 이메일 없음)
         authService.completeSocialSignup(
-                session.email(),
                 nickname,
                 regionId,
                 session.provider(),

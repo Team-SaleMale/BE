@@ -44,8 +44,9 @@ public interface AuthService {
 
     /**
      * 소셜 회원가입 최종 확정: 사용자/대표지역/UserAuth를 생성합니다.
+     * 소셜 로그인은 이메일이 없을 수 있으므로 이메일 파라미터 없음.
      */
-    void completeSocialSignup(String email, String nickname, Long regionId,
+    void completeSocialSignup(String nickname, Long regionId,
                               com.salemale.global.common.enums.LoginType provider,
                               String providerUserId);
 }
