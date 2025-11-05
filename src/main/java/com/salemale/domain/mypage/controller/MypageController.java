@@ -1,8 +1,10 @@
 package com.salemale.domain.mypage.controller;
 
 import com.salemale.common.response.ApiResponse;
+import com.salemale.domain.mypage.dto.request.UpdatePreferredCategoryRequest;
 import com.salemale.domain.mypage.dto.response.LikedItemListResponse;
 import com.salemale.domain.mypage.dto.response.MyAuctionListResponse;
+import com.salemale.domain.mypage.dto.response.PreferredCategoryResponse;
 import com.salemale.domain.mypage.service.MypageService;
 import com.salemale.domain.mypage.enums.MyAuctionSortType;
 import com.salemale.domain.mypage.enums.MyAuctionType;
@@ -11,6 +13,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -88,6 +91,46 @@ public class MypageController {
         MyAuctionListResponse response = mypageService.getMyAuctions(
                 userId, type, sort, pageable
         );
+
+        return ResponseEntity.ok(ApiResponse.onSuccess(response));
+    }
+
+    /**
+     * 선호 카테고리 설정
+     * POST /mypage/category
+     */
+    @Operation(
+            summary = "선호 카테고리 설정",
+            description = "사용자의 선호 카테고리를 설정합니다. 기존 설정은 모두 삭제되고 새로운 카테고리로 대체됩니다."
+    )
+    @PostMapping("/category")
+    public ResponseEntity<ApiResponse<PreferredCategoryResponse>> updatePreferredCategories(
+            @Parameter(hidden = true) HttpServletRequest request,
+            @Valid @RequestBody UpdatePreferredCategoryRequest requestDto
+    ) {
+        Long userId = currentUserProvider.getCurrentUserId(request);
+        PreferredCategoryResponse response = mypageService.updatePreferredCategories(
+                userId,
+                requestDto.getCategories()
+        );
+
+        return ResponseEntity.ok(ApiResponse.onSuccess(response));
+    }
+
+    /**
+     * 선호 카테고리 조회
+     * GET /mypage/category
+     */
+    @Operation(
+            summary = "선호 카테고리 조회",
+            description = "사용자가 설정한 선호 카테고리 목록을 조회합니다."
+    )
+    @GetMapping("/category")
+    public ResponseEntity<ApiResponse<PreferredCategoryResponse>> getPreferredCategories(
+            @Parameter(hidden = true) HttpServletRequest request
+    ) {
+        Long userId = currentUserProvider.getCurrentUserId(request);
+        PreferredCategoryResponse response = mypageService.getPreferredCategories(userId);
 
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
     }
