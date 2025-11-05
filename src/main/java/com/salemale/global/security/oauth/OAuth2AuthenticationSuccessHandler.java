@@ -1,6 +1,7 @@
 package com.salemale.global.security.oauth;
 
 import com.salemale.domain.auth.service.SocialSignupSessionService;
+import com.salemale.domain.user.repository.UserAuthRepository;
 import com.salemale.global.common.enums.LoginType;
 import com.salemale.global.security.jwt.JwtTokenProvider;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,8 +16,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 
 /**
  * OAuth2 인증 성공 시 호출되는 핸들러
@@ -31,6 +35,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     private final JwtTokenProvider jwtTokenProvider;
     private final SocialSignupSessionService socialSignupSessionService;
+    private final UserAuthRepository userAuthRepository;
     
     @Value("${FRONTEND_URL}")
     private String frontendUrl;
@@ -57,12 +62,52 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         log.debug("파싱된 사용자 정보: provider={}, providerUserId={}, email={}, nickname={}", 
                   loginType, providerUserId, email, nickname);
         
-        // 즉시 사용자 생성 대신 '가입 확정' 세션 발급 → 프론트에서 닉네임/지역 입력 후 완료 호출
-        String signupToken = socialSignupSessionService.create(loginType, providerUserId, email);
-        String baseUri = getRedirectUri();
-        String redirectUri = baseUri + "#social=1&provider=" + registrationId + "&signupToken=" + signupToken;
-        log.info("OAuth2 인증 완료(미확정), 리다이렉트: {}#social=1&provider={}&signupToken=***", baseUri, registrationId);
-        getRedirectStrategy().sendRedirect(request, response, redirectUri);
+        // 기존 회원 여부 확인 (provider + providerUserId로 조회)
+        var existingAuth = userAuthRepository.findByProviderAndProviderUserId(loginType, providerUserId);
+        
+        if (existingAuth.isPresent()) {
+            // 기존 회원: JWT 토큰 발급 후 바로 로그인 처리
+            var userAuth = existingAuth.get();
+            var user = userAuth.getUser();
+            
+            // 소프트 삭제 계정은 로그인 불가
+            if (user.getDeletedAt() != null) {
+                log.warn("소프트 삭제된 계정 로그인 시도: userId={}", user.getId());
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "삭제된 계정입니다.");
+                return;
+            }
+            
+            // 최근 로그인 시간 업데이트
+            userAuth.updateLastLoginAt(LocalDateTime.now());
+            userAuthRepository.save(userAuth);
+            
+            // JWT 토큰 생성
+            String userId = String.valueOf(user.getId());
+            String accessToken = jwtTokenProvider.generateToken(userId);
+            String refreshToken = jwtTokenProvider.generateRefreshToken(userId);
+            
+            // 리프레시 토큰을 쿠키에 저장
+            ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
+                    .httpOnly(true)
+                    .secure(true)
+                    .sameSite("None")
+                    .path("/")
+                    .maxAge(Duration.ofDays(14))
+                    .build();
+            response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+            
+            String baseUri = getRedirectUri();
+            String redirectUri = baseUri + "#token=" + accessToken;
+            log.info("OAuth2 로그인 성공 (기존 회원), 리다이렉트: {}#token=***", baseUri);
+            getRedirectStrategy().sendRedirect(request, response, redirectUri);
+        } else {
+            // 신규 회원: 가입 확정 세션 발급 → 프론트에서 닉네임/지역 입력 후 완료 호출
+            String signupToken = socialSignupSessionService.create(loginType, providerUserId, email);
+            String baseUri = getRedirectUri();
+            String redirectUri = baseUri + "#social=1&provider=" + registrationId + "&signupToken=" + signupToken;
+            log.info("OAuth2 인증 완료(신규 회원, 미확정), 리다이렉트: {}#social=1&provider={}&signupToken=***", baseUri, registrationId);
+            getRedirectStrategy().sendRedirect(request, response, redirectUri);
+        }
     }
     
     /**
