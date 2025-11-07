@@ -18,7 +18,6 @@ import org.springframework.web.cors.CorsConfiguration; // CORS 정책 정의
 import org.springframework.web.cors.CorsConfigurationSource; // CORS 설정 소스
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource; // URL 패턴별 CORS 적용
 import jakarta.servlet.http.HttpServletResponse; // 응답 객체
-import lombok.extern.slf4j.Slf4j; // Lombok: 로깅 지원
 
 import java.util.Arrays; // 허용 메서드/헤더 나열에 사용
 import java.util.List; // 허용 오리진 목록에 사용
@@ -106,7 +105,7 @@ public class SecurityConfig {
                 "http://127.0.0.1:8080" // 로컬(루프백 IP - 백엔드)
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")); // 허용 메서드
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With")); // 허용 헤더
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "X-Email-Verify-Token")); // 허용 헤더
         configuration.setExposedHeaders(List.of("Authorization")); // 클라이언트에서 읽을 수 있는 응답 헤더
         configuration.setAllowCredentials(true); // 인증정보(쿠키/Authorization) 포함 허용
 
