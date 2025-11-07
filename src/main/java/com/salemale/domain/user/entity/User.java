@@ -9,7 +9,6 @@ import lombok.Builder; // 빌더 패턴 자동 생성
 import lombok.Getter; // 필드에 대한 getter 자동 생성
 import lombok.NoArgsConstructor; // 파라미터 없는 생성자 자동 생성
 import org.hibernate.annotations.Where; // 소프트 삭제 전역 필터
-import java.time.LocalDateTime; // 삭제시각 처리
 
 @Entity // JPA 엔티티로 매핑됨(테이블 레코드와 1:1 대응)
 @Table(
@@ -39,6 +38,12 @@ public class User extends BaseEntity {
     // 로컬 로그인 자격은 UserAuth.emailNormalized에 저장되고, User.email은 프로필 표시/연락 용도로 사용 가능
     @Column(name = "email", nullable = true, length = 254)
     private String email;
+
+    // 사용자 역할(권한): ADMIN/HOTDEAL_VERIFIED/GENERAL/DELETED 등
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 30)
+    private Role role = Role.GENERAL;
 
     // 경매지수(혹은 매너지수): 사용자 신뢰도/매너 지표로 사용
     @Builder.Default // 빌더 사용 시 기본값 50 유지
@@ -155,9 +160,38 @@ public class User extends BaseEntity {
     }
 
     /**
+     * 사용자 역할을 변경합니다.
+     *
+     * - null이 전달되면 무시합니다.
+     * - 관리자/운영 기능에서 호출하여 권한을 조정합니다.
+     *
+     * @param newRole 변경할 역할
+     */
+    public void changeRole(Role newRole) {
+        if (newRole != null) {
+            this.role = newRole;
+        }
+    }
+
+    /**
      * 소프트 삭제 플래그를 설정합니다.
      */
     public void markDeletedNow() {
         markAsDeleted();
+    }
+
+    /**
+     * 사용자 역할(Role)을 정의합니다.
+     *
+     * - ADMIN: 시스템 관리자
+     * - HOTDEAL_VERIFIED: 핫딜 인증 계정
+     * - GENERAL: 일반 사용자(기본값)
+     * - DELETED: 삭제/차단 처리된 계정
+     */
+    public enum Role {
+        ADMIN,
+        HOTDEAL_VERIFIED,
+        GENERAL,
+        DELETED
     }
 }

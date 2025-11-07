@@ -32,6 +32,12 @@ public enum ErrorStatus implements BaseErrorCode {
     AUTH_INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "AUTH4011", "아이디 또는 비밀번호가 올바르지 않습니다."),
     AUTH_NOT_LOCAL_ACCOUNT(HttpStatus.FORBIDDEN, "AUTH4031", "소셜 로그인 계정은 비밀번호를 변경할 수 없습니다."),
     MISSING_PASSWORD(HttpStatus.BAD_REQUEST, "AUTH4001", "로컬 계정은 비밀번호가 필요합니다."),
+    EMAIL_VERIFICATION_REQUIRED(HttpStatus.BAD_REQUEST, "AUTH4002", "이메일 인증을 완료해주세요."),
+    CODE_VERIFICATION_FAILED(HttpStatus.BAD_REQUEST, "AUTH4003", "인증번호가 유효하지 않습니다."),
+    PASSWORD_RESET_FAILED(HttpStatus.BAD_REQUEST, "AUTH4004", "비밀번호를 재설정할 수 없습니다."),
+    REFRESH_TOKEN_REQUIRED(HttpStatus.UNAUTHORIZED, "AUTH4012", "리프레시 토큰이 없습니다."),
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH4013", "유효하지 않은 리프레시 토큰입니다."),
+    ADMIN_ROLE_REQUIRED(HttpStatus.FORBIDDEN, "AUTH4032", "관리자 권한이 필요합니다."),
     
     // 지역 관련 에러
     REGION_NOT_FOUND(HttpStatus.NOT_FOUND, "REGION4001", "지역을 찾을 수 없습니다."),

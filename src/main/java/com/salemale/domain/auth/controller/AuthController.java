@@ -1,5 +1,6 @@
 package com.salemale.domain.auth.controller;
 
+import com.salemale.common.code.status.ErrorStatus;
 import com.salemale.common.response.ApiResponse;
 import com.salemale.domain.auth.dto.request.LoginRequest;
 import com.salemale.domain.auth.dto.request.SignupRequest;
@@ -15,10 +16,6 @@ import com.salemale.global.common.enums.LoginType;
 import com.salemale.global.security.jwt.CurrentUserProvider;
 import com.salemale.domain.auth.service.SignupVerificationService;
 import com.salemale.domain.auth.service.SocialSignupSessionService;
-import com.salemale.domain.region.entity.Region;
-import com.salemale.domain.region.repository.RegionRepository;
-import com.salemale.domain.user.entity.UserRegion;
-import com.salemale.domain.user.repository.UserRegionRepository;
 import com.salemale.domain.auth.service.PasswordResetService;
 import com.salemale.global.security.jwt.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +32,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -60,8 +58,6 @@ public class AuthController {
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final SignupVerificationService signupVerificationService;
     private final SocialSignupSessionService socialSignupSessionService;
-    private final RegionRepository regionRepository;
-    private final UserRegionRepository userRegionRepository;
 
     @Value("${FRONTEND_URL:http://localhost:3000}")
     private String frontendUrl;
@@ -71,9 +67,7 @@ public class AuthController {
                           UserAuthRepository userAuthRepository,
                           org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
                           SignupVerificationService signupVerificationService,
-                          SocialSignupSessionService socialSignupSessionService,
-                          RegionRepository regionRepository,
-                          UserRegionRepository userRegionRepository) {
+                          SocialSignupSessionService socialSignupSessionService) {
         this.authService = authService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordResetService = passwordResetService;
@@ -83,8 +77,6 @@ public class AuthController {
         this.passwordEncoder = passwordEncoder;
         this.signupVerificationService = signupVerificationService;
         this.socialSignupSessionService = socialSignupSessionService;
-        this.regionRepository = regionRepository;
-        this.userRegionRepository = userRegionRepository;
     }
 
     @Operation(
@@ -136,7 +128,9 @@ public class AuthController {
             @Valid @RequestBody com.salemale.domain.auth.dto.request.EmailVerificationRequest request) {
         // 회원가입 정책: 미가입 이메일만 허용
         if (authService.existsLocalEmail(request.getEmail())) {
-            return ResponseEntity.status(400).body(ApiResponse.onFailure("USER_EMAIL_ALREADY_EXISTS", "이미 가입된 이메일입니다.", null));
+            var err = ErrorStatus.USER_EMAIL_ALREADY_EXISTS;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
         signupVerificationService.sendSignupCode(request.getEmail());
         return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("message", "인증코드가 이메일로 발송되었습니다.")));
@@ -181,17 +175,18 @@ public class AuthController {
         UserAuth localAuth = userAuthRepository.findByProviderAndUser(LoginType.LOCAL, user).orElse(null);
         if (localAuth != null) {
             if (password == null || password.isBlank()) {
-                var err = com.salemale.common.code.status.ErrorStatus.MISSING_PASSWORD;
+                var err = ErrorStatus.MISSING_PASSWORD;
                 return ResponseEntity.status(err.getHttpStatus())
                         .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
             }
             if (localAuth.getPasswordHash() == null || !passwordEncoder.matches(password, localAuth.getPasswordHash())) {
-                var err = com.salemale.common.code.status.ErrorStatus.AUTH_INVALID_CREDENTIALS;
+                var err = ErrorStatus.AUTH_INVALID_CREDENTIALS;
                 return ResponseEntity.status(err.getHttpStatus())
                         .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
             }
         }
 
+        user.changeRole(User.Role.DELETED);
         user.markDeletedNow();
         userRepository.save(user);
 
@@ -212,6 +207,48 @@ public class AuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, delete.toString())
                 .body(ApiResponse.onSuccess());
+    }
+
+    @Operation(
+            summary = "사용자 역할 변경 (관리자)",
+            description = "관리자가 다른 사용자의 역할을 변경합니다."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "역할 변경 완료"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "관리자 권한 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "사용자를 찾을 수 없음")
+    })
+    @PatchMapping("/admin/users/{userId}/role")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<ApiResponse<Void>> changeUserRole(
+            jakarta.servlet.http.HttpServletRequest request,
+            @Parameter(description = "역할을 변경할 사용자 ID", example = "5")
+            @PathVariable Long userId,
+            @Parameter(description = "새 역할", example = "HOTDEAL_VERIFIED")
+            @RequestParam("role") User.Role role
+    ) {
+        Long adminId = currentUserProvider.getCurrentUserId(request);
+        User adminUser = userRepository.findById(adminId)
+                .orElseThrow(() -> new IllegalStateException("Admin user not found for authenticated userId: " + adminId));
+
+        if (adminUser.getRole() != User.Role.ADMIN) {
+            var err = ErrorStatus.ADMIN_ROLE_REQUIRED;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
+        }
+
+        User targetUser = userRepository.findById(userId)
+                .orElse(null);
+        if (targetUser == null) {
+            var err = ErrorStatus.USER_NOT_FOUND;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
+        }
+
+        targetUser.changeRole(role);
+        userRepository.save(targetUser);
+
+        return ResponseEntity.ok(ApiResponse.onSuccess());
     }
 
     @Operation(
@@ -256,22 +293,24 @@ public class AuthController {
     ) {
         // 이메일 인증 토큰 필수: 미제공/검증실패 시 가입 거부
         if (token == null || !signupVerificationService.validateSignupToken(request.getEmail(), token)) {
-            return ResponseEntity.status(400).body(ApiResponse.onFailure("EMAIL_VERIFICATION_REQUIRED", "이메일 인증을 완료해주세요.", null));
+            var err = ErrorStatus.EMAIL_VERIFICATION_REQUIRED;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
 
         // 닉네임/지역 필수 및 중복 검사
         if (request.getNickname() == null || request.getNickname().trim().isEmpty()) {
-            var err = com.salemale.common.code.status.ErrorStatus.NICKNAME_NOT_EXIST;
+            var err = ErrorStatus.NICKNAME_NOT_EXIST;
             return ResponseEntity.status(err.getHttpStatus())
                     .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
         if (authService.existsNickname(request.getNickname().trim())) {
-            var err = com.salemale.common.code.status.ErrorStatus.NICKNAME_ALREADY_EXISTS;
+            var err = ErrorStatus.NICKNAME_ALREADY_EXISTS;
             return ResponseEntity.status(err.getHttpStatus())
                     .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
         if (request.getRegionId() == null) {
-            var err = com.salemale.common.code.status.ErrorStatus.REGION_NOT_FOUND;
+            var err = ErrorStatus.REGION_NOT_FOUND;
             return ResponseEntity.status(err.getHttpStatus())
                     .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
@@ -290,24 +329,24 @@ public class AuthController {
     ) {
         var session = socialSignupSessionService.get(signupToken);
         if (session == null) {
-            var err = com.salemale.common.code.status.ErrorStatus.SOCIAL_SIGNUP_SESSION_INVALID;
+            var err = ErrorStatus.SOCIAL_SIGNUP_SESSION_INVALID;
             return ResponseEntity.status(err.getHttpStatus())
                     .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
 
         // 닉네임 검증
         if (nickname == null || nickname.trim().isEmpty()) {
-            var err = com.salemale.common.code.status.ErrorStatus.NICKNAME_NOT_EXIST;
+            var err = ErrorStatus.NICKNAME_NOT_EXIST;
             return ResponseEntity.status(err.getHttpStatus())
                     .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
         if (authService.existsNickname(nickname.trim())) {
-            var err = com.salemale.common.code.status.ErrorStatus.NICKNAME_ALREADY_EXISTS;
+            var err = ErrorStatus.NICKNAME_ALREADY_EXISTS;
             return ResponseEntity.status(err.getHttpStatus())
                     .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
         if (regionId == null) {
-            var err = com.salemale.common.code.status.ErrorStatus.REGION_NOT_FOUND;
+            var err = ErrorStatus.REGION_NOT_FOUND;
             return ResponseEntity.status(err.getHttpStatus())
                     .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
@@ -356,7 +395,9 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<Map<String, String>>> refresh(@CookieValue(name = "refreshToken", required = false) String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
-            return ResponseEntity.status(401).body(ApiResponse.onFailure("COMMON401", "리프레시 토큰이 없습니다.", null));
+            var err = ErrorStatus.REFRESH_TOKEN_REQUIRED;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
 
         try {
@@ -377,7 +418,9 @@ public class AuthController {
                     .header(HttpHeaders.CACHE_CONTROL, "no-store")
                     .body(ApiResponse.onSuccess(Map.of("accessToken", newAccess)));
         } catch (io.jsonwebtoken.JwtException ex) {
-            return ResponseEntity.status(401).body(ApiResponse.onFailure("COMMON401", "유효하지 않은 리프레시 토큰입니다.", null));
+            var err = ErrorStatus.INVALID_REFRESH_TOKEN;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
     }
 
@@ -424,8 +467,9 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Map<String, String>>> me(
             @Parameter(hidden = true) @AuthenticationPrincipal UserDetails principal) {
         if (principal == null) {
-            return ResponseEntity.status(401)
-                    .body(ApiResponse.onFailure("COMMON401", "인증이 필요합니다.", null));
+            var err = ErrorStatus._UNAUTHORIZED;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), err.getMessage(), null));
         }
         return ResponseEntity.ok(ApiResponse.onSuccess(Map.of("userId", principal.getUsername())));
     }
@@ -464,8 +508,9 @@ public class AuthController {
                     Map.of("sessionToken", sessionToken)
             ));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(400)
-                    .body(ApiResponse.onFailure("CODE_VERIFICATION_FAILED", e.getMessage(), null));
+            var err = ErrorStatus.CODE_VERIFICATION_FAILED;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), e.getMessage(), null));
         }
     }
 
@@ -489,8 +534,9 @@ public class AuthController {
             passwordResetService.resetPassword(sessionToken, request.getNewPassword());
             return ResponseEntity.ok(ApiResponse.onSuccess());
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(400)
-                    .body(ApiResponse.onFailure("PASSWORD_RESET_FAILED", e.getMessage(), null));
+            var err = ErrorStatus.PASSWORD_RESET_FAILED;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), e.getMessage(), null));
         }
     }
 }
