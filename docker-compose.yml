@@ -87,6 +87,7 @@ services:
 networks:
   default:
     name: salemale-network
+    external: false  # BE compose가 네트워크를 생성 (AI는 external: true로 사용)
 
 volumes:
   redis-data:
