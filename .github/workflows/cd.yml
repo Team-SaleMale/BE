@@ -106,7 +106,10 @@ jobs:
 
           # 동일 이름의 기존 컨테이너 강제 제거 (이름 충돌 방지)
           # 과거 수동 실행/실패로 남은 컨테이너 대비
-          docker rm -f salemale-app >/dev/null 2>&1 || true
+          docker rm -f salemale-app salemale-redis >/dev/null 2>&1 || true
+
+          # 네트워크 확인 및 생성 (없으면 생성, 있으면 사용)
+          docker network create salemale-network >/dev/null 2>&1 || true
 
           # 프로젝트명 고정 → 네트워크/컨테이너 명명 일관성
           export COMPOSE_PROJECT_NAME=salemale
