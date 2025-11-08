@@ -4,6 +4,7 @@ import com.salemale.domain.chat.entity.Message.MessageType; // 메시지 종류(
 import lombok.*; // 게터 등 생성
 import java.time.LocalDateTime; // 메시지 보낸 시간 기록용
 
+
 /*
  MessageDtos
  - 메시지 전송 및 조회 관련 DTO 모음

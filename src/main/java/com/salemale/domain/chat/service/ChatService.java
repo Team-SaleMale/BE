@@ -113,59 +113,6 @@ public class ChatService {
                 .toList();
     }
 
-
-    /*
-     채팅방 생성(수동)
-     - 동일한 (itemId, sellerId, buyerId) 조합 존재 시 재사용
-     - 없으면 새 채팅방 생성
-     - (추가) 호출자(me)가 seller | winner 인지 권한 검증
-     */
-
-    /*
-    @Transactional
-    public ChatResponse createChat(Long me, CreateChatRequest req) {
-        // 1) Item만 조회해서 seller/winner 모두 참조
-        Item item = itemRepository.findById(req.getItemId())
-                .orElseThrow(() -> new EntityNotFoundException("상품이 존재하지 않습니다."));
-
-        User seller = item.getSeller();
-        User winner = item.getWinner(); // 낙찰자(없으면 생성 불가)
-
-        if (seller == null) {
-            throw new IllegalStateException("판매자 정보가 없습니다.");
-        }
-        if (winner == null) {
-            throw new IllegalStateException("낙찰자가 없습니다.(경매 미완료/유찰)");
-        }
-
-        // 호출자 권한 검증 (추가사항)
-        if (!seller.getId().equals(me) && !winner.getId().equals(me)) {
-            throw new IllegalStateException("채팅방 생성 권한이 없습니다.");
-        }
-
-
-        // 기존 동일 조합이 있는지 확인
-        var existing = chatRepository.findByItem_ItemIdAndSeller_IdAndBuyer_Id(
-                item.getItemId(), seller.getId(), winner.getId()
-        );
-        if (existing.isPresent()) {
-            return new ChatResponse(existing.get().getChatId());
-        }
-
-        // 채팅방 생성 및 저장
-        Chat chat = Chat.builder()
-                .seller(seller)
-                .buyer(winner) //buyer == winner
-                .item(item)
-                .lastMessageAt(LocalDateTime.now())
-                .build();
-
-        Chat saved = chatRepository.save(chat);
-        return new ChatResponse(saved.getChatId());
-    }
-
-     */
-
     /**
      채팅방 나가기(삭제)
      - sellerDeletedAt 또는 buyerDeletedAt에 시간 기록

@@ -1,11 +1,15 @@
 package com.salemale.domain.chat.controller; // 메시지 관련 컨트롤러
 
+import com.salemale.common.response.ApiResponse;
+import com.salemale.domain.chat.dto.MessageDtos.MessageResponse;
 import com.salemale.domain.chat.dto.MessageDtos.*; // 메시지 요청/응답 DTO 묶음
 import com.salemale.domain.chat.service.MessageService; // 메시지 비즈니스 로직 서비스
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor; // 생성자 자동 생성
 import org.springframework.http.ResponseEntity; // HTTP 응답 객체
 import org.springframework.web.bind.annotation.*; // REST 매핑용 어노테이션
+
+import java.security.Principal;
 
 /*
  메시지 관련 API 컨트롤러
@@ -16,7 +20,7 @@ import org.springframework.web.bind.annotation.*; // REST 매핑용 어노테이
 @RequiredArgsConstructor
 public class MessageController {
 
-    private final MessageService messageService; // 메시지 서비스 주입
+    private final MessageService messageService; // 메시지 서비스
 
     /*
      메시지 전송 API
@@ -24,11 +28,12 @@ public class MessageController {
      */
     @Operation(summary = "메시지 보내기", description = "채팅방(chatId)으로 메시지를 보냅니다.")
     @PostMapping("/messages")
-    public ResponseEntity<MessageResponse> sendMessage(
+    public ResponseEntity<ApiResponse<MessageResponse>> sendMessage(
             @RequestHeader("USER_ID") Long me,
             @RequestBody SendMessageRequest request
     ) {
-        return ResponseEntity.ok(messageService.send(me, request));
+        MessageResponse resp = messageService.send(me, request);
+        return ResponseEntity.ok(ApiResponse.onSuccess(resp));
     }
 
     /*
