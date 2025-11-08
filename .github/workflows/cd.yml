@@ -104,21 +104,23 @@ jobs:
             WAIT_FLAG=""
           fi
 
-          # 동일 이름의 기존 컨테이너 강제 제거 (이름 충돌 방지)
-          # 과거 수동 실행/실패로 남은 컨테이너 대비
-          docker rm -f salemale-app salemale-redis >/dev/null 2>&1 || true
-
-          # 네트워크 확인 및 생성 (없으면 생성, 있으면 사용)
-          docker network create salemale-network >/dev/null 2>&1 || true
-
           # 프로젝트명 고정 → 네트워크/컨테이너 명명 일관성
           export COMPOSE_PROJECT_NAME=salemale
 
           # 1) down: 이전 리소스 정리(다운타임 허용) 후 재기동
           $DC down --remove-orphans || true
-          # 2) pull: 최신 이미지 당김(롤아웃 전 준비)
+
+          # 2) 남아있는 컨테이너 강제 제거 (이름 충돌 방지)
+          # docker-compose down 후에도 남아있을 수 있는 컨테이너 정리
+          docker rm -f salemale-app salemale-redis >/dev/null 2>&1 || true
+          # 모든 salemale-* 컨테이너 제거 (혹시 모를 경우 대비)
+          docker ps -a --filter "name=salemale-" --format "{{.ID}}" | while read id; do [ -n "$id" ] && docker rm -f "$id" || true; done
+
+          # 3) 네트워크 확인 및 생성 (없으면 생성, 있으면 사용)
+          docker network create salemale-network >/dev/null 2>&1 || true
+          # 4) pull: 최신 이미지 당김(롤아웃 전 준비)
           $DC pull
-          # 3) up: 강제 재생성, v2면 헬스체크 healthy까지 대기
+          # 5) up: 강제 재생성, v2면 헬스체크 healthy까지 대기
           $DC up -d --force-recreate --remove-orphans $WAIT_FLAG
           
           # 배포 상태 확인
