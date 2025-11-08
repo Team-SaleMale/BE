@@ -59,7 +59,10 @@ public class SecurityConfig {
                                 "/auth/**",
                                 "/api/auth/**", // 로그인/회원가입/로그아웃 등 인증 경로는 공개(과거 프리픽스 호환)
                                 "/oauth2/authorization/**", // OAuth2 인증 시작 경로
-                                "/login/oauth2/code/**" // OAuth2 콜백 경로
+                                "/login/oauth2/code/**", // OAuth2 콜백 경로
+                                "/search/regions", // 지역 검색 API (인증 불필요)
+                                "/auctions", // 경매 상품 리스트 조회 (인증 선택적: RECOMMENDED 제외하고는 불필요)
+                                "/auctions/**" // 경매 상품 상세 조회 (인증 선택적: 공개 정보)
                         ).permitAll()
                         .anyRequest().authenticated() // 그 외는 인증 필요
                 )
