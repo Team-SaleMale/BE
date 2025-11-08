@@ -91,8 +91,7 @@ services:
 networks:
   salemale-network:
     name: salemale-network
-    driver: bridge
-    # BE compose가 네트워크를 생성 (AI는 external: true로 사용)
+    external: true  # 외부 네트워크 사용 (AI compose와 공유)
 
 volumes:
   redis-data:
