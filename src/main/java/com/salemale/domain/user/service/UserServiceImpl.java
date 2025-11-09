@@ -66,6 +66,7 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
 
         // 2) 주 활동 동네 조회: isPrimary=true인 UserRegion을 찾습니다.
         //    - 주 활동 동네가 없으면 null로 설정합니다 (지역 미설정 시).
+<<<<<<< HEAD
         //    - Optional.map을 사용하여 UserRegion이 존재할 때만 RegionInfoDTO를 생성합니다.
         RegionInfoDTO primaryRegion = userRegionRepository.findByPrimaryUser(user)
                 .map(userRegion -> {
@@ -73,16 +74,27 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
                     var region = userRegion.getRegion();
                     // RegionInfoDTO를 생성하여 반환합니다.
                     // - sido, sigungu, eupmyeondong 필드를 포함합니다.
+=======
+        RegionInfoDTO primaryRegion = userRegionRepository.findByPrimaryUser(user)
+                .map(userRegion -> {
+                    var region = userRegion.getRegion();
+>>>>>>> c84cfb81e4b8f345eea05487d367b7e87302e0d3
                     return RegionInfoDTO.builder()
                             .sido(region.getSido())
                             .sigungu(region.getSigungu())
                             .eupmyeondong(region.getEupmyeondong())
                             .build();
                 })
+<<<<<<< HEAD
                 .orElse(null); // 주 활동 동네가 없으면 null 반환
 
         // 3) 엔티티 → DTO 변환: UserProfileResponse.from() 정적 메서드를 사용합니다.
         //    - 사용자 정보와 지역 정보를 함께 전달하여 DTO를 생성합니다.
+=======
+                .orElse(null);
+
+        // 3) 엔티티 → DTO 변환: UserProfileResponse.from() 정적 메서드를 사용합니다.
+>>>>>>> c84cfb81e4b8f345eea05487d367b7e87302e0d3
         return UserProfileResponse.from(user, primaryRegion);
     }
 
