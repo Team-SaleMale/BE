@@ -2,6 +2,7 @@ package com.salemale.domain.user.service; // 사용자 프로필 관리 서비�
 
 import com.salemale.common.code.status.ErrorStatus; // 에러 코드 집합
 import com.salemale.common.exception.GeneralException; // 커스텀 예외
+import com.salemale.domain.region.dto.response.RegionInfoDTO; // 지역 정보 DTO
 import com.salemale.domain.user.dto.request.NicknameUpdateRequest; // 닉네임 변경 요청 DTO
 import com.salemale.domain.user.dto.request.PasswordUpdateRequest; // 비밀번호 변경 요청 DTO
 import com.salemale.domain.user.dto.request.RangeSettingUpdateRequest; // 활동 반경 변경 요청 DTO
@@ -9,6 +10,7 @@ import com.salemale.domain.user.dto.response.UserProfileResponse; // 사용자 �
 import com.salemale.domain.user.entity.User; // 사용자 엔티티
 import com.salemale.domain.user.entity.UserAuth; // 사용자 인증 엔티티
 import com.salemale.domain.user.repository.UserAuthRepository; // 사용자 인증 저장소
+import com.salemale.domain.user.repository.UserRegionRepository; // 사용자-지역 연결 저장소
 import com.salemale.domain.user.repository.UserRepository; // 사용자 저장소
 import com.salemale.global.common.enums.LoginType; // 인증 제공자 타입
 import lombok.RequiredArgsConstructor; // Lombok: 생성자 자동 생성
@@ -16,6 +18,9 @@ import lombok.extern.slf4j.Slf4j; // Lombok: 로깅 지원
 import org.springframework.security.crypto.password.PasswordEncoder; // 비밀번호 해시/검증
 import org.springframework.stereotype.Service; // 서비스 빈 선언
 import org.springframework.transaction.annotation.Transactional; // 트랜잭션 처리
+
+import java.util.List; // 리스트 타입
+import java.util.stream.Collectors; // 스트림 수집
 
 /**
  * UserServiceImpl: 사용자 프로필 관리 로직을 실제로 구현하는 서비스 클래스입니다.
@@ -37,6 +42,7 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
     // 의존성 선언: RequiredArgsConstructor로 자동 주입됩니다.
     private final UserRepository userRepository; // 사용자 프로필 조회/저장 저장소
     private final UserAuthRepository userAuthRepository; // 사용자 인증 정보 조회/저장 저장소
+    private final UserRegionRepository userRegionRepository; // 사용자-지역 연결 저장소
     private final PasswordEncoder passwordEncoder; // 비밀번호 해시/검증 도구
 
     /**
@@ -60,8 +66,17 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
 
         log.debug("프로필 조회 - 사용자 ID: {}, 닉네임: {}", user.getId(), user.getNickname());
 
-        // 2) 엔티티 → DTO 변환: UserProfileResponse.from() 정적 메서드를 사용합니다.
-        return UserProfileResponse.from(user);
+        // 2) 사용자의 지역 정보 조회: UserRegion을 통해 등록된 지역 정보를 가져옵니다.
+        List<RegionInfoDTO> regions = userRegionRepository.findAllByUser(user).stream()
+                .map(userRegion -> RegionInfoDTO.builder()
+                        .sido(userRegion.getRegion().getSido())
+                        .sigungu(userRegion.getRegion().getSigungu())
+                        .eupmyeondong(userRegion.getRegion().getEupmyeondong())
+                        .build())
+                .collect(Collectors.toList());
+
+        // 3) 엔티티 → DTO 변환: UserProfileResponse.from() 정적 메서드를 사용하여 지역 정보를 포함합니다.
+        return UserProfileResponse.from(user, regions);
     }
 
     /**
