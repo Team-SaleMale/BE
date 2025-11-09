@@ -20,6 +20,18 @@ public interface KeywordItemSearchService {
             AuctionSortType sort,
             Pageable pageable
     );
+
+    /**
+     * 중고 시세 검색: 낙찰된 상품(ItemStatus.SUCCESS)만 키워드로 조회
+     * 
+     * @param q 검색 키워드
+     * @param pageable 페이징 정보
+     * @return 낙찰된 상품 목록 (날짜순 정렬)
+     */
+    Page<AuctionListItemDTO> searchCompletedItems(
+            String q,
+            Pageable pageable
+    );
 }
 
 

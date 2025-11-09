@@ -61,6 +61,7 @@ public class SecurityConfig {
                                 "/oauth2/authorization/**", // OAuth2 인증 시작 경로
                                 "/login/oauth2/code/**", // OAuth2 콜백 경로
                                 "/search/regions", // 지역 검색 API (인증 불필요)
+                                "/search/price-history", // 중고 시세 검색 API (인증 불필요)
                                 "/auctions", // 경매 상품 리스트 조회 (인증 선택적: RECOMMENDED 제외하고는 불필요)
                                 "/auctions/**" // 경매 상품 상세 조회 (인증 선택적: 공개 정보)
                         ).permitAll()
@@ -108,7 +109,7 @@ public class SecurityConfig {
                 "http://127.0.0.1:8080" // 로컬(루프백 IP - 백엔드)
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")); // 허용 메서드
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "X-Email-Verify-Token")); // 허용 헤더
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "X-Email-Verify-Token", "USER_ID")); // 허용 헤더
         configuration.setExposedHeaders(List.of("Authorization")); // 클라이언트에서 읽을 수 있는 응답 헤더
         configuration.setAllowCredentials(true); // 인증정보(쿠키/Authorization) 포함 허용
 
