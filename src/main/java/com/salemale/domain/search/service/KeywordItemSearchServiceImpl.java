@@ -118,6 +118,21 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
             case BID_COUNT_DESC -> java.util.Comparator.comparing(Item::getBidCount).reversed();
         };
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<AuctionListItemDTO> searchCompletedItems(String q, Pageable pageable) {
+        if (q == null || q.trim().isBlank()) {
+            throw new GeneralException(ErrorStatus._BAD_REQUEST);
+        }
+        String keyword = q.trim();
+
+        // 낙찰된 상품만 조회 (ItemStatus.SUCCESS), 날짜순 정렬 (최신순)
+        ItemStatus status = ItemStatus.SUCCESS;
+        Page<Item> page = itemRepository.searchItemsByKeyword(status, keyword, pageable);
+
+        return page.map(ItemConverter::toAuctionListItemDTO);
+    }
 }
 
 
