@@ -2,6 +2,7 @@ package com.salemale.domain.user.service; // 사용자 프로필 관리 서비�
 
 import com.salemale.common.code.status.ErrorStatus; // 에러 코드 집합
 import com.salemale.common.exception.GeneralException; // 커스텀 예외
+import com.salemale.domain.region.dto.response.RegionInfoDTO; // 지역 정보 DTO
 import com.salemale.domain.user.dto.request.NicknameUpdateRequest; // 닉네임 변경 요청 DTO
 import com.salemale.domain.user.dto.request.PasswordUpdateRequest; // 비밀번호 변경 요청 DTO
 import com.salemale.domain.user.dto.request.RangeSettingUpdateRequest; // 활동 반경 변경 요청 DTO
@@ -9,6 +10,7 @@ import com.salemale.domain.user.dto.response.UserProfileResponse; // 사용자 �
 import com.salemale.domain.user.entity.User; // 사용자 엔티티
 import com.salemale.domain.user.entity.UserAuth; // 사용자 인증 엔티티
 import com.salemale.domain.user.repository.UserAuthRepository; // 사용자 인증 저장소
+import com.salemale.domain.user.repository.UserRegionRepository; // 사용자-지역 연결 저장소
 import com.salemale.domain.user.repository.UserRepository; // 사용자 저장소
 import com.salemale.global.common.enums.LoginType; // 인증 제공자 타입
 import lombok.RequiredArgsConstructor; // Lombok: 생성자 자동 생성
@@ -37,6 +39,7 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
     // 의존성 선언: RequiredArgsConstructor로 자동 주입됩니다.
     private final UserRepository userRepository; // 사용자 프로필 조회/저장 저장소
     private final UserAuthRepository userAuthRepository; // 사용자 인증 정보 조회/저장 저장소
+    private final UserRegionRepository userRegionRepository; // 사용자-지역 연결 저장소
     private final PasswordEncoder passwordEncoder; // 비밀번호 해시/검증 도구
 
     /**
@@ -44,6 +47,7 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
      *
      * - JWT 토큰에서 추출한 사용자 ID로 프로필을 조회합니다.
      * - 민감한 정보(비밀번호 등)는 제외하고 반환합니다.
+     * - 주 활동 동네 정보도 함께 조회하여 포함합니다.
      *
      * @param userId 조회할 사용자의 ID (JWT에서 추출)
      * @return 사용자 프로필 정보 (UserProfileResponse)
@@ -60,8 +64,21 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
 
         log.debug("프로필 조회 - 사용자 ID: {}, 닉네임: {}", user.getId(), user.getNickname());
 
-        // 2) 엔티티 → DTO 변환: UserProfileResponse.from() 정적 메서드를 사용합니다.
-        return UserProfileResponse.from(user);
+        // 2) 주 활동 동네 조회: isPrimary=true인 UserRegion을 찾습니다.
+        //    - 주 활동 동네가 없으면 null로 설정합니다 (지역 미설정 시).
+        RegionInfoDTO primaryRegion = userRegionRepository.findByPrimaryUser(user)
+                .map(userRegion -> {
+                    var region = userRegion.getRegion();
+                    return RegionInfoDTO.builder()
+                            .sido(region.getSido())
+                            .sigungu(region.getSigungu())
+                            .eupmyeondong(region.getEupmyeondong())
+                            .build();
+                })
+                .orElse(null);
+
+        // 3) 엔티티 → DTO 변환: UserProfileResponse.from() 정적 메서드를 사용합니다.
+        return UserProfileResponse.from(user, primaryRegion);
     }
 
     /**

@@ -25,7 +25,7 @@ public class MessageController {
     @Operation(summary = "메시지 보내기", description = "채팅방(chatId)으로 메시지를 보냅니다.")
     @PostMapping("/messages")
     public ResponseEntity<MessageResponse> sendMessage(
-            @RequestHeader("USER_ID") Long me,
+            @RequestHeader(name = "user_id", required = true) Long me,
             @RequestBody SendMessageRequest request
     ) {
         return ResponseEntity.ok(messageService.send(me, request));

@@ -32,7 +32,7 @@ public class ChatController {
     @Operation(summary = "채팅방 목록 조회", description = "chatId와 읽지 않은 메세지 개수 표시.")
     @GetMapping("/chats")
     public ResponseEntity<List<ChatIdUnread>> getChats(
-           @RequestHeader("USER_ID") Long me,           // USER가 속한 방들만
+           @RequestHeader(name = "user_id", required = true) Long me,           // USER가 속한 방들만 (Axios는 소문자로 변환)
            @RequestParam(defaultValue = "0") int page,  // 오프셋 페이징
            @RequestParam(defaultValue = "50") int size
     ) {
@@ -46,7 +46,7 @@ public class ChatController {
     @Operation(summary = "채팅방 자동 생성", description = "경매 낙찰시 채팅방이 생성됩니다.")
     @PostMapping("/items/{itemId}/chat")
     public ResponseEntity<ChatResponse> createChatForWinner(
-            @RequestHeader("USER_ID") Long me,
+            @RequestHeader(name = "user_id", required = true) Long me,
             @PathVariable Long itemId
     ) {
         ChatResponse resp = chatService.createChatForItemWinner(itemId);
@@ -79,7 +79,7 @@ public class ChatController {
     @Operation(summary = "채팅방 나가기", description = "나간 시간이 기록됩니다.")
     @PatchMapping("/chats/{chatId}/exit")
     public ResponseEntity<Void> exitChat(
-            @RequestHeader("USER_ID") Long me,
+            @RequestHeader(name = "user_id", required = true) Long me,
             @PathVariable Long chatId
     ) {
         chatService.exitChat(me, chatId);
@@ -94,7 +94,7 @@ public class ChatController {
     @Operation(summary = "채팅방 입장", description = "해당 채팅방의 메시지들이 반환되며 읽지 않은 메시지는 모두 읽음 처리됩니다.")
     @PostMapping("/chats/{chatId}/enter")
     public ResponseEntity<ChatEnterResponse> enter(
-            @RequestHeader("USER_ID") Long me,
+            @RequestHeader(name = "user_id", required = true) Long me,
             @PathVariable Long chatId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size
@@ -109,7 +109,7 @@ public class ChatController {
     @Operation(summary = "메세지 읽음 처리", description = "채팅방을 입장하지 않고 읽음 처리 기능을 넣을시 유지.")
     @PatchMapping("/chats/{chatId}/read")
     public ResponseEntity<MessageDtos.ReadAllResponse> readAllInChat(
-            @RequestHeader("USER_ID") Long me,
+            @RequestHeader(name = "user_id", required = true) Long me,
             @PathVariable Long chatId
     ) {
         MessageDtos.ReadAllResponse res = chatService.markAllReadInChat(me, chatId);

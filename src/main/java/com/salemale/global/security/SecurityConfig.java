@@ -65,6 +65,7 @@ public class SecurityConfig {
                                 "/auctions", // 경매 상품 리스트 조회 (인증 선택적: RECOMMENDED 제외하고는 불필요)
                                 "/auctions/**" // 경매 상품 상세 조회 (인증 선택적: 공개 정보)
                         ).permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll() // CORS preflight 요청 허용
                         .anyRequest().authenticated() // 그 외는 인증 필요
                 )
                 // OAuth2 로그인 설정
@@ -109,7 +110,7 @@ public class SecurityConfig {
                 "http://127.0.0.1:8080" // 로컬(루프백 IP - 백엔드)
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")); // 허용 메서드
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "X-Email-Verify-Token", "USER_ID")); // 허용 헤더
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "X-Email-Verify-Token", "USER_ID", "user_id", "Accept")); // 허용 헤더 (CORS preflight용, 대소문자 모두 허용)
         configuration.setExposedHeaders(List.of("Authorization")); // 클라이언트에서 읽을 수 있는 응답 헤더
         configuration.setAllowCredentials(true); // 인증정보(쿠키/Authorization) 포함 허용
 
