@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service; // 서비스 빈 선언
 import org.springframework.transaction.annotation.Transactional; // 트랜잭션 처리
 
 import java.util.List; // 리스트 타입
-import java.util.stream.Collectors; // 스트림 수집
 
 /**
  * UserServiceImpl: 사용자 프로필 관리 로직을 실제로 구현하는 서비스 클래스입니다.
@@ -66,14 +65,17 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
 
         log.debug("프로필 조회 - 사용자 ID: {}, 닉네임: {}", user.getId(), user.getNickname());
 
-        // 2) 사용자의 지역 정보 조회: UserRegion을 통해 등록된 지역 정보를 가져옵니다.
-        List<RegionInfoDTO> regions = userRegionRepository.findAllByUser(user).stream()
-                .map(userRegion -> RegionInfoDTO.builder()
-                        .sido(userRegion.getRegion().getSido())
-                        .sigungu(userRegion.getRegion().getSigungu())
-                        .eupmyeondong(userRegion.getRegion().getEupmyeondong())
-                        .build())
-                .collect(Collectors.toList());
+        // 2) 사용자의 대표 지역 정보 조회: isPrimary=true인 대표 지역만 조회합니다.
+        List<RegionInfoDTO> regions = userRegionRepository.findByPrimaryUser(user)
+                .map(userRegion -> {
+                    RegionInfoDTO regionInfo = RegionInfoDTO.builder()
+                            .sido(userRegion.getRegion().getSido())
+                            .sigungu(userRegion.getRegion().getSigungu())
+                            .eupmyeondong(userRegion.getRegion().getEupmyeondong())
+                            .build();
+                    return List.of(regionInfo); // 단일 요소를 포함한 리스트로 변환
+                })
+                .orElse(List.of()); // 대표 지역이 없으면 빈 리스트
 
         // 3) 엔티티 → DTO 변환: UserProfileResponse.from() 정적 메서드를 사용하여 지역 정보를 포함합니다.
         return UserProfileResponse.from(user, regions);
