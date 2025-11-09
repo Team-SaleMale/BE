@@ -112,9 +112,10 @@ jobs:
 
           # 2) 남아있는 컨테이너 강제 제거 (이름 충돌 방지)
           # docker-compose down 후에도 남아있을 수 있는 컨테이너 정리
+          # 주의: AI 서버(salemale-ai)는 별도 리포지토리이므로 제거하지 않음
           docker rm -f salemale-app salemale-redis >/dev/null 2>&1 || true
-          # 모든 salemale-* 컨테이너 제거 (혹시 모를 경우 대비)
-          docker ps -a --filter "name=salemale-" --format "{{.ID}}" | while read id; do [ -n "$id" ] && docker rm -f "$id" || true; done
+          # BE 서비스만 제거 (AI 서버 제외)
+          # salemale-app, salemale-redis는 위에서 이미 제거했으므로 추가 정리만 수행
 
           # 3) 네트워크 확인 및 생성 (없으면 생성, 있으면 사용)
           docker network create salemale-network >/dev/null 2>&1 || true
