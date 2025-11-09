@@ -1,0 +1,27 @@
+<!doctype html>
+<meta charset="utf-8" />
+<h3>STOMP Test</h3>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+<script>
+    const ws = new WebSocket('ws://127.0.0.1:8080/ws-stomp', ['v12.stomp']);
+    const client = Stomp.over(ws);
+    client.debug = (m) => console.log('[STOMP]', m);
+
+    const CHAT_ID = 3;
+    const USER_ID = '6'; // 테스트할 사용자 ID
+
+    client.connect(
+        { 'USER_ID': USER_ID, 'heart-beat': '10000,10000' },
+        frame => {
+            console.log('CONNECTED:', frame);
+
+            client.subscribe(`/topic/chats/${CHAT_ID}`, msg => {
+                console.log('RECV:', msg.body);
+            });
+
+            const body = JSON.stringify({ content: '안녕하세요', type: 'TEXT' });
+            client.send(`/app/chats/${CHAT_ID}/send`, { 'content-type': 'application/json' }, body);
+        },
+        err => console.error('CONNECT ERROR', err)
+    );
+</script>

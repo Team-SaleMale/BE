@@ -49,6 +49,10 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 세션 미사용
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                //WS관련 추가사항
+                                "/ws-stomp/**",  // WS 추가
+                                "/ws-stomp",     // WS 추가
+                                "/stomp-test.html", // WS 추가
                                 "/", // 루트
                                 "/swagger-ui.html", // 스웨거 UI
                                 "/swagger-ui/**",
@@ -105,7 +109,8 @@ public class SecurityConfig {
                 "http://127.0.0.1:8080" // 로컬(루프백 IP - 백엔드)
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")); // 허용 메서드
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "X-Email-Verify-Token")); // 허용 헤더
+        //[WS관련 추가] USER_ID 헤더도 허용(핸드셰이크/테스트)
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "X-Email-Verify-Token","USER_ID")); // 허용 헤더
         configuration.setExposedHeaders(List.of("Authorization")); // 클라이언트에서 읽을 수 있는 응답 헤더
         configuration.setAllowCredentials(true); // 인증정보(쿠키/Authorization) 포함 허용
 

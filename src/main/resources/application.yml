@@ -108,6 +108,9 @@ logging:
     # OAuth2 디버그 로깅은 개발 환경에서만 활성화 (보안 정보 누출 방지)
     org.springframework.security.oauth2: INFO
     org.springframework.security: INFO
+    #WS 디버깅
+    org.springframework.messaging: DEBUG
+    org.springframework.web.socket: DEBUG
 
 # Swagger 설정
 springdoc:
@@ -159,3 +162,4 @@ gemini:
 recommendation:
   api:
     url: ${RECOMMENDATION_API_URL}
+
