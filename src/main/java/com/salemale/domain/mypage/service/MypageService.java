@@ -221,8 +221,10 @@ public class MypageService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
 
-        // 2. 기존 선호 카테고리 전체 삭제
+        // 2. 기존 선호 카테고리 전체 삭제, 바로 db에 저장(flush)
         preferredCategoryRepository.deleteByUser(user);
+
+        preferredCategoryRepository.flush();
 
         // 3. 새로운 선호 카테고리 저장
         List<UserPreferredCategory> newPreferences = categories.stream()
