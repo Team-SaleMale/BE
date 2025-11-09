@@ -9,11 +9,6 @@ import lombok.Setter;
 
 /**
  * STOMP 메시지 페이로드 DTO
- * JSON 예:
- * {
- *   "content": "안녕!",
- *   "type": "TEXT"   // TEXT | IMAGE | URL
- * }
  */
 @Getter
 @Setter

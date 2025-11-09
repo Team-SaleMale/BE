@@ -16,13 +16,20 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(stompUserInterceptor); // ✅ 주입된 객체 사용
+        registration.interceptors(stompUserInterceptor); // 주입된 객체 사용
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws-stomp").setAllowedOriginPatterns("*");
-        registry.addEndpoint("/ws-stomp").setAllowedOriginPatterns("*").withSockJS();
+        registry.addEndpoint("/ws-stomp").setAllowedOriginPatterns(
+                "https://valuebid.netlify.app",
+                "https://valuebid.site",
+                "http://localhost:8080");
+        registry.addEndpoint("/ws-stomp").setAllowedOriginPatterns(
+                "https://valuebid.netlify.app",
+                "https://valuebid.site",
+                "http://localhost:3000")
+                .withSockJS();
     }
 
     @Override

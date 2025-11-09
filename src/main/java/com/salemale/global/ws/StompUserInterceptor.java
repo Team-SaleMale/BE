@@ -28,10 +28,10 @@ public class StompUserInterceptor implements ChannelInterceptor {
         StompHeaderAccessor acc = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
         if (acc == null) return message;
 
-        // CONNECT: USER_ID를 principal로 심는다
+        // CONNECT: user_id principal로 심는다
         if (StompCommand.CONNECT.equals(acc.getCommand())) {
-            String userId = acc.getFirstNativeHeader("USER_ID");
-            log.info("[WS] CONNECT headers={} USER_ID={}", acc.toNativeHeaderMap(), userId);
+            String userId = acc.getFirstNativeHeader("user_id");
+            log.info("[WS] CONNECT headers={} user_id={}", acc.toNativeHeaderMap(), userId);
             if (userId != null && !userId.isBlank()) {
                 acc.setUser(new SimplePrincipal(userId));
             }

@@ -37,7 +37,7 @@ public class MessageController {
     @Operation(summary = "메시지 보내기", description = "채팅방(chatId)으로 메시지를 보냅니다.")
     @PostMapping("/messages")
     public ResponseEntity<ApiResponse<MessageResponse>> sendMessage(
-            @RequestHeader("USER_ID") Long me,
+            @RequestHeader("user_id") Long me,
             @RequestBody SendMessageRequest request
     ) {
         MessageResponse resp = messageService.send(me, request);
@@ -48,7 +48,7 @@ public class MessageController {
             description = "이미지를 업로드하고, 업로드 URL로 메시지를 저장합니다. 브로드캐스트는 Service에서 처리합니다.")
     @PostMapping(value = "/messages/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<MessageResponse>> sendImage(
-            @RequestHeader("USER_ID") Long me,
+            @RequestHeader("user_id") Long me,
             @RequestParam Long chatId,
             @RequestPart("file") MultipartFile file
     ) {
