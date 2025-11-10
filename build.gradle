@@ -76,6 +76,10 @@ dependencies {
 
 	// Gemini API 호출을 위한 WebFlux
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    //WebSocket
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'  // WebSocket/STOMP
+    implementation 'org.springframework.security:spring-security-messaging' // WS 에서 Security Principal
 }
 
 tasks.named('test') {

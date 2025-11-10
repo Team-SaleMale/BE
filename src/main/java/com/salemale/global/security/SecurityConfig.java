@@ -49,6 +49,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 세션 미사용
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                "/ws-stomp/**",  // WS 추가
+                                "/ws-stomp",     // WS 추가
+                                "/stomp-test.html", // WS 추가(테스트 끝나면 삭제)
                                 "/", // 루트
                                 "/swagger-ui.html", // 스웨거 UI
                                 "/swagger-ui/**",
