@@ -1,4 +1,4 @@
-package com.salemale.domain.hotdeal.entity;
+package com.salemale.domain.hotdeal.enums;
 
 /**
  * 핫딜 가게 승인 상태

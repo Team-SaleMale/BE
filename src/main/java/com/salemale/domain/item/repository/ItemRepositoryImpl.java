@@ -341,7 +341,6 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
         List<Long> itemIds = queryFactory
                 .select(item.itemId)
                 .from(item)
-                .leftJoin(item.hotdealStore).fetchJoin()  // 핫딜 가게 정보도 함께
                 .where(
                         itemTypeIsHotdeal(),  // 핫딜만
                         item.itemStatus.eq(ItemStatus.BIDDING),  // 입찰 중만
@@ -359,6 +358,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
                     .selectFrom(item)
                     .leftJoin(item.images).fetchJoin()
                     .leftJoin(item.hotdealStore).fetchJoin()  // 핫딜 가게 정보
+                    .leftJoin(item.region).fetchJoin()  // region 정보
                     .where(item.itemId.in(itemIds))
                     .orderBy(getOrderSpecifier(sortType))
                     .fetch();

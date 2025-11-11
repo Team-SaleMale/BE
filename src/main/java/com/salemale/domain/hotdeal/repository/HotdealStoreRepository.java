@@ -1,6 +1,6 @@
 package com.salemale.domain.hotdeal.repository;
 
-import com.salemale.domain.hotdeal.entity.ApprovalStatus;
+import com.salemale.domain.hotdeal.enums.ApprovalStatus;
 import com.salemale.domain.hotdeal.entity.HotdealStore;
 import com.salemale.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -1,5 +1,6 @@
 package com.salemale.domain.hotdeal.entity;
 
+import com.salemale.domain.hotdeal.enums.ApprovalStatus;
 import com.salemale.domain.region.entity.Region;
 import com.salemale.domain.user.entity.User;
 import com.salemale.global.common.BaseEntity;

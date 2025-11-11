@@ -1,5 +1,7 @@
 package com.salemale.domain.item.converter;
 
+import com.salemale.domain.hotdeal.dto.response.HotdealListItemDTO;
+import com.salemale.domain.hotdeal.entity.HotdealStore;
 import com.salemale.domain.item.dto.response.AuctionListItemDTO;
 import com.salemale.domain.item.entity.UserLiked;
 import com.salemale.domain.mypage.enums.MyRole;
@@ -211,4 +213,37 @@ public class ItemConverter {
                 .isHighestBidder(isHighestBidder)
                 .build();
     }
+
+    /**
+     * Item Entity → HotdealListItemDTO 변환
+     * @param item 핫딜 상품 엔티티 (hotdealStore가 fetch join되어 있어야 함)
+     * @return 핫딜 리스트 항목 DTO
+     */
+    public static HotdealListItemDTO toHotdealListItemDTO(Item item) {
+        // 이미지 URL 추출
+        List<String> imageUrls = item.getImages().stream()
+                .map(ItemImage::getImageUrl)
+                .collect(Collectors.toList());
+
+        // 핫딜 가게 정보 추출
+        HotdealStore store = item.getHotdealStore();
+
+        return HotdealListItemDTO.builder()
+                .itemId(item.getItemId())
+                .name(item.getName())              // 상품명
+                .imageUrls(imageUrls)
+                .currentPrice(item.getCurrentPrice())
+                .startPrice(item.getStartPrice())
+                .bidderCount(item.getBidCount())
+                .endTime(item.getEndTime())
+                .itemStatus(item.getItemStatus().name())
+                .storeId(store.getStoreId())
+                .storeName(store.getStoreName())   // 가게명
+                .latitude(store.getLatitude())     // 🔥 위도
+                .longitude(store.getLongitude())   // 🔥 경도
+                .address(store.getAddress())
+                .createdAt(item.getCreatedAt())
+                .build();
+    }
+
 }
