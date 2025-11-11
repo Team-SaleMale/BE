@@ -6,6 +6,8 @@ import com.salemale.domain.chat.entity.Chat; // 채팅 엔티티
 import com.salemale.domain.chat.entity.Message; //메시지 엔티티
 import com.salemale.domain.chat.repository.ChatRepository; // 채팅 리포지토리
 import com.salemale.domain.chat.repository.MessageRepository; // 메시지 리포지토리
+import com.salemale.domain.chat.repository.projection.ChatSummaryRow; // 요약 프로젝션
+import com.salemale.domain.chat.entity.Message.MessageType; // enum 매핑용
 import com.salemale.domain.item.entity.Item; // 아이템 엔티티
 import com.salemale.domain.item.repository.ItemRepository;
 import com.salemale.domain.user.entity.User; // 유저 엔티티
@@ -37,47 +39,52 @@ public class ChatService {
     // private final UserRepository userRepository; // 유저 정보 조회
     private final ItemRepository itemRepository; // 상품 정보 조회
 
-    /*
-     기존 채팅방 목록 조회
-     - 내가 판매자 또는 구매(buyer==winner)로 참여 중인 채팅방 모두 조회
-     - 읽지 않은 메시지 개수(unreadCount) 계산 포함
-     */
-    /*
-    public List<ChatSummary> getChatList(Long me, boolean onlyUnread, int page, int size) {
-        Page<Chat> chats = chatRepository
-                .findBySeller_IdOrBuyer_IdOrderByLastMessageAtDesc(me, me, PageRequest.of(page, size));
+    // 추가 : 채팅 요약 목록 API 서비스 (partner/lastMessage/unreadCount)
+    public List<ChatSummaryResponse> getChatSummaries(Long me, int page, int size) {
+        int offset = Math.max(page, 0) * Math.max(size, 1);
 
-        return chats.stream()
-                .filter(chat -> {
-                    // 내가 나간 방(soft delete) 제외
-                    if (chat.getSeller().getId().equals(me)) {
-                        return chat.getSellerDeletedAt() == null;
-                    } else if (chat.getBuyer().getId().equals(me)) {
-                        return chat.getBuyerDeletedAt() == null;
+        List<ChatSummaryRow> rows = chatRepository.findChatSummaries(me, offset, size);
+
+        return rows.stream().map(r -> {
+            ChatSummaryResponse.Partner partner = ChatSummaryResponse.Partner.builder()
+                    .id(r.getPartnerId())
+                    .nickname(r.getPartnerNickname())
+                    .profileImage(r.getPartnerProfileImage())
+                    .build();
+
+            ChatSummaryResponse.LastMessage last = null;
+            if (r.getLastSentAt() != null) {
+                MessageType type = null;
+                if (r.getLastType() != null) {
+                    try {
+                        type = MessageType.valueOf(r.getLastType());
+                    } catch (IllegalArgumentException ignored) {
+                        // 알 수 없는 타입 문자열이면 null로 둠
                     }
+                }
+                // 메시지 타입에 따라 보여주는 텍스트 가공
+                String content = r.getLastContent();
+                if (type == MessageType.IMAGE) {
+                    content = "사진을 보냈습니다";  // 이미지일 경우 대체 텍스트
+                } else if (type == MessageType.URL) {
+                    content = "링크를 보냈습니다";  // URL일 경우 대체 텍스트
+                }
+                last = ChatSummaryResponse.LastMessage.builder()
+                        .content(content)
+                        .type(type)
+                        .sentAt(r.getLastSentAt())
+                        .build();
+            }
 
-                    return false;
-                })
-                .map(chat -> {
-                    // 읽지 않은 메시지 수 계산 (내가 아닌 상대가 보낸 메시지 중 isRead=false)
-                    long unread = messageRepository
-                            .countByChat_ChatIdAndSender_IdNotAndIsReadFalse(chat.getChatId(), me);
-                    // 필터 조건이 unread일 경우, 안 읽은 메시지가 없는 방은 제외
-                    if (onlyUnread && unread == 0) return null;
-                    return ChatSummary.builder()
-                            .chatId(chat.getChatId())
-                            .itemId(chat.getItem().getItemId())
-                            .sellerId(chat.getSeller().getId())
-                            .buyerId(chat.getBuyer().getId())
-                            .lastMessageAt(chat.getLastMessageAt())
-                            .unreadCount(unread)
-                            .build();
-                })
-                .filter(dto -> dto != null)
-                .toList();
+            return ChatSummaryResponse.builder()
+                    .chatId(r.getChatId())
+                    .partner(partner)
+                    .lastMessage(last)
+                    .unreadCount(r.getUnreadCount() == null ? 0 : r.getUnreadCount())
+                    .build();
+        }).toList();
     }
 
-    */
 
     /**
      * 채팅방 목록 조회
