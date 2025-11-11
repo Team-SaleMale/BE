@@ -228,6 +228,12 @@ public class ItemConverter {
         // 핫딜 가게 정보 추출
         HotdealStore store = item.getHotdealStore();
 
+        if (store == null) {
+            throw new IllegalArgumentException(
+                    "핫딜 상품이 아니거나 가게 정보가 없습니다. itemId: " + item.getItemId()
+            );
+        }
+
         return HotdealListItemDTO.builder()
                 .itemId(item.getItemId())
                 .name(item.getName())              // 상품명
