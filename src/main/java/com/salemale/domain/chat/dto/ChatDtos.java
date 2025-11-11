@@ -53,6 +53,34 @@ public class ChatDtos {
     }
 
     /**
+     * (프론트 요청으로 추가)채팅방 목록 요약 응답
+     * partner: 현재 사용자(me)가 판매자면 구매자, 구매자면 판매자
+     * lastMessage: 최근 메시지(막 생성된 경우 -> null)
+     * unreadCount: 읽지 않은 개수
+     */
+    @Getter @NoArgsConstructor @AllArgsConstructor @Builder
+    public static class ChatSummaryResponse {
+        private Long chatId;
+        private Partner partner;
+        private LastMessage lastMessage; // null 가능(대화 시작 전)
+        private Long unreadCount;
+
+        @Getter @NoArgsConstructor @AllArgsConstructor @Builder
+        public static class Partner {
+            private Long id;
+            private String nickname;
+            private String profileImage;
+        }
+
+        @Getter @NoArgsConstructor @AllArgsConstructor @Builder
+        public static class LastMessage {
+            private String content;
+            private MessageType type;
+            private LocalDateTime sentAt;
+        }
+    }
+
+    /**
      채팅방 생성 결과 DTO
      - 새로 만든 채팅방의 ID만 반환 (생성 후 바로 입장 가능)
      */

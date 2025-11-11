@@ -4,7 +4,10 @@ import com.salemale.domain.chat.entity.Chat; //채팅방 정보
 import org.springframework.data.domain.Page; // 페이징
 import org.springframework.data.domain.Pageable; // 페이지 번호, 크기, 정렬 정보가 들어있는 객체
 import org.springframework.data.jpa.repository.JpaRepository; // JPA 기본 기능
+
+import java.util.List;
 import java.util.Optional; //null 대신 사용
+import com.salemale.domain.chat.repository.projection.ChatSummaryRow;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,10 +26,45 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
      order by c.lastMessageAt desc
 """)
     Page<Long> findChatIdsByUserOrderByLastMessageAtDesc(@Param("uid") Long uid, Pageable pageable);
-    /*
-    Page<ChatIdUnreadProjection> findChatIdsWithUnreadByUser(
-            @Param("uid") Long uid,
-            Pageable pageable
+
+    // 추가: 요약 목록 (partner/lastMessage/unreadCount)
+    @Query(value = """
+        SELECT
+              c.chat_id           AS chatId
+            , CASE WHEN :me = c.seller_id THEN c.buyer_id ELSE c.seller_id END AS partnerId
+            , u.nickname          AS partnerNickname
+            , u.profile_image     AS partnerProfileImage
+            , lm.content          AS lastContent
+            , lm.type             AS lastType
+            , lm.sent_at          AS lastSentAt
+            , (
+                SELECT COUNT(*)
+                FROM message mm
+                WHERE mm.chat_id = c.chat_id
+                  AND mm.is_read = false
+                  AND mm.sender_id <> :me
+              )                   AS unreadCount
+        FROM chat c
+        JOIN users u
+          ON u.id = CASE WHEN :me = c.seller_id THEN c.buyer_id ELSE c.seller_id END
+        LEFT JOIN LATERAL (
+            SELECT content, type, sent_at
+            FROM message m
+            WHERE m.chat_id = c.chat_id
+            ORDER BY m.sent_at DESC
+            LIMIT 1
+        ) lm ON TRUE
+        WHERE (:me = c.seller_id OR :me = c.buyer_id)
+          AND (
+               (:me = c.seller_id AND c.seller_deleted_at IS NULL)
+            OR (:me = c.buyer_id  AND c.buyer_deleted_at  IS NULL)
+          )
+        ORDER BY COALESCE(lm.sent_at, c.created_at) DESC
+        OFFSET :offset LIMIT :limit
+        """, nativeQuery = true)
+    List<ChatSummaryRow> findChatSummaries(
+            @Param("me") Long me,
+            @Param("offset") int offset,
+            @Param("limit") int limit
     );
-     */
 }
