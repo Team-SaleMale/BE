@@ -1,11 +1,13 @@
 package com.salemale.domain.item.entity;
 
+import com.salemale.domain.hotdeal.entity.HotdealStore;
 import com.salemale.domain.item.converter.TradeMethodListConverter;
 import com.salemale.domain.region.entity.Region;
 import com.salemale.domain.user.entity.User;
 import com.salemale.global.common.BaseEntity;
 import com.salemale.global.common.enums.Category;
 import com.salemale.global.common.enums.ItemStatus;
+import com.salemale.global.common.enums.ItemType;
 import com.salemale.global.common.enums.TradeMethod;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -99,6 +101,17 @@ public class Item extends BaseEntity {
     @Column(name = "bid_count", nullable = false)
     @Builder.Default
     private Long bidCount = 0L;
+
+    // 상품 타입 (일반 경매 vs 핫딜)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "item_type", nullable = false)
+    @Builder.Default
+    private ItemType itemType = ItemType.AUCTION;
+
+    // 핫딜인 경우에만 참조 (nullable)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hotdeal_store_id")
+    private HotdealStore hotdealStore;
 
     // 입찰이 없을때 낙찰로 경매 상품 상태 변경
     public void completeAuction(User winner) {
