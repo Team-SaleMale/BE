@@ -61,6 +61,9 @@ services:
       
       # Recommendation API Configuration
       RECOMMENDATION_API_URL: ${RECOMMENDATION_API_URL}
+      # Timezone / JVM Timezone
+      TZ: Asia/Seoul
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Seoul
     depends_on:
       - redis
     networks:
@@ -79,6 +82,8 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:6379:6379"
+    environment:
+      TZ: Asia/Seoul
     networks:
       - salemale-network
     healthcheck:
