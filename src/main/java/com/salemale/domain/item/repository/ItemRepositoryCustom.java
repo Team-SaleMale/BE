@@ -44,4 +44,19 @@ public interface ItemRepositoryCustom {
             MyAuctionSortType sortType,
             Pageable pageable
     );
+
+    /**
+     * 핫딜 상품 리스트 조회 (페이징)
+     * @param minPrice 최소 가격
+     * @param maxPrice 최대 가격
+     * @param sortType 정렬 타입
+     * @param pageable 페이징 정보
+     * @return 핫딜 상품 페이지
+     */
+    Page<Item> findHotdealList(
+            Integer minPrice,
+            Integer maxPrice,
+            AuctionSortType sortType,
+            Pageable pageable
+    );
 }

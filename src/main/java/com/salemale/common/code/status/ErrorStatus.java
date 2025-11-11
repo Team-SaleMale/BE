@@ -71,7 +71,12 @@ public enum ErrorStatus implements BaseErrorCode {
     IMAGE_ANALYSIS_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI4001", "이미지 분석에 실패했습니다."),
     IMAGE_NOT_TEMP_URL(HttpStatus.BAD_REQUEST, "AI4002", "temp 폴더의 이미지 URL이 아닙니다."),
     GEMINI_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI4003", "Gemini API 호출에 실패했습니다."),
-    IMAGE_DOWNLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI4004", "이미지 다운로드에 실패했습니다.")
+    IMAGE_DOWNLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI4004", "이미지 다운로드에 실패했습니다."),
+
+    // 핫딜 관련 에러 (4001~)
+    HOTDEAL_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "HOTDEAL4001", "핫딜 판매 권한이 없습니다."),
+    HOTDEAL_STORE_NOT_FOUND(HttpStatus.NOT_FOUND, "HOTDEAL4002", "등록된 가게 정보를 찾을 수 없습니다."),
+    HOTDEAL_ALREADY_EXISTS(HttpStatus.CONFLICT, "HOTDEAL4003", "이미 등록된 가게입니다."),
     ;
 
     private final HttpStatus httpStatus;

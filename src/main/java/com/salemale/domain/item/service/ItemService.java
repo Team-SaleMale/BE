@@ -194,6 +194,7 @@ public class ItemService {
                 .tradeMethods(request.getTradeMethods())
                 .tradeDetails(request.getTradeDetails())
                 .region(region)
+                .itemType(ItemType.AUCTION)  // 경매 상품 타입 추가(일반경매, 핫딜 구분)
                 .build();
 
         // 5. ItemImage 엔티티 생성 및 연결 (순서대로 0부터 부여)
