@@ -51,4 +51,8 @@ public class Chat extends BaseEntity {
 
     @Column(name = "buyer_deleted_at")
     private LocalDateTime buyerDeletedAt;
+
+    public void updateLastMessageAt(LocalDateTime time) {
+        this.lastMessageAt = time;
+    }
 }

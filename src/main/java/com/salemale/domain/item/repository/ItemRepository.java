@@ -112,6 +112,31 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
     );
 
     /**
+     * 키워드 + 필터(JPQL, 전국검색용)
+     * - 상태, 카테고리(옵션), 최소/최대 가격(옵션)을 함께 적용
+     * - 정렬은 Pageable의 Sort로 처리
+     */
+    @Query("""
+            SELECT i FROM Item i
+            WHERE i.itemStatus = :status
+              AND (
+                LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                 OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              )
+              AND (:categories IS NULL OR i.category IN :categories)
+              AND (:minPrice IS NULL OR i.currentPrice >= :minPrice)
+              AND (:maxPrice IS NULL OR i.currentPrice <= :maxPrice)
+            """)
+    Page<Item> searchItemsByKeywordWithFilters(
+            @Param("status") com.salemale.global.common.enums.ItemStatus status,
+            @Param("keyword") String keyword,
+            @Param("categories") java.util.List<com.salemale.global.common.enums.Category> categories,
+            @Param("minPrice") Integer minPrice,
+            @Param("maxPrice") Integer maxPrice,
+            Pageable pageable
+    );
+
+    /**
      * 키워드 + 반경 검색(네이티브, 하버사인)
      */
     @Query(value = """

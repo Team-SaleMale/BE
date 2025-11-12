@@ -61,8 +61,13 @@ services:
       
       # Recommendation API Configuration
       RECOMMENDATION_API_URL: ${RECOMMENDATION_API_URL}
+      # Timezone / JVM Timezone
+      TZ: Asia/Seoul
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Seoul
     depends_on:
       - redis
+    networks:
+      - salemale-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 30s
@@ -77,12 +82,23 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:6379:6379"
+    environment:
+      TZ: Asia/Seoul
+    networks:
+      - salemale-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
       start_period: 30s
+
+networks:
+  salemale-network:
+    name: salemale-network
+    driver: bridge
+    # BE compose가 네트워크를 생성 (없으면 생성, 있으면 사용)
+    # AI compose는 external: true로 이 네트워크 사용
 
 volumes:
   redis-data:

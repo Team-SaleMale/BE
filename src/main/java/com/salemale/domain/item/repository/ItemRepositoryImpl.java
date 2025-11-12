@@ -51,6 +51,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
                 .select(item.itemId)
                 .from(item)
                 .where(
+                        itemTypeIsAuction(),  // 추가: 일반 경매만 조회하도록
                         statusCondition(status, now, threeDaysAgo),
                         categoryCondition(categories),
                         priceRangeCondition(minPrice, maxPrice)
@@ -76,6 +77,7 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
                 .select(item.count())
                 .from(item)
                 .where(
+                        itemTypeIsAuction(),  // 추가: 일반 경매만
                         statusCondition(status, now, threeDaysAgo),
                         categoryCondition(categories),  // ← 변경
                         priceRangeCondition(minPrice, maxPrice)
@@ -325,5 +327,62 @@ public class ItemRepositoryImpl implements ItemRepositoryCustom {
                     item.itemId.asc()
             };
         };
+    }
+
+    // 추가: 핫딜 상품 리스트 조회
+    @Override
+    public Page<Item> findHotdealList(
+            Integer minPrice,
+            Integer maxPrice,
+            AuctionSortType sortType,
+            Pageable pageable
+    ) {
+        // Step 1: ID만 페이징해서 조회
+        List<Long> itemIds = queryFactory
+                .select(item.itemId)
+                .from(item)
+                .where(
+                        itemTypeIsHotdeal(),  // 핫딜만
+                        item.itemStatus.eq(ItemStatus.BIDDING),  // 입찰 중만
+                        priceRangeCondition(minPrice, maxPrice)
+                )
+                .orderBy(getOrderSpecifier(sortType))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        // Step 2: 조회된 ID로 전체 데이터 + 이미지 fetch join
+        List<Item> content = Collections.emptyList();
+        if (!itemIds.isEmpty()) {
+            content = queryFactory
+                    .selectFrom(item)
+                    .leftJoin(item.images).fetchJoin()
+                    .leftJoin(item.hotdealStore).fetchJoin()  // 핫딜 가게 정보
+                    .leftJoin(item.region).fetchJoin()  // region 정보
+                    .where(item.itemId.in(itemIds))
+                    .orderBy(getOrderSpecifier(sortType))
+                    .fetch();
+        }
+
+        // Count 쿼리
+        JPAQuery<Long> countQuery = queryFactory
+                .select(item.count())
+                .from(item)
+                .where(
+                        itemTypeIsHotdeal(),
+                        item.itemStatus.eq(ItemStatus.BIDDING),
+                        priceRangeCondition(minPrice, maxPrice)
+                );
+
+        return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
+    }
+
+    // 🔥 추가: itemType 조건 메서드들
+    private BooleanExpression itemTypeIsAuction() {
+        return item.itemType.eq(ItemType.AUCTION);
+    }
+
+    private BooleanExpression itemTypeIsHotdeal() {
+        return item.itemType.eq(ItemType.HOTDEAL);
     }
 }

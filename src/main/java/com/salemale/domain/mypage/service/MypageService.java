@@ -8,15 +8,15 @@ import com.salemale.domain.item.entity.ItemTransaction;
 import com.salemale.domain.item.repository.ItemRepository;
 import com.salemale.domain.item.repository.ItemTransactionRepository;
 import com.salemale.domain.item.repository.UserLikedRepository;
-import com.salemale.domain.mypage.dto.response.LikedItemListResponse;
-import com.salemale.domain.mypage.dto.response.MyAuctionItemDTO;
-import com.salemale.domain.mypage.dto.response.MyAuctionListResponse;
-import com.salemale.domain.mypage.dto.response.MyAuctionSummaryDTO;
+import com.salemale.domain.mypage.dto.response.*;
 import com.salemale.domain.user.entity.User;
+import com.salemale.domain.user.entity.UserPreferredCategory;
+import com.salemale.domain.user.repository.UserPreferredCategoryRepository;
 import com.salemale.domain.user.repository.UserRepository;
 import com.salemale.domain.mypage.enums.MyRole;
 import com.salemale.domain.mypage.enums.MyAuctionSortType;
 import com.salemale.domain.mypage.enums.MyAuctionType;
+import com.salemale.global.common.enums.Category;
 import com.salemale.global.common.enums.ItemStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -37,6 +37,7 @@ public class MypageService {
     private final ItemRepository itemRepository;
     private final ItemTransactionRepository itemTransactionRepository;
     private final UserLikedRepository userLikedRepository;
+    private final UserPreferredCategoryRepository preferredCategoryRepository;
 
     /**
      * 내 경매 목록 조회
@@ -205,6 +206,62 @@ public class MypageService {
                 .size(likedPage.getSize())
                 .hasNext(likedPage.hasNext())
                 .hasPrevious(likedPage.hasPrevious())
+                .build();
+    }
+
+    /**
+     * 선호 카테고리 설정
+     */
+    @Transactional
+    public PreferredCategoryResponse updatePreferredCategories(
+            Long userId,
+            List<Category> categories
+    ) {
+        // 1. 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+        // 2. 기존 선호 카테고리 전체 삭제, 바로 db에 저장(flush)
+        preferredCategoryRepository.deleteByUser(user);
+
+        preferredCategoryRepository.flush();
+
+        // 3. 새로운 선호 카테고리 저장
+        List<UserPreferredCategory> newPreferences = categories.stream()
+                .distinct() // 중복 제거
+                .map(category -> UserPreferredCategory.builder()
+                        .user(user)
+                        .category(category)
+                        .build())
+                .toList();
+
+        preferredCategoryRepository.saveAll(newPreferences);
+
+        // 4. 응답 생성
+        return PreferredCategoryResponse.builder()
+                .categories(categories.stream().distinct().toList())
+                .count(categories.size())
+                .build();
+    }
+
+    /**
+     * 선호 카테고리 조회
+     */
+    public PreferredCategoryResponse getPreferredCategories(Long userId) {
+        // 1. 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+        // 2. 선호 카테고리 조회
+        List<Category> categories = preferredCategoryRepository.findByUser(user)
+                .stream()
+                .map(UserPreferredCategory::getCategory)
+                .toList();
+
+        // 3. 응답 생성
+        return PreferredCategoryResponse.builder()
+                .categories(categories)
+                .count(categories.size())
                 .build();
     }
 }
