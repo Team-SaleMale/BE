@@ -31,10 +31,8 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
     @Override
     @Transactional(readOnly = true)
     public Page<AuctionListItemDTO> search(Long userId, String q, User.RangeSetting radius, AuctionStatus status, java.util.List<Category> categories, Integer minPrice, Integer maxPrice, AuctionSortType sort, Pageable pageable) {
-        if (q == null || q.trim().isBlank()) {
-            throw new GeneralException(ErrorStatus._BAD_REQUEST);
-        }
-        String keyword = q.trim();
+        // q가 null이거나 비어있으면 키워드 검색 없이 필터만 적용
+        String keyword = (q != null && !q.trim().isBlank()) ? q.trim() : null;
 
         boolean nationwide = (radius != null && radius == User.RangeSetting.ALL);
         // 상태 매핑: COMPLETED은 SUCCESS/FAIL 모두를 포함하는 별도 요구가 있으나, 검색/노출 관점에서는 우선 SUCCESS/FAIL을 COMPLETED로 다루는 리스트 API에 맡기고
@@ -58,19 +56,36 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
 
         Page<Item> page;
         if (nationwide) {
-            // 전국 검색: JPQL + 옵션 필터 + 동적 정렬(Pageable Sort)
+            // 전국 검색
             java.util.List<Category> cats = (categories == null || categories.isEmpty()) ? null : categories;
             // Pageable에 정렬 매핑 적용
             org.springframework.data.domain.Pageable sorted = org.springframework.data.domain.PageRequest.of(
                     pageable.getPageNumber(), pageable.getPageSize(),
                     toSpringSort(sort)
             );
-            page = itemRepository.searchItemsByKeywordWithFilters(
-                    effectiveStatus, keyword, cats, normalizeMin(minPrice), normalizeMax(maxPrice), sorted
-            );
+            
+            if (keyword != null) {
+                // 키워드가 있으면 키워드 검색 + 필터
+                page = itemRepository.searchItemsByKeywordWithFilters(
+                        effectiveStatus, keyword, cats, normalizeMin(minPrice), normalizeMax(maxPrice), sorted
+                );
+            } else {
+                // 키워드가 없으면 필터만 적용 (키워드 조건 제외)
+                page = itemRepository.searchItemsByFiltersOnly(
+                        effectiveStatus, cats, normalizeMin(minPrice), normalizeMax(maxPrice), sorted
+                );
+            }
         } else {
-            // 반경 검색: 기존 네이티브(키워드+반경) → 이후 카테고리/가격/정렬은 메모리에서 보정
-            page = itemRepository.findNearbyItemsByKeyword(effectiveStatus.name(), keyword, lat, lon, km, pageable);
+            // 반경 검색
+            if (keyword != null) {
+                // 키워드가 있으면 키워드 + 반경 검색
+                page = itemRepository.findNearbyItemsByKeyword(effectiveStatus.name(), keyword, lat, lon, km, pageable);
+            } else {
+                // 키워드가 없으면 반경 검색만 (키워드 조건 제외)
+                page = itemRepository.findNearbyItems(effectiveStatus.name(), lat, lon, km, pageable);
+            }
+            
+            // 반경 검색의 경우 카테고리/가격 필터는 메모리에서 보정
             java.util.List<Item> filtered = page.getContent().stream()
                     .filter(it -> categories == null || categories.isEmpty() || categories.contains(it.getCategory()))
                     .filter(it -> minPrice == null || minPrice == 0 || it.getCurrentPrice() >= minPrice)
