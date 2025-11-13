@@ -235,7 +235,13 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
         String existingProfileImage = user.getProfileImage();
         String uploadedProfileImageUrl = s3Service.uploadUserProfileImage(userId, profileImage);
 
-        UserProfileResponse response = persistProfileImage(userId, uploadedProfileImageUrl);
+        UserProfileResponse response;
+        try {
+            response = persistProfileImage(userId, uploadedProfileImageUrl);
+        } catch (Exception ex) {
+            userProfileImageCleanupService.deleteProfileImageAsync(uploadedProfileImageUrl);
+            throw ex;
+        }
 
         if (existingProfileImage != null && !existingProfileImage.equals(uploadedProfileImageUrl)) {
             userProfileImageCleanupService.deleteProfileImageAsync(existingProfileImage);

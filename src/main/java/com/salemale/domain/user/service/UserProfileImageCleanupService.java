@@ -13,7 +13,7 @@ public class UserProfileImageCleanupService {
 
     private final S3Service s3Service;
 
-    @Async
+    @Async("profileImageCleanupExecutor")
     public void deleteProfileImageAsync(String imageUrl) {
         if (imageUrl == null || imageUrl.isBlank()) {
             return;
