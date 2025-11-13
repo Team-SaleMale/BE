@@ -26,14 +26,26 @@ public class ImageService {
      * @throws GeneralException 검증 실패 시
      */
     public void validateFile(MultipartFile file) {
+        validateFile(file, MAX_FILE_SIZE, ErrorStatus.IMAGE_SIZE_EXCEEDED);
+    }
+
+    /**
+     * 파일 검증 (사용자 정의 최대 크기 및 에러 코드)
+     * @param file 검증할 파일
+     * @param maxFileSize 허용 최대 파일 크기 (bytes)
+     * @param sizeExceededError 최대 크기 초과 시 사용할 에러 코드 (null 허용)
+     */
+    public void validateFile(MultipartFile file, long maxFileSize, ErrorStatus sizeExceededError) {
         // 1. null/empty 체크
         if (file == null || file.isEmpty()) {
             throw new GeneralException(ErrorStatus.IMAGE_UPLOAD_FAILED);
         }
 
         // 2. 파일 크기 체크
-        if (file.getSize() > MAX_FILE_SIZE) {
-            throw new GeneralException(ErrorStatus.IMAGE_SIZE_EXCEEDED);
+        if (file.getSize() > maxFileSize) {
+            throw new GeneralException(
+                    sizeExceededError != null ? sizeExceededError : ErrorStatus.IMAGE_SIZE_EXCEEDED
+            );
         }
 
         // 3. 확장자 체크

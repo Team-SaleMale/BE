@@ -2,7 +2,9 @@ package com.salemale.domain.user.service; // 사용자 프로필 관리 서비�
 
 import com.salemale.common.code.status.ErrorStatus; // 에러 코드 집합
 import com.salemale.common.exception.GeneralException; // 커스텀 예외
+import com.salemale.domain.item.service.ImageService; // 이미지 검증 서비스
 import com.salemale.domain.region.dto.response.RegionInfoDTO; // 지역 정보 DTO
+import com.salemale.domain.s3.service.S3Service; // S3 업로드 서비스
 import com.salemale.domain.user.dto.request.NicknameUpdateRequest; // 닉네임 변경 요청 DTO
 import com.salemale.domain.user.dto.request.PasswordUpdateRequest; // 비밀번호 변경 요청 DTO
 import com.salemale.domain.user.dto.request.RangeSettingUpdateRequest; // 활동 반경 변경 요청 DTO
@@ -18,6 +20,7 @@ import lombok.extern.slf4j.Slf4j; // Lombok: 로깅 지원
 import org.springframework.security.crypto.password.PasswordEncoder; // 비밀번호 해시/검증
 import org.springframework.stereotype.Service; // 서비스 빈 선언
 import org.springframework.transaction.annotation.Transactional; // 트랜잭션 처리
+import org.springframework.web.multipart.MultipartFile; // 파일 업로드용 MultipartFile
 
 import java.util.List; // 리스트 타입
 
@@ -43,6 +46,9 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
     private final UserAuthRepository userAuthRepository; // 사용자 인증 정보 조회/저장 저장소
     private final UserRegionRepository userRegionRepository; // 사용자-지역 연결 저장소
     private final PasswordEncoder passwordEncoder; // 비밀번호 해시/검증 도구
+    private final S3Service s3Service; // S3 파일 업로드/삭제 서비스
+    private final ImageService imageService; // 이미지 파일 검증 서비스
+    private final UserProfileImageCleanupService userProfileImageCleanupService; // 이전 프로필 이미지 정리 서비스
 
     /**
      * 현재 로그인한 사용자의 프로필 정보를 조회합니다.
@@ -209,6 +215,48 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
 
         // 4) 엔티티 → DTO 변환: 변경된 정보를 반환합니다.
         return UserProfileResponse.from(user);
+    }
+
+    /**
+     * 사용자의 프로필 이미지를 변경합니다.
+     *
+     * @param userId      프로필 이미지를 변경할 사용자의 ID
+     * @param profileImage 업로드할 프로필 이미지 파일
+     * @return 변경된 프로필 정보
+     */
+    @Override
+    public UserProfileResponse updateProfileImage(Long userId, MultipartFile profileImage) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+        final long profileImageMaxSize = 50L * 1024 * 1024; // 50MB
+        imageService.validateFile(profileImage, profileImageMaxSize, ErrorStatus.PROFILE_IMAGE_SIZE_EXCEEDED);
+
+        String existingProfileImage = user.getProfileImage();
+        String uploadedProfileImageUrl = s3Service.uploadUserProfileImage(userId, profileImage);
+
+        UserProfileResponse response;
+        try {
+            response = persistProfileImage(userId, uploadedProfileImageUrl);
+        } catch (Exception ex) {
+            userProfileImageCleanupService.deleteProfileImageAsync(uploadedProfileImageUrl);
+            throw ex;
+        }
+
+        if (existingProfileImage != null && !existingProfileImage.equals(uploadedProfileImageUrl)) {
+            userProfileImageCleanupService.deleteProfileImageAsync(existingProfileImage);
+        }
+
+        log.info("프로필 이미지 변경 - 사용자 ID: {}, 신규 URL: {}", userId, uploadedProfileImageUrl);
+        return response;
+    }
+
+    @Transactional
+    protected UserProfileResponse persistProfileImage(Long userId, String profileImageUrl) {
+        User managedUser = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+        managedUser.updateProfileImage(profileImageUrl);
+        return UserProfileResponse.from(managedUser);
     }
 }
 
