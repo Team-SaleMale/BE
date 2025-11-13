@@ -38,18 +38,15 @@ public class SecurityConfig {
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint; // 인증 실패 엔트리포인트
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler; // OAuth2 성공 핸들러
     private final UserRepository userRepository; // JWT 필터 주입
-    private final OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService;
 
     public SecurityConfig(JwtTokenProvider jwtTokenProvider, 
                          CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
                          OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
-                         UserRepository userRepository,
-                         OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService) {
+                         UserRepository userRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
         this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
         this.userRepository = userRepository;
-        this.customOAuth2UserService = customOAuth2UserService;
     }
 
     @Bean
@@ -84,7 +81,7 @@ public class SecurityConfig {
                 )
                 // OAuth2 로그인 설정
                 .oauth2Login(oauth2 -> oauth2
-                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService()))
                         .successHandler(oAuth2AuthenticationSuccessHandler)
                         .failureHandler((request, response, exception) -> {
                             // OAuth2 실패 시 로그
