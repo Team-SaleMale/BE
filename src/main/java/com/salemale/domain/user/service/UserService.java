@@ -4,6 +4,7 @@ import com.salemale.domain.user.dto.request.NicknameUpdateRequest; // 닉네임 
 import com.salemale.domain.user.dto.request.PasswordUpdateRequest; // 비밀번호 변경 요청 DTO
 import com.salemale.domain.user.dto.request.RangeSettingUpdateRequest; // 활동 반경 변경 요청 DTO
 import com.salemale.domain.user.dto.response.UserProfileResponse; // 사용자 프로필 응답 DTO
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * UserService: 사용자 프로필 관리를 담당하는 서비스 인터페이스입니다.
@@ -85,5 +86,14 @@ public interface UserService {
      * @throws IllegalArgumentException 사용자를 찾을 수 없을 때 발생
      */
     UserProfileResponse updateRangeSetting(Long userId, RangeSettingUpdateRequest request);
+
+    /**
+     * 사용자의 프로필 이미지를 변경합니다.
+     *
+     * @param userId 프로필 이미지를 변경할 사용자 ID
+     * @param profileImage 업로드할 프로필 이미지 파일
+     * @return 변경된 프로필 정보 (UserProfileResponse)
+     */
+    UserProfileResponse updateProfileImage(Long userId, MultipartFile profileImage);
 }
 

@@ -17,7 +17,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -108,6 +110,40 @@ public class MypageProfileController {
     ) {
         Long userId = currentUserProvider.getCurrentUserId(request);
         UserProfileResponse profile = userService.updateNickname(userId, updateRequest);
+        return ApiResponse.onSuccess(profile);
+    }
+
+    @Operation(
+            summary = "프로필 이미지 변경",
+            description = """
+                    사용자의 프로필 이미지를 새로운 파일로 변경합니다.
+                    
+                    **파일 제한:**
+                    - 허용 확장자: jpg, jpeg, png, gif, webp
+                    - 최대 크기: 50MB
+                    
+                    **처리 흐름:**
+                    - 업로드된 이미지를 검증 후 S3 사용자 프로필 경로에 저장
+                    - 기존 프로필 이미지가 있는 경우 S3에서 삭제
+                    
+                    **요청 형식:**
+                    - multipart/form-data
+                    - 필드명: userProfile
+                    """
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "프로필 이미지 변경 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "유효하지 않은 이미지 파일 (확장자/크기 제한)"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패 (로그인 필요)")
+    })
+    @PatchMapping(value = "/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<UserProfileResponse> updateProfileImage(
+            @Parameter(hidden = true) HttpServletRequest request,
+            @Parameter(description = "업로드할 프로필 이미지 파일 (50MB 이하, jpg/jpeg/png/gif/webp)", required = true)
+            @RequestPart("userProfile") MultipartFile profileImage
+    ) {
+        Long userId = currentUserProvider.getCurrentUserId(request);
+        UserProfileResponse profile = userService.updateProfileImage(userId, profileImage);
         return ApiResponse.onSuccess(profile);
     }
 
