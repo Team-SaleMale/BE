@@ -48,6 +48,7 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
     private final PasswordEncoder passwordEncoder; // 비밀번호 해시/검증 도구
     private final S3Service s3Service; // S3 파일 업로드/삭제 서비스
     private final ImageService imageService; // 이미지 파일 검증 서비스
+    private final UserProfileImageCleanupService userProfileImageCleanupService; // 이전 프로필 이미지 정리 서비스
 
     /**
      * 현재 로그인한 사용자의 프로필 정보를 조회합니다.
@@ -224,7 +225,6 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
      * @return 변경된 프로필 정보
      */
     @Override
-    @Transactional
     public UserProfileResponse updateProfileImage(Long userId, MultipartFile profileImage) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
@@ -235,14 +235,22 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
         String existingProfileImage = user.getProfileImage();
         String uploadedProfileImageUrl = s3Service.uploadUserProfileImage(userId, profileImage);
 
-        user.updateProfileImage(uploadedProfileImageUrl);
+        UserProfileResponse response = persistProfileImage(userId, uploadedProfileImageUrl);
 
         if (existingProfileImage != null && !existingProfileImage.equals(uploadedProfileImageUrl)) {
-            s3Service.deleteFileByUrl(existingProfileImage);
+            userProfileImageCleanupService.deleteProfileImageAsync(existingProfileImage);
         }
 
         log.info("프로필 이미지 변경 - 사용자 ID: {}, 신규 URL: {}", userId, uploadedProfileImageUrl);
-        return UserProfileResponse.from(user);
+        return response;
+    }
+
+    @Transactional
+    protected UserProfileResponse persistProfileImage(Long userId, String profileImageUrl) {
+        User managedUser = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+        managedUser.updateProfileImage(profileImageUrl);
+        return UserProfileResponse.from(managedUser);
     }
 }
 
