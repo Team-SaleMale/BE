@@ -20,9 +20,14 @@ import lombok.extern.slf4j.Slf4j; // Lombok: 로깅 지원
 import org.springframework.security.crypto.password.PasswordEncoder; // 비밀번호 해시/검증
 import org.springframework.stereotype.Service; // 서비스 빈 선언
 import org.springframework.transaction.annotation.Transactional; // 트랜잭션 처리
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile; // 파일 업로드용 MultipartFile
 
 import java.util.List; // 리스트 타입
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * UserServiceImpl: 사용자 프로필 관리 로직을 실제로 구현하는 서비스 클래스입니다.
@@ -49,6 +54,7 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
     private final S3Service s3Service; // S3 파일 업로드/삭제 서비스
     private final ImageService imageService; // 이미지 파일 검증 서비스
     private final UserProfileImageCleanupService userProfileImageCleanupService; // 이전 프로필 이미지 정리 서비스
+    private final PlatformTransactionManager transactionManager;
 
     /**
      * 현재 로그인한 사용자의 프로필 정보를 조회합니다.
@@ -226,37 +232,64 @@ public class UserServiceImpl implements UserService { // UserService 인터페�
      */
     @Override
     public UserProfileResponse updateProfileImage(Long userId, MultipartFile profileImage) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
-
         final long profileImageMaxSize = 50L * 1024 * 1024; // 50MB
         imageService.validateFile(profileImage, profileImageMaxSize, ErrorStatus.PROFILE_IMAGE_SIZE_EXCEEDED);
 
-        String existingProfileImage = user.getProfileImage();
-        String uploadedProfileImageUrl = s3Service.uploadUserProfileImage(userId, profileImage);
+        if (!userRepository.existsById(userId)) {
+            throw new GeneralException(ErrorStatus.USER_NOT_FOUND);
+        }
 
-        UserProfileResponse response;
+        String uploadedProfileImageUrl = s3Service.uploadUserProfileImage(userId, profileImage);
+        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+        AtomicBoolean synchronizationRegistered = new AtomicBoolean(false);
+
         try {
-            response = persistProfileImage(userId, uploadedProfileImageUrl);
-        } catch (Exception ex) {
-            userProfileImageCleanupService.deleteProfileImageAsync(uploadedProfileImageUrl);
+            UserProfileResponse response = transactionTemplate.execute(status -> {
+                User managedUser = userRepository.findById(userId)
+                        .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+                final String previousProfileImage = managedUser.getProfileImage();
+                managedUser.updateProfileImage(uploadedProfileImageUrl);
+
+                if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            log.info("프로필 이미지 변경 - 사용자 ID: {}, 신규 URL: {}", userId, uploadedProfileImageUrl);
+                            if (previousProfileImage != null && !previousProfileImage.equals(uploadedProfileImageUrl)) {
+                                userProfileImageCleanupService.deleteProfileImageAsync(previousProfileImage);
+                            }
+                        }
+
+                        @Override
+                        public void afterCompletion(int status) {
+                            if (status == TransactionSynchronization.STATUS_ROLLED_BACK) {
+                                userProfileImageCleanupService.deleteProfileImageAsync(uploadedProfileImageUrl);
+                            }
+                        }
+                    });
+                    synchronizationRegistered.set(true);
+                } else {
+                    log.info("프로필 이미지 변경 - 사용자 ID: {}, 신규 URL: {}", userId, uploadedProfileImageUrl);
+                    if (previousProfileImage != null && !previousProfileImage.equals(uploadedProfileImageUrl)) {
+                        userProfileImageCleanupService.deleteProfileImageAsync(previousProfileImage);
+                    }
+                }
+
+                return UserProfileResponse.from(managedUser);
+            });
+
+            if (response == null) {
+                throw new GeneralException(ErrorStatus.IMAGE_UPLOAD_FAILED);
+            }
+
+            return response;
+        } catch (RuntimeException ex) {
+            if (!synchronizationRegistered.get()) {
+                userProfileImageCleanupService.deleteProfileImageAsync(uploadedProfileImageUrl);
+            }
             throw ex;
         }
-
-        if (existingProfileImage != null && !existingProfileImage.equals(uploadedProfileImageUrl)) {
-            userProfileImageCleanupService.deleteProfileImageAsync(existingProfileImage);
-        }
-
-        log.info("프로필 이미지 변경 - 사용자 ID: {}, 신규 URL: {}", userId, uploadedProfileImageUrl);
-        return response;
-    }
-
-    @Transactional
-    protected UserProfileResponse persistProfileImage(Long userId, String profileImageUrl) {
-        User managedUser = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
-        managedUser.updateProfileImage(profileImageUrl);
-        return UserProfileResponse.from(managedUser);
     }
 }
 

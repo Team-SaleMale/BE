@@ -8,6 +8,12 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy; // 세션 정책(STATeless)
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder; // BCrypt 구현체
 import org.springframework.security.crypto.password.PasswordEncoder; // 비밀번호 인코더 인터페이스
+import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain; // 필터 체인 빈
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter; // 커스텀 필터 삽입 지점
 import com.salemale.global.security.jwt.JwtAuthenticationFilter; // JWT 인증 필터
@@ -19,8 +25,10 @@ import org.springframework.web.cors.CorsConfigurationSource; // CORS 설정 소�
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource; // URL 패턴별 CORS 적용
 import jakarta.servlet.http.HttpServletResponse; // 응답 객체
 
+import java.util.HashMap;
 import java.util.Arrays; // 허용 메서드/헤더 나열에 사용
 import java.util.List; // 허용 오리진 목록에 사용
+import java.util.Map;
 
 @Configuration // 스프링 구성 클래스
 @EnableWebSecurity // 웹 보안 활성화
@@ -30,15 +38,18 @@ public class SecurityConfig {
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint; // 인증 실패 엔트리포인트
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler; // OAuth2 성공 핸들러
     private final UserRepository userRepository; // JWT 필터 주입
+    private final OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService;
 
     public SecurityConfig(JwtTokenProvider jwtTokenProvider, 
                          CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
                          OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler,
-                         UserRepository userRepository) {
+                         UserRepository userRepository,
+                         OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
         this.oAuth2AuthenticationSuccessHandler = oAuth2AuthenticationSuccessHandler;
         this.userRepository = userRepository;
+        this.customOAuth2UserService = customOAuth2UserService;
     }
 
     @Bean
@@ -73,6 +84,7 @@ public class SecurityConfig {
                 )
                 // OAuth2 로그인 설정
                 .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(oAuth2AuthenticationSuccessHandler)
                         .failureHandler((request, response, exception) -> {
                             // OAuth2 실패 시 로그
@@ -120,6 +132,47 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration); // 전 경로에 위 정책 적용
         return source;
+    }
+
+    @Bean
+    public OAuth2UserService<OAuth2UserRequest, OAuth2User> customOAuth2UserService() {
+        return new FlatteningOAuth2UserService();
+    }
+
+    private static class FlatteningOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
+
+        private final DefaultOAuth2UserService delegate = new DefaultOAuth2UserService();
+
+        @Override
+        public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
+            OAuth2User oAuth2User = delegate.loadUser(userRequest);
+            Map<String, Object> attributes = new HashMap<>(oAuth2User.getAttributes());
+            String registrationId = userRequest.getClientRegistration().getRegistrationId();
+
+            if ("naver".equalsIgnoreCase(registrationId)) {
+                Map<String, Object> responseAttributes = extractResponse(attributes);
+                attributes.put("id", responseAttributes.get("id"));
+                attributes.put("email", responseAttributes.get("email"));
+                attributes.put("nickname", responseAttributes.get("nickname"));
+                attributes.put("name", responseAttributes.getOrDefault("nickname", responseAttributes.get("name")));
+            }
+
+            String userNameAttributeName = userRequest.getClientRegistration()
+                    .getProviderDetails()
+                    .getUserInfoEndpoint()
+                    .getUserNameAttributeName();
+
+            return new DefaultOAuth2User(oAuth2User.getAuthorities(), attributes, userNameAttributeName);
+        }
+
+        @SuppressWarnings("unchecked")
+        private Map<String, Object> extractResponse(Map<String, Object> attributes) {
+            Object response = attributes.get("response");
+            if (response instanceof Map) {
+                return (Map<String, Object>) response;
+            }
+            return Map.of();
+        }
     }
 }
 
