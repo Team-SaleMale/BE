@@ -176,7 +176,8 @@ public class SearchController {
                     키워드로 경매 상품을 검색합니다. 제목 또는 상품명에 키워드가 포함된 상품을 찾습니다.
                     
                     **검색 기능:**
-                    - 키워드 부분일치 검색 (대소문자 구분 없음)
+                    - 키워드 부분일치 검색 (대소문자 구분 없음, 선택)
+                    - 키워드 미지정 시: 키워드 검색 없이 필터만 적용
                     - 제목(title)과 상품명(name) 모두 검색 대상
                     - 반경 필터: 사용자 동네 기준 거리 필터링 (옵션)
                     - 상태 필터: 진행중(BIDDING), 완료(COMPLETED) 등
@@ -193,6 +194,7 @@ public class SearchController {
                     - "아이폰" 검색 + 반경 NEAR → 사용자 동네 기준 1km 이내 아이폰 검색
                     - "노트북" 검색 + 카테고리 DIGITAL + 가격 10만원~50만원
                     - "의자" 검색 + 반경 ALL → 전국 의자 검색
+                    - 키워드 없이 카테고리 DIGITAL만 → DIGITAL 카테고리 상품 전체 조회
                     
                     **주의사항:**
                     - 인증 필요 (사용자 동네 정보 사용)
@@ -201,14 +203,14 @@ public class SearchController {
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "검색 성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "검색어 누락 또는 유효하지 않은 파라미터"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "유효하지 않은 파라미터"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패 (로그인 필요)"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "사용자 동네 미설정")
     })
     @GetMapping("/items")
     public ApiResponse<NearbyItemsResponse> searchItems(
             HttpServletRequest request,
-            @Parameter(description = "검색 키워드 (필수, 제목/상품명 부분일치 검색)", example = "아이폰", required = true) @RequestParam String q,
+            @Parameter(description = "검색 키워드 (선택, 제목/상품명 부분일치 검색). 미지정 시 키워드 검색 없이 필터만 적용", example = "아이폰", required = false) @RequestParam(required = false) String q,
             @Parameter(description = "표시 반경 Enum (VERY_NEAR: 0.5km, NEAR: 1km, MEDIUM: 3km, FAR: 5km, ALL: 전국). 미지정 시 사용자 기본값 사용", example = "NEAR") @RequestParam(required = false) User.RangeSetting radius,
             @Parameter(description = "상태 필터 (BIDDING: 진행중, COMPLETED: 완료, POPULAR: 인기, RECOMMENDED: 추천). 기본값: BIDDING", example = "BIDDING") @RequestParam(required = false, defaultValue = "BIDDING") AuctionStatus status,
             @Parameter(description = "카테고리 필터 (다중 선택 가능). 예: DIGITAL, HOME_APPLIANCE 등", example = "DIGITAL") @RequestParam(required = false) java.util.List<Category> categories,
