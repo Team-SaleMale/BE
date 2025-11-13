@@ -180,4 +180,71 @@ public class S3Service {
             throw new GeneralException(ErrorStatus.INVALID_IMAGE_URL);
         }
     }
+
+    /**
+     * 프로필 이미지 업로드 (users/{userId}/profile/)
+     * @param userId 사용자 ID
+     * @param file 업로드할 파일
+     * @return 업로드된 프로필 이미지의 공개 URL
+     */
+    public String uploadUserProfileImage(Long userId, MultipartFile file) {
+        String originalFilename = file.getOriginalFilename();
+        String extension = getFileExtension(originalFilename);
+        String fileName = UUID.randomUUID() + (extension.isEmpty() ? "" : "." + extension);
+        String s3Key = String.format("users/%d/profile/%s", userId, fileName);
+
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(s3Key)
+                    .contentType(file.getContentType())
+                    .build();
+
+            s3Client.putObject(
+                    putObjectRequest,
+                    RequestBody.fromInputStream(file.getInputStream(), file.getSize())
+            );
+
+            return generatePublicUrl(s3Key);
+
+        } catch (S3Exception e) {
+            log.error("프로필 이미지 업로드 실패: {}", e.getMessage());
+            throw new GeneralException(ErrorStatus.IMAGE_UPLOAD_FAILED);
+        } catch (IOException e) {
+            log.error("프로필 이미지 파일 읽기 실패: {}", e.getMessage());
+            throw new GeneralException(ErrorStatus.IMAGE_UPLOAD_FAILED);
+        }
+    }
+
+    /**
+     * S3 URL을 받아 파일 삭제
+     * @param url 삭제할 파일의 S3 공개 URL
+     */
+    public void deleteFileByUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return;
+        }
+        try {
+            String s3Key = extractS3KeyFromUrl(url);
+            deleteFile(s3Key);
+        } catch (GeneralException e) {
+            log.warn("프로필 이미지 삭제 중 URL 파싱 실패: {}", url, e);
+        }
+    }
+
+    /**
+     * 파일 확장자 추출
+     * @param filename 원본 파일명
+     * @return 확장자 (없으면 빈 문자열)
+     */
+    private String getFileExtension(String filename) {
+        if (filename == null) {
+            return "";
+        }
+        int lastDot = filename.lastIndexOf('.');
+        if (lastDot == -1 || lastDot == filename.length() - 1) {
+            return "";
+        }
+        return filename.substring(lastDot + 1);
+    }
 }

@@ -160,6 +160,15 @@ public class User extends BaseEntity {
     }
 
     /**
+     * 프로필 이미지 URL을 변경합니다.
+     *
+     * @param profileImageUrl 새로운 프로필 이미지 URL (null 허용: 삭제)
+     */
+    public void updateProfileImage(String profileImageUrl) {
+        this.profileImage = profileImageUrl;
+    }
+
+    /**
      * 사용자 역할을 변경합니다.
      *
      * - null이 전달되면 무시합니다.
