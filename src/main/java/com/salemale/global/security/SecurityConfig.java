@@ -152,6 +152,7 @@ public class SecurityConfig {
                 attributes.put("email", responseAttributes.get("email"));
                 attributes.put("nickname", responseAttributes.get("nickname"));
                 attributes.put("name", responseAttributes.getOrDefault("nickname", responseAttributes.get("name")));
+                return new DefaultOAuth2User(oAuth2User.getAuthorities(), attributes, "id");
             }
 
             String userNameAttributeName = userRequest.getClientRegistration()
