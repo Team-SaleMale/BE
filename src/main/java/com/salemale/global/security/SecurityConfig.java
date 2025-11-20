@@ -122,8 +122,17 @@ public class SecurityConfig {
                 "http://127.0.0.1:8080" // 로컬(루프백 IP - 백엔드)
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")); // 허용 메서드
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "X-Email-Verify-Token", "USER-ID", "user-id", "Accept")); // 허용 헤더 (CORS preflight용, 대소문자 모두 허용)
-        configuration.setExposedHeaders(List.of("Authorization")); // 클라이언트에서 읽을 수 있는 응답 헤더
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With",
+                "X-Email-Verify-Token",
+                "X-Password-Reset-Token",
+                "USER-ID",
+                "user-id",
+                "Accept"
+        )); // 허용 헤더 (CORS preflight용, 대소문자 모두 허용)
+        configuration.setExposedHeaders(List.of("Authorization", "X-Password-Reset-Token")); // 클라이언트에서 읽을 수 있는 응답 헤더
         configuration.setAllowCredentials(true); // 인증정보(쿠키/Authorization) 포함 허용
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
