@@ -524,17 +524,13 @@ public class AuthController {
     })
     @PostMapping("/password/reset/confirm")
     public ResponseEntity<ApiResponse<Void>> confirmPasswordReset(
-            @RequestHeader(value = "X-Password-Reset-Token", required = false) String passwordResetHeader,
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestHeader(value = "X-Password-Reset-Token") String sessionToken,
             @Valid @RequestBody PasswordResetConfirmRequest request) {
-        String sessionToken = resolvePasswordResetToken(passwordResetHeader, authorization);
-
         if (sessionToken == null || sessionToken.isBlank()) {
             var err = ErrorStatus.PASSWORD_RESET_FAILED;
             return ResponseEntity.status(err.getHttpStatus())
                     .body(ApiResponse.onFailure(err.getCode(), "세션 토큰이 필요합니다.", null));
         }
-
         try {
             passwordResetService.resetPassword(sessionToken, request.getNewPassword());
             return ResponseEntity.ok(ApiResponse.onSuccess());
@@ -543,18 +539,6 @@ public class AuthController {
             return ResponseEntity.status(err.getHttpStatus())
                     .body(ApiResponse.onFailure(err.getCode(), e.getMessage(), null));
         }
-    }
-
-    private String resolvePasswordResetToken(String passwordResetHeader, String authorization) {
-        if (passwordResetHeader != null && !passwordResetHeader.isBlank()) {
-            return passwordResetHeader.trim();
-        }
-        if (authorization != null && !authorization.isBlank()) {
-            return authorization.startsWith("Bearer ")
-                    ? authorization.substring(7).trim()
-                    : authorization.trim();
-        }
-        return null;
     }
 }
 
