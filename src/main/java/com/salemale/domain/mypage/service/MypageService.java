@@ -5,8 +5,10 @@ import com.salemale.common.exception.GeneralException;
 import com.salemale.domain.item.converter.ItemConverter;
 import com.salemale.domain.item.entity.Item;
 import com.salemale.domain.item.entity.ItemTransaction;
+import com.salemale.domain.item.entity.Review;
 import com.salemale.domain.item.repository.ItemRepository;
 import com.salemale.domain.item.repository.ItemTransactionRepository;
+import com.salemale.domain.item.repository.ReviewRepository;
 import com.salemale.domain.item.repository.UserLikedRepository;
 import com.salemale.domain.mypage.dto.response.*;
 import com.salemale.domain.user.entity.User;
@@ -38,6 +40,7 @@ public class MypageService {
     private final ItemTransactionRepository itemTransactionRepository;
     private final UserLikedRepository userLikedRepository;
     private final UserPreferredCategoryRepository preferredCategoryRepository;
+    private final ReviewRepository reviewRepository;
 
     /**
      * 내 경매 목록 조회
@@ -262,6 +265,40 @@ public class MypageService {
         return PreferredCategoryResponse.builder()
                 .categories(categories)
                 .count(categories.size())
+                .build();
+    }
+
+    /**
+     * 내가 받은 후기 목록 조회
+     *
+     * @param userId 로그인한 사용자 ID
+     * @param pageable 페이징 정보
+     * @return 받은 후기 목록 (페이징)
+     */
+    @Transactional(readOnly = true)
+    public ReceivedReviewsResponse getReceivedReviews(Long userId, Pageable pageable) {
+
+        // 1. 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+        // 2. 후기 목록 조회 (페이징, 최신순)
+        Page<Review> reviewPage = reviewRepository.findByTargetOrderByCreatedAtDesc(user, pageable);
+
+        // 3. Review 엔티티를 DTO로 변환
+        List<ReceivedReviewDTO> reviewDTOs = reviewPage.getContent().stream()
+                .map(ReceivedReviewDTO::from)
+                .toList();
+
+        // 4. 응답 DTO 생성
+        return ReceivedReviewsResponse.builder()
+                .reviews(reviewDTOs)
+                .totalElements(reviewPage.getTotalElements())
+                .totalPages(reviewPage.getTotalPages())
+                .currentPage(reviewPage.getNumber())
+                .size(reviewPage.getSize())
+                .hasNext(reviewPage.hasNext())
+                .hasPrevious(reviewPage.hasPrevious())
                 .build();
     }
 }
