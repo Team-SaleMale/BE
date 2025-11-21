@@ -57,6 +57,6 @@ public class NaverShoppingClient {
                 .header("X-Naver-Client-Secret", clientSecret)
                 .retrieve()
                 .bodyToMono(NaverShopSearchResponse.class)
-                .block(); // Spring MVC
+                .block(Duration.ofSeconds(5));
     }
 }
