@@ -163,3 +163,8 @@ recommendation:
   api:
     url: ${RECOMMENDATION_API_URL}
 
+# 네이버 쇼핑 API 설정
+naver:
+  shopping:
+    client-id: ${NAVER_SHOPPING_CLIENT_ID}
+    client-secret: ${NAVER_SHOPPING_CLIENT_SECRET}
