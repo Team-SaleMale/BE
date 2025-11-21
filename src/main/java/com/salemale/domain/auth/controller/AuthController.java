@@ -524,13 +524,14 @@ public class AuthController {
     })
     @PostMapping("/password/reset/confirm")
     public ResponseEntity<ApiResponse<Void>> confirmPasswordReset(
-            @RequestHeader(value = "Authorization", required = true) String authorization,
+            @RequestHeader(value = "X-Password-Reset-Token") String sessionToken,
             @Valid @RequestBody PasswordResetConfirmRequest request) {
+        if (sessionToken == null || sessionToken.isBlank()) {
+            var err = ErrorStatus.PASSWORD_RESET_FAILED;
+            return ResponseEntity.status(err.getHttpStatus())
+                    .body(ApiResponse.onFailure(err.getCode(), "세션 토큰이 필요합니다.", null));
+        }
         try {
-            String sessionToken = authorization.startsWith("Bearer ") 
-                    ? authorization.substring(7).trim() 
-                    : authorization.trim();
-            
             passwordResetService.resetPassword(sessionToken, request.getNewPassword());
             return ResponseEntity.ok(ApiResponse.onSuccess());
         } catch (IllegalArgumentException e) {
