@@ -3,18 +3,18 @@ package com.salemale.domain.item.service;
 import com.salemale.common.code.status.ErrorStatus;
 import com.salemale.common.exception.GeneralException;
 import com.salemale.domain.item.converter.ItemConverter;
+import com.salemale.domain.item.converter.ReviewConverter;
 import com.salemale.domain.item.dto.request.BidRequest;
 import com.salemale.domain.item.dto.request.ItemRegisterRequest;
+import com.salemale.domain.item.dto.request.ReviewRequest;
 import com.salemale.domain.item.dto.response.*;
 import com.salemale.domain.item.dto.response.detail.ItemDetailResponse;
-import com.salemale.domain.item.entity.Item;
-import com.salemale.domain.item.entity.ItemImage;
-import com.salemale.domain.item.entity.ItemTransaction;
-import com.salemale.domain.item.entity.UserLiked;
+import com.salemale.domain.item.entity.*;
 import com.salemale.domain.item.enums.AuctionSortType;
 import com.salemale.domain.item.enums.AuctionStatus;
 import com.salemale.domain.item.repository.ItemRepository;
 import com.salemale.domain.item.repository.ItemTransactionRepository;
+import com.salemale.domain.item.repository.ReviewRepository;
 import com.salemale.domain.item.repository.UserLikedRepository;
 import com.salemale.domain.region.entity.Region;
 import com.salemale.domain.s3.service.S3Service;
@@ -51,6 +51,7 @@ public class ItemService {
     private final S3Service s3Service; // s3 로직
     private final ImageService imageService;
     private final RecommendationService recommendationService;
+    private final ReviewRepository reviewRepository;
 
     //찜하기
     @Transactional
@@ -447,5 +448,100 @@ public class ItemService {
                 .hasNext(end < recommendedItemIds.size())
                 .hasPrevious(start > 0)
                 .build();
+    }
+
+    /**
+     * 거래 후기 작성
+     * @param reviewerId 후기 작성자 ID (JWT에서 추출)
+     * @param itemId 상품 ID
+     * @param request 후기 요청 (별점, 내용)
+     * @return 후기 작성 결과
+     */
+    @Transactional
+    public ReviewResponse createReview(Long reviewerId, Long itemId, ReviewRequest request) {
+        // 1. 기본 검증
+        User reviewer = userRepository.findById(reviewerId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.USER_NOT_FOUND));
+
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.ITEM_NOT_FOUND));
+
+        // 2. 비즈니스 검증
+        // 2-1. 경매가 성공적으로 완료되었는지 확인
+        if (item.getItemStatus() != ItemStatus.SUCCESS) {
+            throw new GeneralException(ErrorStatus.REVIEW_NOT_ALLOWED_ITEM_NOT_SUCCESS);
+        }
+
+        // 2-2. winner가 존재하는지 확인
+        if (item.getWinner() == null) {
+            throw new GeneralException(ErrorStatus.REVIEW_NOT_ALLOWED_NO_WINNER);
+        }
+
+        // 2-3. 작성자가 판매자 또는 낙찰자인지 확인
+        boolean isSeller = item.getSeller().getId().equals(reviewerId);
+        boolean isWinner = item.getWinner().getId().equals(reviewerId);
+
+        if (!isSeller && !isWinner) {
+            throw new GeneralException(ErrorStatus.REVIEW_NOT_ALLOWED_NOT_PARTICIPANT);
+        }
+
+        // 2-4. 중복 후기 방지
+        if (reviewRepository.existsByItemAndReviewer(item, reviewer)) {
+            throw new GeneralException(ErrorStatus.REVIEW_ALREADY_EXISTS);
+        }
+
+        // 3. 후기 대상자 결정
+        User target = isSeller ? item.getWinner() : item.getSeller();
+
+        // 4. 후기 생성
+        Review review = Review.builder()
+                .reviewer(reviewer)
+                .target(target)
+                .item(item)
+                .rating(request.getRating())
+                .content(request.getContent())
+                .build();
+
+        Review savedReview = reviewRepository.save(review);
+
+        // 5. 매너 지수 업데이트
+        Integer mannerScoreDelta = calculateMannerScoreDelta(request.getRating());
+        updateMannerScore(target, mannerScoreDelta);
+
+        // 6. 응답 생성 및 반환
+        return ReviewConverter.toReviewResponse(savedReview, target.getMannerScore());
+    }
+
+    /**
+     * 별점에 따른 매너 지수 변화량 계산
+     */
+    private Integer calculateMannerScoreDelta(Review.Rating rating) {
+        switch (rating) {
+            case FIVE:
+                return 2;   // 5점: +2
+            case FOUR:
+                return 1;   // 4점: +1
+            case THREE:
+                return 0;   // 3점: 0
+            case TWO:
+                return -1;  // 2점: -1
+            case ONE:
+                return -2;  // 1점: -2
+            default:
+                return 0;
+        }
+    }
+
+    /**
+     * 매너 지수 업데이트 (경계값 처리 포함)
+     */
+    private void updateMannerScore(User user, Integer delta) {
+        Integer currentScore = user.getMannerScore();
+        Integer newScore = currentScore + delta;
+
+        // 매너 지수는 0~100 사이로 제한
+        newScore = Math.max(0, Math.min(100, newScore));
+
+        user.updateMannerScore(newScore);
     }
 }

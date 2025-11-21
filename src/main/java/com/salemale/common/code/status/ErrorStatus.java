@@ -78,6 +78,12 @@ public enum ErrorStatus implements BaseErrorCode {
     HOTDEAL_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "HOTDEAL4001", "핫딜 판매 권한이 없습니다."),
     HOTDEAL_STORE_NOT_FOUND(HttpStatus.NOT_FOUND, "HOTDEAL4002", "등록된 가게 정보를 찾을 수 없습니다."),
     HOTDEAL_ALREADY_EXISTS(HttpStatus.CONFLICT, "HOTDEAL4003", "이미 등록된 가게입니다."),
+
+    // 거래 후기 관련 에러
+    REVIEW_NOT_ALLOWED_ITEM_NOT_SUCCESS(HttpStatus.BAD_REQUEST, "REVIEW4001", "경매가 성공적으로 완료된 상품만 후기 작성이 가능합니다."),
+    REVIEW_NOT_ALLOWED_NO_WINNER(HttpStatus.BAD_REQUEST, "REVIEW4002", "낙찰자가 없는 상품은 후기 작성이 불가능합니다."),
+    REVIEW_NOT_ALLOWED_NOT_PARTICIPANT(HttpStatus.FORBIDDEN, "REVIEW4003", "해당 거래의 참여자(판매자 또는 낙찰자)만 후기를 작성할 수 있습니다."),
+    REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "REVIEW4004", "이미 해당 상품에 대한 후기를 작성하셨습니다.");
     ;
 
     private final HttpStatus httpStatus;
