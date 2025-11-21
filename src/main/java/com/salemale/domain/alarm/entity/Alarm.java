@@ -9,6 +9,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "alarm")
 @Getter
@@ -28,4 +30,23 @@ public class Alarm extends BaseEntity {
 
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
+
+    @Column(name = "is_read", nullable = false)
+    private boolean isRead;
+
+    @Column(name = "read_at")
+    private LocalDateTime readAt;
+
+    // delete 여부 확인(soft)
+    public boolean isDeleted() {
+        return getDeletedAt() != null;
+    }
+
+    public void markRead() {
+        if (!isRead) {
+            this.isRead = true;
+            this.readAt = LocalDateTime.now();
+        }
+    }
+
 }
