@@ -5,6 +5,7 @@ import com.salemale.domain.mypage.dto.request.UpdatePreferredCategoryRequest;
 import com.salemale.domain.mypage.dto.response.LikedItemListResponse;
 import com.salemale.domain.mypage.dto.response.MyAuctionListResponse;
 import com.salemale.domain.mypage.dto.response.PreferredCategoryResponse;
+import com.salemale.domain.mypage.dto.response.ReceivedReviewsResponse;
 import com.salemale.domain.mypage.service.MypageService;
 import com.salemale.domain.mypage.enums.MyAuctionSortType;
 import com.salemale.domain.mypage.enums.MyAuctionType;
@@ -236,6 +237,45 @@ public class MypageController {
     ) {
         Long userId = currentUserProvider.getCurrentUserId(request);
         PreferredCategoryResponse response = mypageService.getPreferredCategories(userId);
+
+        return ResponseEntity.ok(ApiResponse.onSuccess(response));
+    }
+
+    /**
+     * 내가 받은 후기 목록 조회
+     * GET /mypage/auctions/reviews
+     */
+    @Operation(
+            summary = "내가 받은 후기 목록 조회",
+            description = """
+                마이페이지에서 다른 사용자들이 나에게 작성한 거래 후기 목록을 조회합니다.
+                
+                **반환 정보:**
+                - 작성자 정보 (닉네임, 프로필 이미지)
+                - 거래 상품 정보 (제목, 대표 이미지)
+                - 별점 및 후기 내용
+                - 작성 일시
+                - 페이징 정보
+                
+                **정렬:**
+                - 최신 작성순 (createdAt DESC)
+                """
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패 (로그인 필요)")
+    })
+    @GetMapping("/reviews")
+    public ResponseEntity<ApiResponse<ReceivedReviewsResponse>> getReceivedReviews(
+            @Parameter(hidden = true) HttpServletRequest request,
+            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @Parameter(description = "페이지당 아이템 개수", example = "20")
+            @RequestParam(required = false, defaultValue = "20") int size
+    ) {
+        Long userId = currentUserProvider.getCurrentUserId(request);
+        Pageable pageable = PageRequest.of(page, size);
+        ReceivedReviewsResponse response = mypageService.getReceivedReviews(userId, pageable);
 
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
     }
