@@ -61,6 +61,12 @@ services:
       
       # Recommendation API Configuration
       RECOMMENDATION_API_URL: ${RECOMMENDATION_API_URL}
+
+      #NAVER SHOPPING API
+      NAVER_SHOPPING_CLIENT_ID: ${NAVER_SHOPPING_CLIENT_ID}
+      NAVER_SHOPPING_CLIENT_SECRET: ${NAVER_SHOPPING_CLIENT_SECRET}
+
+
       # Timezone / JVM Timezone
       TZ: Asia/Seoul
       JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Seoul
