@@ -28,6 +28,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.salemale.domain.item.dto.request.ReviewRequest;
+import com.salemale.domain.item.dto.response.ReviewResponse;
+import com.salemale.domain.item.converter.ReviewConverter;
 
 import java.util.List;
 
@@ -224,5 +227,29 @@ public class ItemController {
     ) {
         ProductAnalysisResponse response = geminiService.analyzeProductImage(request.getImageUrl());
         return ApiResponse.onSuccess(response);
+    }
+
+    /**
+     * 거래 후기 작성
+     * POST /auctions/{itemId}/reviews
+     * - JWT 인증 필요
+     * - 판매자 또는 낙찰자만 작성 가능
+     * - 경매 성공(SUCCESS) 상태에서만 작성 가능
+     */
+    @Operation(
+            summary = "거래 후기 작성",
+            description = "경매가 성공적으로 완료된 상품에 대해 판매자 또는 낙찰자가 상대방에게 후기를 작성합니다."
+    )
+    @PostMapping("/{itemId}/reviews")
+    public ResponseEntity<ApiResponse<ReviewResponse>> createReview(
+            @Parameter(hidden = true) HttpServletRequest httpRequest,
+            @PathVariable Long itemId,
+            @Valid @RequestBody ReviewRequest request
+    ) {
+        Long userId = currentUserProvider.getCurrentUserId(httpRequest);
+        ReviewResponse response = itemService.createReview(userId, itemId, request);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.of(SuccessStatus._CREATED, response));
     }
 }

@@ -203,4 +203,16 @@ public class User extends BaseEntity {
         GENERAL,
         DELETED
     }
+
+    /**
+     * 매너 지수를 업데이트합니다.
+     *
+     * @param newScore 새로운 매너 지수 (0~100)
+     */
+    public void updateMannerScore(Integer newScore) {
+        if (newScore != null) {
+            // 0~100 범위로 제한
+            this.mannerScore = Math.max(0, Math.min(100, newScore));
+        }
+    }
 }
