@@ -16,6 +16,9 @@ import java.time.LocalDateTime; // 시간 기록용
 import lombok.extern.slf4j.Slf4j; //로깅용
 import org.springframework.messaging.simp.SimpMessagingTemplate; // WS 브로드캐스트용
 
+import com.salemale.domain.alarm.service.AlarmService;                    // 알람용 추가
+import com.salemale.domain.alarm.dto.AlarmDtos.CreateAlarmRequest;       // 알람용 추가
+
 /*
  MessageService
  - 메시지 전송, 읽음 처리 로직 담당
@@ -32,6 +35,7 @@ public class MessageService {
 
     //브로드캐스트는 이벤트로 위임(템플릿 의존 제거)
     private final ApplicationEventPublisher eventPublisher;
+    private final AlarmService alarmService;   // 알람용 추가
 
     /*
      메시지 전송
@@ -69,23 +73,27 @@ public class MessageService {
 
         // 저장
         Message saved = messageRepository.save(msg);
-/*
-        //(기존)채팅방의 마지막 대화 시간 갱신 -> Chat.builder로 새 객체 생성
-        chat = Chat.builder()
-                .chatId(chat.getChatId())
-                .seller(chat.getSeller())
-                .buyer(chat.getBuyer())
-                .item(chat.getItem())
-                .lastMessageAt(saved.getSentAt())
-                .sellerDeletedAt(chat.getSellerDeletedAt())
-                .buyerDeletedAt(chat.getBuyerDeletedAt())
-                .build();
-        chatRepository.save(chat);
 
- */
         // 변경: 기존 엔티티 필드 업데이트
         chat.updateLastMessageAt(saved.getSentAt());
         chatRepository.save(chat);
+
+        // 새 메시지 알림: 상대방에게만 전송
+        Long sellerId = chat.getSeller().getId();
+        Long buyerId  = chat.getBuyer().getId();
+        Long senderId = me;
+
+        // 내가 판매자면 수신자는 구매자, 내가 구매자면 수신자는 판매자
+        Long receiverId = senderId.equals(sellerId) ? buyerId : sellerId;
+
+        // 발신자 = 수신자 케이스는 방어
+        if (!receiverId.equals(senderId)) {
+            String content = saved.getContent() == null ? "" : saved.getContent();
+            String preview = content.length() > 10 ? content.substring(0, 10) + "..." : content;
+
+            String msgForReceiver = "새 메시지가 도착했습니다: " + preview;
+            alarmService.createAlarm(new CreateAlarmRequest(receiverId, msgForReceiver));
+        }
 
         // 응답 DTO 생성
         MessageResponse dto = MessageResponse.builder()

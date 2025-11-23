@@ -82,11 +82,11 @@ public class AuctionSchedulerService {
             String title = item.getTitle();
 
             // 판매자에게
-            String msgForSeller = "경매가 낙찰되었습니다: " + title;
+            String msgForSeller = "경매가 낙찰되어 채팅방이 생성되었습니다: " + title;
             alarmService.createAlarm(new CreateAlarmRequest(sellerId, msgForSeller));
 
             // 낙찰자에게
-            String msgForWinner = "축하합니다! 경매에 낙찰되었습니다: " + title;
+            String msgForWinner = "축하합니다! 경매에 낙찰되어 채팅방이 생성되었습니다: " + title;
             alarmService.createAlarm(new CreateAlarmRequest(winnerId, msgForWinner));
 
 
