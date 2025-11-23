@@ -231,4 +231,11 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             "LEFT JOIN FETCH i.images " +
             "WHERE i.itemId IN :itemIds")
     List<Item> findAllByItemIdInWithImages(@Param("itemIds") List<Long> itemIds);
+
+    // [알람용 추가] 종료 시간이 남은 입찰중인(BIDDING) 경매 조회
+    List<Item> findByEndTimeBetweenAndItemStatus(
+            LocalDateTime start,
+            LocalDateTime end,
+            ItemStatus status
+    );
 }

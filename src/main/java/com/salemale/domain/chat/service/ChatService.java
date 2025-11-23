@@ -25,6 +25,9 @@ import java.util.Map;
 
 import org.springframework.data.domain.Pageable;
 
+import com.salemale.domain.alarm.service.AlarmService;                    // 알람용 추가
+import com.salemale.domain.alarm.dto.AlarmDtos.CreateAlarmRequest;       // 알람용 추가
+
 /**
  ChatService
  - 채팅방 생성, 조회, 나가기 로직 담당
@@ -38,6 +41,8 @@ public class ChatService {
     private final MessageRepository messageRepository; // 메시지 조회용
     // private final UserRepository userRepository; // 유저 정보 조회
     private final ItemRepository itemRepository; // 상품 정보 조회
+
+    private final AlarmService alarmService;   // 알람용 추가
 
     // 추가 : 채팅 요약 목록 API 서비스 (partner/lastMessage/unreadCount)
     public List<ChatSummaryResponse> getChatSummaries(Long me, int page, int size) {
@@ -173,7 +178,6 @@ public class ChatService {
             throw new IllegalStateException("낙찰자가 없습니다.(경매 미완료/유찰)");
         }
 
-
         var existing = chatRepository.findByItem_ItemIdAndSeller_IdAndBuyer_Id(
                 item.getItemId(), seller.getId(), winner.getId()
         );
@@ -187,6 +191,7 @@ public class ChatService {
                 .item(item)
                 .lastMessageAt(LocalDateTime.now())
                 .build());
+
 
         return new ChatResponse(saved.getChatId());
     }
