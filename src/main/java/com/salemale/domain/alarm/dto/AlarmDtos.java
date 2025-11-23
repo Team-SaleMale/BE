@@ -2,6 +2,8 @@ package com.salemale.domain.alarm.dto;
 
 import com.salemale.domain.alarm.entity.Alarm;
 import java.time.LocalDateTime;
+import java.util.List;
+import jakarta.validation.constraints.NotNull;
 
 public class AlarmDtos {
 
@@ -28,9 +30,7 @@ public class AlarmDtos {
             @NotNull String content
     ) { }
 
-    // 단건 읽음 요청이 body가 필요 없다면 생략 가능
-    public record MarkReadRequest(
-            // (선택적 사용)
-            Long alarmId
+    public record DeleteManyRequest(
+             @NotNull List<Long> alarmIds
     ) { }
 }

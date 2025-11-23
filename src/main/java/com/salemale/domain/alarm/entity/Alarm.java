@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
 
@@ -42,8 +43,9 @@ public class Alarm extends BaseEntity {
         return getDeletedAt() != null;
     }
 
+    // 단일 읽음 처리용 헬퍼 메서드가 있다면 (선택)
     public void markRead() {
-        if (!isRead) {
+        if (!this.isRead) {
             this.isRead = true;
             this.readAt = LocalDateTime.now();
         }
