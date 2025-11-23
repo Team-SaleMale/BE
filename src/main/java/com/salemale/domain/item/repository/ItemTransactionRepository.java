@@ -19,6 +19,9 @@ public interface ItemTransactionRepository extends JpaRepository<ItemTransaction
     //특정 경매 상품의 최고 입찰 조회 (금액이 가장 높은 입찰)
     Optional<ItemTransaction> findTopByItemOrderByBidPriceDescCreatedAtAsc(Item item);
 
+    // [알람용 추가] 특정 아이템에 대해 모든 입찰 내역 조회
+    List<ItemTransaction> findByItem(Item item);
+
     // 특정 사용자가 특정 상품에 입찰했는지 확인
     boolean existsByBuyerAndItem(User buyer, Item item);
 
