@@ -18,7 +18,7 @@ public class AlarmController {
 
     @Operation(summary = "알람 보내기(test)", description = "알람을 생성합니다.")
     @PostMapping
-    public ApiResponse<Void> createAlarm(@Valid @RequestBody CreateAlarmRequest req) {
+    public ApiResponse<Void> createAlarm(@RequestBody CreateAlarmRequest req) {
         alarmService.createAlarm(req);
         return ApiResponse.onSuccess();
     }
