@@ -113,6 +113,7 @@ services:
       - '--web.console.templates=/usr/share/prometheus/consoles'
       - '--storage.tsdb.retention.time=30d'  # 30일간 데이터 보관
       - '--web.enable-lifecycle'  # 설정 리로드 API 활성화
+      - '--web.external-url=/prometheus'  # Nginx 경로 기반 접근을 위한 외부 URL 설정
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
@@ -135,7 +136,8 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}  # 환경변수로 설정, 기본값: admin
       - GF_USERS_ALLOW_SIGN_UP=false  # 회원가입 비활성화
-      - GF_SERVER_ROOT_URL=http://localhost:3001  # 외부 접속 URL (도메인 사용 시 변경 필요)
+      - GF_SERVER_ROOT_URL=https://valuebid.site/grafana  # Nginx 경로 기반 접근
+      - GF_SERVER_SERVE_FROM_SUBPATH=true  # 서브 경로에서 서비스 제공
       - GF_INSTALL_PLUGINS=  # 필요시 플러그인 추가
       - TZ=Asia/Seoul
     volumes:
