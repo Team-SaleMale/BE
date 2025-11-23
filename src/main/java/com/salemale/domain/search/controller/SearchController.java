@@ -55,7 +55,8 @@ import java.util.List;
         
         **인증 요구사항:**
         - 지역 검색, 중고 시세 검색: 인증 불필요 (공개 정보)
-        - 내 주변 아이템 검색, 키워드 검색: 인증 필요 (사용자 지역 정보 사용)
+        - 키워드 검색: 인증 선택적 (비로그인 전체 검색, 로그인 지역 기반 검색)
+        - 내 주변 아이템 검색: 인증 필요 (사용자 지역 정보 사용)
         """)
 public class SearchController {
 
@@ -185,33 +186,35 @@ public class SearchController {
                     - 가격 범위 필터: 최소/최대 가격 설정
                     - 정렬 옵션: 최신순, 가격순, 입찰수순 등
                     
-                    **반경 설정:**
-                    - radius 파라미터 미지정 시: 사용자의 기본 활동 반경 사용
-                    - radius=ALL: 전국 검색 (거리 무시)
-                    - radius=VERY_NEAR/NEAR/MEDIUM/FAR: 해당 거리 내 검색
+                    **인증 상태별 동작:**
+                    - **비로그인 사용자**: 전체 지역 표시로 전국 검색 (radius 파라미터 무시)
+                    - **로그인 사용자**: 
+                      - radius 파라미터 미지정 시: 사용자의 기본 활동 반경 사용
+                      - radius=ALL: 전국 검색 (거리 무시)
+                      - radius=VERY_NEAR/NEAR/MEDIUM/FAR: 해당 거리 내 검색
                     
                     **사용 예시:**
-                    - "아이폰" 검색 + 반경 NEAR → 사용자 동네 기준 1km 이내 아이폰 검색
-                    - "노트북" 검색 + 카테고리 DIGITAL + 가격 10만원~50만원
-                    - "의자" 검색 + 반경 ALL → 전국 의자 검색
+                    - 비로그인: "아이폰" 검색 → 전국 아이폰 검색
+                    - 로그인: "아이폰" 검색 + 반경 NEAR → 사용자 동네 기준 1km 이내 아이폰 검색
+                    - 로그인: "노트북" 검색 + 카테고리 DIGITAL + 가격 10만원~50만원
+                    - 로그인: "의자" 검색 + 반경 ALL → 전국 의자 검색
                     - 키워드 없이 카테고리 DIGITAL만 → DIGITAL 카테고리 상품 전체 조회
                     
                     **주의사항:**
-                    - 인증 필요 (사용자 동네 정보 사용)
-                    - 반경 검색 시 사용자 동네가 설정되어 있어야 함
+                    - 비로그인 사용자는 인증 없이 전체 검색 가능
+                    - 로그인 사용자의 반경 검색 시 사용자 동네가 설정되어 있어야 함
                     """
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "검색 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "유효하지 않은 파라미터"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패 (로그인 필요)"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "사용자 동네 미설정")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "로그인 사용자의 동네 미설정 (반경 검색 시)")
     })
     @GetMapping("/items")
     public ApiResponse<NearbyItemsResponse> searchItems(
             HttpServletRequest request,
             @Parameter(description = "검색 키워드 (선택, 제목/상품명 부분일치 검색). 미지정 시 키워드 검색 없이 필터만 적용", example = "아이폰", required = false) @RequestParam(required = false) String q,
-            @Parameter(description = "표시 반경 Enum (VERY_NEAR: 0.5km, NEAR: 1km, MEDIUM: 3km, FAR: 5km, ALL: 전국). 미지정 시 사용자 기본값 사용", example = "NEAR") @RequestParam(required = false) User.RangeSetting radius,
+            @Parameter(description = "표시 반경 Enum (VERY_NEAR: 0.5km, NEAR: 1km, MEDIUM: 3km, FAR: 5km, ALL: 전국). 비로그인 사용자는 무시됨. 로그인 사용자 미지정 시 기본값 사용", example = "NEAR") @RequestParam(required = false) User.RangeSetting radius,
             @Parameter(description = "상태 필터 (BIDDING: 진행중, COMPLETED: 완료, POPULAR: 인기, RECOMMENDED: 추천). 기본값: BIDDING", example = "BIDDING") @RequestParam(required = false, defaultValue = "BIDDING") AuctionStatus status,
             @Parameter(description = "카테고리 필터 (다중 선택 가능). 예: DIGITAL, HOME_APPLIANCE 등", example = "DIGITAL") @RequestParam(required = false) java.util.List<Category> categories,
             @Parameter(description = "최소 가격 (원 단위, 0 이상). 예: 10000", example = "10000") @RequestParam(required = false) Integer minPrice,
@@ -229,9 +232,9 @@ public class SearchController {
             @Parameter(description = "페이지 번호 (0부터 시작, 기본값: 0)", example = "0") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 크기 (기본값: 20, 최대 권장: 100)", example = "20") @RequestParam(defaultValue = "20") int size
     ) {
-        Long userId = currentUserProvider.getCurrentUserId(request);
+        java.util.Optional<Long> userIdOpt = currentUserProvider.getCurrentUserIdOptional(request);
         Page<AuctionListItemDTO> result = keywordItemSearchService.search(
-                userId, q, radius, status, categories, minPrice, maxPrice, sort,
+                userIdOpt, q, radius, status, categories, minPrice, maxPrice, sort,
                 PageRequest.of(Math.max(page,0), Math.max(size,1))
         );
         NearbyItemsResponse body = NearbyItemsResponse.builder()

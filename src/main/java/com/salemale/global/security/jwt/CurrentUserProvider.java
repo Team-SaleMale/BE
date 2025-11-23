@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
 import java.util.Locale;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -61,6 +62,21 @@ public class CurrentUserProvider {
             User user = userRepository.findByEmail(normalizedEmail)
                     .orElseThrow(() -> new UsernameNotFoundException("User not found"));
             return user.getId();
+        }
+    }
+
+    /**
+     * HTTP 요청에서 JWT 토큰을 추출하여 현재 사용자 ID를 Optional로 반환합니다.
+     * 토큰이 없거나 유효하지 않을 때는 예외를 던지지 않고 Optional.empty()를 반환합니다.
+     * 
+     * @param request HTTP 요청 객체
+     * @return 현재 사용자 ID (Optional)
+     */
+    public Optional<Long> getCurrentUserIdOptional(HttpServletRequest request) {
+        try {
+            return Optional.of(getCurrentUserId(request));
+        } catch (Exception e) {
+            return Optional.empty();
         }
     }
 }
