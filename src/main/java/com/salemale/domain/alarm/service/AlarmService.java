@@ -8,6 +8,7 @@ import com.salemale.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+// import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -20,7 +21,7 @@ public class AlarmService {
     private final AlarmRepository alarmRepository;
     private final UserRepository userRepository;
 
-    @Transactional
+    @Transactional// (propagation = Propagation.REQUIRES_NEW)
     public void createAlarm(CreateAlarmRequest req) {
         User user = userRepository.findById(req.userId())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));

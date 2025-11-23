@@ -17,6 +17,9 @@ import java.util.List;
 import com.salemale.domain.chat.event.ItemAuctionClosedEvent; //채팅방 생성을 위해 추가
 import org.springframework.context.ApplicationEventPublisher; // 채팅방 생성을 위해 추가
 
+import com.salemale.domain.alarm.service.AlarmService;       // 알람 생성을 위해 추가
+import com.salemale.domain.alarm.dto.AlarmDtos.CreateAlarmRequest; // 알람 생성을 위해 추가
+
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +30,7 @@ public class AuctionSchedulerService {
     private final ItemTransactionRepository itemTransactionRepository;
 
     private final ApplicationEventPublisher publisher; //채팅방 생성을 위해 추가
+    private final AlarmService alarmService; //알람 생성을 위해 추가
 
     // 1분마다 종료된 경매 처리 로직
     @Scheduled(fixedRate = 60000) // 60000ms = 1분
@@ -67,6 +71,20 @@ public class AuctionSchedulerService {
                     winningBid.getBuyer().getId(),
                     winningBid.getBidPrice());
 
+            // 알림 생성 (판매자 + 낙찰자)
+            Long sellerId = item.getSeller().getId();
+            Long winnerId = winningBid.getBuyer().getId();
+            String title = item.getTitle();
+
+            // 판매자에게
+            String msgForSeller = "경매가 낙찰되었습니다.";
+            alarmService.createAlarm(new CreateAlarmRequest(sellerId, msgForSeller));
+
+            // 낙찰자에게
+            String msgForWinner = "축하합니다! 경매에 낙찰되었습니다.";
+            alarmService.createAlarm(new CreateAlarmRequest(winnerId, msgForWinner));
+
+
             // 트랜잭션 커밋 후 채팅 자동 생성, 채팅방 생성을 위해 추가
             publisher.publishEvent(new ItemAuctionClosedEvent(item.getItemId()));
 
@@ -75,6 +93,13 @@ public class AuctionSchedulerService {
             // 입찰이 없으면 유찰 처리
             item.failAuction();
             log.info("경매 유찰 처리: itemId={}", item.getItemId());
+
+            // 알림 생성 (판매자만)
+            Long sellerId = item.getSeller().getId();
+            String title = item.getTitle();
+
+            String msgForSeller = "경매가 유찰되었습니다.";
+            alarmService.createAlarm(new CreateAlarmRequest(sellerId, msgForSeller));
         }
     }
 }
