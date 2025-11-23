@@ -157,6 +157,8 @@ public class ItemConverter {
                 .bidderCount(item.getBidCount())
                 .endTime(item.getEndTime())
                 .viewCount(item.getViewCount())  // 조회수 추가
+                .startPrice(item.getStartPrice())
+                .currentPrice(item.getCurrentPrice())
                 .build();
     }
 

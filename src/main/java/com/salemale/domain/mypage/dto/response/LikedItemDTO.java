@@ -35,4 +35,10 @@ public class LikedItemDTO {
 
     @Schema(description = "조회수", example = "1944")
     private Long viewCount;
+
+    @Schema(description = "경매 시작 가격", example = "100000")
+    private Integer startPrice;
+
+    @Schema(description = "현재 입찰 가격", example = "150000")
+    private Integer currentPrice;
 }
