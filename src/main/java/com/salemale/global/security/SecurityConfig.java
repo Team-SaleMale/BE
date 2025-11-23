@@ -67,6 +67,7 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/api-docs/**",
                                 "/actuator/health", // 헬스체크
+                                "/actuator/prometheus", // Prometheus 메트릭 엔드포인트
                                 "/error", // Spring Boot 기본 에러 엔드포인트
                                 "/auth/**",
                                 "/api/auth/**", // 로그인/회원가입/로그아웃 등 인증 경로는 공개(과거 프리픽스 호환)
