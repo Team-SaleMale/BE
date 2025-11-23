@@ -1,0 +1,35 @@
+global:
+  scrape_interval: 15s  # 15초마다 메트릭 수집
+  evaluation_interval: 15s  # 15초마다 규칙 평가
+  external_labels:
+    cluster: 'salemale'
+    environment: 'production'
+
+# Alertmanager 설정 (선택사항)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']
+
+# 규칙 파일 (선택사항)
+# rule_files:
+#   - "alert_rules.yml"
+
+# 스크래핑 대상 설정
+scrape_configs:
+  # Spring Boot 애플리케이션 메트릭 수집
+  - job_name: 'salemale-app'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['app:8080']  # docker-compose 네트워크 내부 이름 사용
+        labels:
+          application: 'salemale-backend'
+          service: 'api'
+
+  # Prometheus 자체 메트릭 
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+

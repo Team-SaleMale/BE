@@ -20,6 +20,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
@@ -50,17 +52,22 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
             }
             
             com.salemale.global.common.enums.ItemStatus effectiveStatus = mapAuctionStatusToItemStatus(status);
+            boolean isPopular = (status != null && status == AuctionStatus.POPULAR);
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime threeDaysAgo = now.minusDays(3);
             
             if (keyword != null) {
                 // 키워드가 있으면 키워드 검색 + 필터
                 Page<Item> page = itemRepository.searchItemsByKeywordWithFilters(
-                        effectiveStatus, keyword, cats, normalizeMin(minPrice), normalizeMax(maxPrice), sorted
+                        effectiveStatus, keyword, cats, normalizeMin(minPrice), normalizeMax(maxPrice),
+                        isPopular, threeDaysAgo, now, sorted
                 );
                 return page.map(ItemConverter::toAuctionListItemDTO);
             } else {
                 // 키워드가 없으면 필터만 적용 (키워드 조건 제외)
                 Page<Item> page = itemRepository.searchItemsByFiltersOnly(
-                        effectiveStatus, cats, normalizeMin(minPrice), normalizeMax(maxPrice), sorted
+                        effectiveStatus, cats, normalizeMin(minPrice), normalizeMax(maxPrice),
+                        isPopular, threeDaysAgo, now, sorted
                 );
                 return page.map(ItemConverter::toAuctionListItemDTO);
             }
@@ -100,6 +107,9 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
         }
 
         com.salemale.global.common.enums.ItemStatus effectiveStatus = mapAuctionStatusToItemStatus(status);
+        boolean isPopular = (status != null && status == AuctionStatus.POPULAR);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime threeDaysAgo = now.minusDays(3);
         
         Page<Item> page;
         if (nationwide) {
@@ -114,12 +124,14 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
             if (keyword != null) {
                 // 키워드가 있으면 키워드 검색 + 필터
                 page = itemRepository.searchItemsByKeywordWithFilters(
-                        effectiveStatus, keyword, cats, normalizeMin(minPrice), normalizeMax(maxPrice), sorted
+                        effectiveStatus, keyword, cats, normalizeMin(minPrice), normalizeMax(maxPrice),
+                        isPopular, threeDaysAgo, now, sorted
                 );
             } else {
                 // 키워드가 없으면 필터만 적용 (키워드 조건 제외)
                 page = itemRepository.searchItemsByFiltersOnly(
-                        effectiveStatus, cats, normalizeMin(minPrice), normalizeMax(maxPrice), sorted
+                        effectiveStatus, cats, normalizeMin(minPrice), normalizeMax(maxPrice),
+                        isPopular, threeDaysAgo, now, sorted
                 );
             }
         } else {
@@ -132,11 +144,16 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
                 page = itemRepository.findNearbyItems(effectiveStatus.name(), lat, lon, km, pageable);
             }
             
-            // 반경 검색의 경우 카테고리/가격 필터는 메모리에서 보정
+            // 반경 검색의 경우 카테고리/가격 필터 및 POPULAR 조건은 메모리에서 보정
             java.util.List<Item> filtered = page.getContent().stream()
                     .filter(it -> categories == null || categories.isEmpty() || categories.contains(it.getCategory()))
                     .filter(it -> minPrice == null || minPrice == 0 || it.getCurrentPrice() >= minPrice)
                     .filter(it -> maxPrice == null || maxPrice == 0 || it.getCurrentPrice() <= maxPrice)
+                    .filter(it -> !isPopular || (
+                        it.getBidCount() >= 3
+                        && it.getCreatedAt().isAfter(threeDaysAgo)
+                        && it.getEndTime().isAfter(now)
+                    ))
                     .sorted(java.util.Comparator.comparing((Item it) -> 0))
                     .toList();
             // 정렬 보정
@@ -180,14 +197,16 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
      * COMPLETED 상태 상품 검색 (SUCCESS와 FAIL 둘 다 포함, 전국 검색)
      */
     private Page<Item> searchCompletedItems(String keyword, java.util.List<Category> categories, Integer minPrice, Integer maxPrice, org.springframework.data.domain.Pageable pageable) {
-        // SUCCESS와 FAIL 둘 다 조회
+        // SUCCESS와 FAIL 둘 다 조회 (COMPLETED는 POPULAR 조건 적용 안 함)
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime threeDaysAgo = now.minusDays(3);
         Page<Item> successPage = keyword != null
-                ? itemRepository.searchItemsByKeywordWithFilters(ItemStatus.SUCCESS, keyword, categories, minPrice, maxPrice, pageable)
-                : itemRepository.searchItemsByFiltersOnly(ItemStatus.SUCCESS, categories, minPrice, maxPrice, pageable);
+                ? itemRepository.searchItemsByKeywordWithFilters(ItemStatus.SUCCESS, keyword, categories, minPrice, maxPrice, false, threeDaysAgo, now, pageable)
+                : itemRepository.searchItemsByFiltersOnly(ItemStatus.SUCCESS, categories, minPrice, maxPrice, false, threeDaysAgo, now, pageable);
         
         Page<Item> failPage = keyword != null
-                ? itemRepository.searchItemsByKeywordWithFilters(ItemStatus.FAIL, keyword, categories, minPrice, maxPrice, pageable)
-                : itemRepository.searchItemsByFiltersOnly(ItemStatus.FAIL, categories, minPrice, maxPrice, pageable);
+                ? itemRepository.searchItemsByKeywordWithFilters(ItemStatus.FAIL, keyword, categories, minPrice, maxPrice, false, threeDaysAgo, now, pageable)
+                : itemRepository.searchItemsByFiltersOnly(ItemStatus.FAIL, categories, minPrice, maxPrice, false, threeDaysAgo, now, pageable);
         
         // 두 결과를 합치기
         java.util.List<Item> combined = new java.util.ArrayList<>();

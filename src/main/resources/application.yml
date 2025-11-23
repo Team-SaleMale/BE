@@ -119,15 +119,21 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
-# Actuator 설정 (health, info 노출)
+# Actuator 설정 (health, info, prometheus 노출)
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
   endpoint:
     health:
       show-details: when_authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
 
 # JWT 설정: jjwt에서 사용할 비밀키와 만료시간(ms)
 jwt:
