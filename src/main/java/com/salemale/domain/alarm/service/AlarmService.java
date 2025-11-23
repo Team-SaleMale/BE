@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -59,10 +60,10 @@ public class AlarmService {
 
     @Transactional
     public int markAllRead(Long me) {
-        return alarmRepository.markAllRead(me);
+        return alarmRepository.markAllRead(userId, LocalDateTime.now());
     }
 
-    // (선택) 모두 삭제(soft delete) 기존 메서드가 있었다면 유지
+    // 모두삭제 추가 예
     // @Transactional
     // public int deleteAll(Long userId) { return alarmRepository.softDeleteAllByUser(userId); }
 }
