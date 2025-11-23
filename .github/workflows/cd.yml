@@ -93,6 +93,8 @@ jobs:
           AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}
           GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
           RECOMMENDATION_API_URL=${{ secrets.RECOMMENDATION_API_URL }}
+          NAVER_SHOPPING_CLIENT_ID=${{ secrets.NAVER_SHOPPING_CLIENT_ID }}
+          NAVER_SHOPPING_CLIENT_SECRET=${{ secrets.NAVER_SHOPPING_CLIENT_SECRET }}
           EOF
           
           # Docker Compose v2/v1 자동 감지
@@ -128,4 +130,4 @@ jobs:
           # 컨테이너 목록 출력 → 최종 점검
           sleep 10
           $DC ps
-
+          
