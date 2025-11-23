@@ -115,6 +115,7 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
      * 키워드 + 필터(JPQL, 전국검색용)
      * - 상태, 카테고리(옵션), 최소/최대 가격(옵션)을 함께 적용
      * - 정렬은 Pageable의 Sort로 처리
+     * - POPULAR 상태인 경우: bidCount >= 3, 3일 이내 생성, 진행중인 상품만
      */
     @Query("""
             SELECT i FROM Item i
@@ -126,6 +127,11 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
               AND (:categories IS NULL OR i.category IN :categories)
               AND (:minPrice IS NULL OR i.currentPrice >= :minPrice)
               AND (:maxPrice IS NULL OR i.currentPrice <= :maxPrice)
+              AND (:isPopular = false OR (
+                i.bidCount >= 3
+                AND i.createdAt >= :threeDaysAgo
+                AND i.endTime > :now
+              ))
             """)
     Page<Item> searchItemsByKeywordWithFilters(
             @Param("status") com.salemale.global.common.enums.ItemStatus status,
@@ -133,6 +139,9 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             @Param("categories") java.util.List<com.salemale.global.common.enums.Category> categories,
             @Param("minPrice") Integer minPrice,
             @Param("maxPrice") Integer maxPrice,
+            @Param("isPopular") boolean isPopular,
+            @Param("threeDaysAgo") LocalDateTime threeDaysAgo,
+            @Param("now") LocalDateTime now,
             Pageable pageable
     );
 
@@ -140,6 +149,7 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
      * 필터만 적용 (키워드 없음, JPQL, 전국검색용)
      * - 상태, 카테고리(옵션), 최소/최대 가격(옵션)을 함께 적용
      * - 정렬은 Pageable의 Sort로 처리
+     * - POPULAR 상태인 경우: bidCount >= 3, 3일 이내 생성, 진행중인 상품만
      */
     @Query("""
             SELECT i FROM Item i
@@ -147,12 +157,20 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
               AND (:categories IS NULL OR i.category IN :categories)
               AND (:minPrice IS NULL OR i.currentPrice >= :minPrice)
               AND (:maxPrice IS NULL OR i.currentPrice <= :maxPrice)
+              AND (:isPopular = false OR (
+                i.bidCount >= 3
+                AND i.createdAt >= :threeDaysAgo
+                AND i.endTime > :now
+              ))
             """)
     Page<Item> searchItemsByFiltersOnly(
             @Param("status") com.salemale.global.common.enums.ItemStatus status,
             @Param("categories") java.util.List<com.salemale.global.common.enums.Category> categories,
             @Param("minPrice") Integer minPrice,
             @Param("maxPrice") Integer maxPrice,
+            @Param("isPopular") boolean isPopular,
+            @Param("threeDaysAgo") LocalDateTime threeDaysAgo,
+            @Param("now") LocalDateTime now,
             Pageable pageable
     );
 

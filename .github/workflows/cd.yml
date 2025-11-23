@@ -132,3 +132,8 @@ jobs:
           sleep 10
           $DC ps
           
+          # 불필요한 Docker 리소스 정리 (용량 절약)
+          # 사용하지 않는 이미지, 컨테이너, 네트워크 삭제
+          # --volumes=false: 볼륨은 보존 (데이터 손실 방지)
+          docker system prune -a -f --volumes=false || true
+          
