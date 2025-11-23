@@ -24,6 +24,7 @@ import org.springframework.web.cors.CorsConfiguration; // CORS 정책 정의
 import org.springframework.web.cors.CorsConfigurationSource; // CORS 설정 소스
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource; // URL 패턴별 CORS 적용
 import jakarta.servlet.http.HttpServletResponse; // 응답 객체
+import org.springframework.http.HttpMethod;
 
 import java.util.HashMap;
 import java.util.Arrays; // 허용 메서드/헤더 나열에 사용
@@ -76,6 +77,7 @@ public class SecurityConfig {
                                 "/auctions", // 경매 상품 리스트 조회 (인증 선택적: RECOMMENDED 제외하고는 불필요)
                                 "/auctions/**" // 경매 상품 상세 조회 (인증 선택적: 공개 정보)
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/hotdeals").permitAll() // 핫딜리스트 조회 인증없이 가능하도록, POST는 허용 안함
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll() // CORS preflight 요청 허용
                         .anyRequest().authenticated() // 그 외는 인증 필요
                 )
