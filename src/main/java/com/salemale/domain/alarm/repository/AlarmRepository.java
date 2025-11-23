@@ -17,9 +17,7 @@ public interface AlarmRepository extends JpaRepository<Alarm, Long> {
     long countByUser_IdAndIsReadFalse(Long userId);
 
     @Modifying
-    @Query("""update Alarm a set a.isRead = true, a.readAt = :readAt
-where a.user.id = :userId and a.isRead = false and a.deletedAt is null
-""")
-int markAllRead(@Param("userId") Long userId,
-                @Param("readAt") LocalDateTime readAt);
+    @Query("update Alarm a set a.isRead = true, a.readAt = current_timestamp " +
+            "where a.user.id = :userId and a.isRead = false and a.deletedAt is null")
+    int markAllRead(@Param("userId") Long userId);
 }
