@@ -73,6 +73,7 @@ public class SecurityConfig {
                                 "/oauth2/authorization/**", // OAuth2 인증 시작 경로
                                 "/login/oauth2/code/**", // OAuth2 콜백 경로
                                 "/search/regions", // 지역 검색 API (인증 불필요)
+                                "/search/items", // 키워드 검색 API (인증 선택적: 비로그인 전체 검색, 로그인 지역 기반 검색)
                                 "/search/price-history", // 중고 시세 검색 API (인증 불필요)
                                 "/auctions", // 경매 상품 리스트 조회 (인증 선택적: RECOMMENDED 제외하고는 불필요)
                                 "/auctions/**" // 경매 상품 상세 조회 (인증 선택적: 공개 정보)

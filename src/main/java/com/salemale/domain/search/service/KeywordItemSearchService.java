@@ -10,7 +10,7 @@ import org.springframework.data.domain.Pageable;
 
 public interface KeywordItemSearchService {
     Page<AuctionListItemDTO> search(
-            Long userId,
+            java.util.Optional<Long> userId,
             String q,
             User.RangeSetting radius,
             AuctionStatus status,
