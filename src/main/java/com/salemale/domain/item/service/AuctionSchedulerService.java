@@ -77,11 +77,11 @@ public class AuctionSchedulerService {
             String title = item.getTitle();
 
             // 판매자에게
-            String msgForSeller = "경매가 낙찰되었습니다.";
+            String msgForSeller = "경매가 낙찰되었습니다: " + title;
             alarmService.createAlarm(new CreateAlarmRequest(sellerId, msgForSeller));
 
             // 낙찰자에게
-            String msgForWinner = "축하합니다! 경매에 낙찰되었습니다.";
+            String msgForWinner = "축하합니다! 경매에 낙찰되었습니다: " + title;
             alarmService.createAlarm(new CreateAlarmRequest(winnerId, msgForWinner));
 
 
@@ -98,7 +98,7 @@ public class AuctionSchedulerService {
             Long sellerId = item.getSeller().getId();
             String title = item.getTitle();
 
-            String msgForSeller = "경매가 유찰되었습니다.";
+            String msgForSeller = "경매가 유찰되었습니다: "  + title;
             alarmService.createAlarm(new CreateAlarmRequest(sellerId, msgForSeller));
         }
     }
