@@ -24,8 +24,8 @@ public class AlarmDtos {
     }
 
     public record CreateAlarmRequest(
-            Long userId,
-            String content
+            @NotNull Long userId,
+            @NotNull String content
     ) { }
 
     // 단건 읽음 요청이 body가 필요 없다면 생략 가능
