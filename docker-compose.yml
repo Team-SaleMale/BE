@@ -111,9 +111,10 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
-      - '--storage.tsdb.retention.time=30d'  # 30일간 데이터 보관
+      - '--storage.tsdb.retention.time=7d'  # 7일간 데이터 보관 (비용 절감)
       - '--web.enable-lifecycle'  # 설정 리로드 API 활성화
-      - '--web.external-url=https://valuebid.site/prometheus'  # Nginx 경로 기반 접근을 위한 외부 URL 설정
+      - '--web.external-url=https://valuebid.site/prometheus'  # 외부 접근 URL
+      - '--web.route-prefix=/'  # 내부 경로는 루트로 설정 (Nginx가 /prometheus 처리)
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
@@ -124,6 +125,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s  # Prometheus 시작 시간 여유
 
   # Grafana - 메트릭 시각화
   grafana:
@@ -147,14 +149,15 @@ services:
       - salemale-network
     depends_on:
       - prometheus
-      # - loki
+      # loki는 선택적 (PR에 포함되지 않을 수 있음)
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  # # Loki - 로그 수집 및 저장
+  # Loki - 로그 수집 및 저장 (선택적, PR에 포함되지 않을 수 있음)
+  # 주석 해제하여 사용하려면 loki/ 및 promtail/ 디렉토리와 설정 파일이 필요합니다
   # loki:
   #   image: grafana/loki:latest
   #   container_name: salemale-loki
@@ -173,7 +176,7 @@ services:
   #     timeout: 10s
   #     retries: 3
 
-  # # Promtail - 로그 수집 에이전트 (Docker 컨테이너 로그 수집)
+  # Promtail - 로그 수집 에이전트 (Docker 컨테이너 로그 수집) (선택적)
   # promtail:
   #   image: grafana/promtail:latest
   #   container_name: salemale-promtail
@@ -199,4 +202,4 @@ volumes:
   redis-data:
   prometheus-data:  # Prometheus 데이터 저장
   grafana-data:    # Grafana 데이터 저장
-  # loki-data:       # Loki 로그 데이터 저장
+  # loki-data:       # Loki 로그 데이터 저장 (선택적)
