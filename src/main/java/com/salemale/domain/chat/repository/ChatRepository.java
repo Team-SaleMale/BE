@@ -44,7 +44,19 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
                   AND mm.is_read = false
                   AND mm.sender_id <> :me
               )                   AS unreadCount
+                
+            -- 아이템 요약 정보
+            , i.item_id           AS itemId
+            , i.title             AS itemTitle
+            , ii.image_url        AS itemImage
+            , i.current_price     AS winningPrice
+                
         FROM chat c
+                    
+            -- [ADD] item 조인
+        JOIN item i
+          ON i.item_id = c.item_id
+                    
         JOIN users u
           ON u.id = CASE WHEN :me = c.seller_id THEN c.buyer_id ELSE c.seller_id END
         LEFT JOIN LATERAL (
@@ -54,6 +66,16 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
             ORDER BY m.sent_at DESC
             LIMIT 1
         ) lm ON TRUE
+                     
+        -- 대표 이미지 한 장만 가져오는 LATERAL 조인
+        LEFT JOIN LATERAL (
+            SELECT image_url
+            FROM item_image ii2
+            WHERE ii2.item_id = i.item_id
+            ORDER BY ii2.image_order ASC
+            LIMIT 1
+        ) ii ON TRUE
+                     
         WHERE (:me = c.seller_id OR :me = c.buyer_id)
           AND (
                (:me = c.seller_id AND c.seller_deleted_at IS NULL)

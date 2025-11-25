@@ -13,4 +13,9 @@ public interface ChatSummaryRow {
     LocalDateTime getLastSentAt(); // nullable
 
     Long getUnreadCount();      // not null
+
+    Long getItemId();
+    String getItemTitle();
+    String getItemImageUrl();
+    Integer getWinningPrice();
 }
