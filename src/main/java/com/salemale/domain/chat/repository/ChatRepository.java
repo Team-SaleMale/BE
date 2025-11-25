@@ -34,6 +34,8 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
             , CASE WHEN :me = c.seller_id THEN c.buyer_id ELSE c.seller_id END AS partnerId
             , u.nickname          AS partnerNickname
             , u.profile_image     AS partnerProfileImage
+            , r.region_id         AS partnerRegionId
+            , r.region_name       AS partnerRegionName
             , lm.content          AS lastContent
             , lm.type             AS lastType
             , lm.sent_at          AS lastSentAt
@@ -44,9 +46,30 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
                   AND mm.is_read = false
                   AND mm.sender_id <> :me
               )                   AS unreadCount
+                
+            -- 아이템 요약 정보
+            , i.item_id           AS itemId
+            , i.title             AS itemTitle
+            , ii.image_url        AS itemImageUrl
+            , i.current_price     AS winningPrice
+                
         FROM chat c
+                    
+            -- item 조인
+        JOIN item i
+          ON i.item_id = c.item_id
+                    
         JOIN users u
           ON u.id = CASE WHEN :me = c.seller_id THEN c.buyer_id ELSE c.seller_id END
+        
+         -- partner 지역
+        LEFT JOIN user_region ur
+          ON ur.user_id = u.id
+         AND ur.is_primary = true
+        
+                LEFT JOIN region r
+                  ON r.region_id = ur.region_id
+        
         LEFT JOIN LATERAL (
             SELECT content, type, sent_at
             FROM message m
@@ -54,6 +77,16 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
             ORDER BY m.sent_at DESC
             LIMIT 1
         ) lm ON TRUE
+                     
+        -- 대표 이미지 한 장만 가져오는 LATERAL 조인
+        LEFT JOIN LATERAL (
+            SELECT image_url
+            FROM item_image ii2
+            WHERE ii2.item_id = i.item_id
+            ORDER BY ii2.image_order ASC
+            LIMIT 1
+        ) ii ON TRUE
+                     
         WHERE (:me = c.seller_id OR :me = c.buyer_id)
           AND (
                (:me = c.seller_id AND c.seller_deleted_at IS NULL)
