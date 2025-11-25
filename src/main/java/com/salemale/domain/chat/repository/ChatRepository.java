@@ -35,7 +35,7 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
             , u.nickname          AS partnerNickname
             , u.profile_image     AS partnerProfileImage
             , r.region_id         AS partnerRegionId
-            , r.region_name       AS partnerRegionName
+            , CONCAT(r.sido, ' ', r.sigungu, ' ', r.eupmyeondong) AS partnerRegionName
             , lm.content          AS lastContent
             , lm.type             AS lastType
             , lm.sent_at          AS lastSentAt
