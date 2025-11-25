@@ -18,4 +18,8 @@ public interface ChatSummaryRow {
     String getItemTitle();
     String getItemImageUrl();
     Integer getWinningPrice();
+
+    //partner 동네 정보
+    Long getPartnerRegionId();
+    String getPartnerRegionName();
 }

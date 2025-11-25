@@ -34,6 +34,8 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
             , CASE WHEN :me = c.seller_id THEN c.buyer_id ELSE c.seller_id END AS partnerId
             , u.nickname          AS partnerNickname
             , u.profile_image     AS partnerProfileImage
+            , r.region_id         AS partnerRegionId
+            , r.region_name       AS partnerRegionName
             , lm.content          AS lastContent
             , lm.type             AS lastType
             , lm.sent_at          AS lastSentAt
@@ -53,12 +55,21 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
                 
         FROM chat c
                     
-            -- [ADD] item 조인
+            -- item 조인
         JOIN item i
           ON i.item_id = c.item_id
                     
         JOIN users u
           ON u.id = CASE WHEN :me = c.seller_id THEN c.buyer_id ELSE c.seller_id END
+        
+         -- partner 지역
+        LEFT JOIN user_region ur
+          ON ur.user_id = u.id
+         AND ur.is_primary = true
+        
+                LEFT JOIN region r
+                  ON r.region_id = ur.region_id
+        
         LEFT JOIN LATERAL (
             SELECT content, type, sent_at
             FROM message m

@@ -56,6 +56,9 @@ public class ChatDtos {
             private Long id;
             private String nickname;
             private String profileImage;
+            //대화 상대 지역정보 추가
+            private Long regionId;
+            private String regionName;
         }
 
         @Getter @NoArgsConstructor @AllArgsConstructor @Builder

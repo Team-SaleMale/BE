@@ -56,6 +56,8 @@ public class ChatService {
                     .id(r.getPartnerId())
                     .nickname(r.getPartnerNickname())
                     .profileImage(r.getPartnerProfileImage())
+                    .regionId(r.getPartnerRegionId())
+                    .regionName(r.getPartnerRegionName())
                     .build();
 
             //마지막 메세지
