@@ -50,7 +50,7 @@ public interface ChatRepository extends JpaRepository<Chat, Long> {
             -- 아이템 요약 정보
             , i.item_id           AS itemId
             , i.title             AS itemTitle
-            , ii.image_url        AS itemImage
+            , ii.image_url        AS itemImageUrl
             , i.current_price     AS winningPrice
                 
         FROM chat c
