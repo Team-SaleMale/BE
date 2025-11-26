@@ -39,11 +39,7 @@ public class ExperimentalTryOnService {
 
     public VirtualTryOnResponse requestVirtualTryOn(
             MultipartFile background,
-            MultipartFile garment,
-            String garmentDesc,
-            Boolean crop,
-            Integer denoiseSteps,
-            Integer seed
+            MultipartFile garment
     ) {
         validateFile(background, "background");
         validateFile(garment, "garment");
@@ -52,13 +48,14 @@ public class ExperimentalTryOnService {
         addFilePart(builder, "background", background);
         addFilePart(builder, "garment", garment);
 
-        builder.part("garment_desc", garmentDesc != null ? garmentDesc : "")
+        // Hugging Face Space에서 요구하는 파라미터에 대해 공통 기본값 사용
+        builder.part("garment_desc", "")
                 .contentType(MediaType.TEXT_PLAIN);
-        builder.part("crop", String.valueOf(crop != null && crop))
+        builder.part("crop", String.valueOf(false))
                 .contentType(MediaType.TEXT_PLAIN);
-        builder.part("denoise_steps", String.valueOf(denoiseSteps != null ? denoiseSteps : 30))
+        builder.part("denoise_steps", String.valueOf(20))
                 .contentType(MediaType.TEXT_PLAIN);
-        builder.part("seed", String.valueOf(seed != null ? seed : 42))
+        builder.part("seed", String.valueOf(2021125041))
                 .contentType(MediaType.TEXT_PLAIN);
 
         MultiValueMap<String, org.springframework.http.HttpEntity<?>> body = builder.build();

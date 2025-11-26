@@ -7,14 +7,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,12 +31,10 @@ public class ExperimentalTryOnController {
             description = """
                     사람 전신 사진과 의류 이미지를 업로드하면, 외부 AI 서버(Hugging Face Space)를 통해 가상 피팅 결과를 생성합니다.
                     
-                    - background: 사람(모델) 전신 이미지
-                    - garment: 착용시킬 의류 이미지
-                    - garment_desc: 의류 특징 설명(색상, 종류 등)
-                    - crop: 모델 상반신만 사용할지 여부 (기본 false)
-                    - denoise_steps: 이미지 생성 디노이즈 스텝 수 (기본 30)
-                    - seed: 재현 가능한 결과를 위한 시드 값 (기본 42)
+                    - background: 사람(모델) 전신 이미지 (필수)
+                    - garment: 착용시킬 의류 이미지 (필수)
+                    
+                    기타 파라미터(설명, crop, denoise_steps, seed)는 서버에서 공통 기본값으로 설정하여 전송합니다.
                     
                     처리 시간은 수십 초~1분 이상 걸릴 수 있습니다.
                     """
@@ -56,19 +52,11 @@ public class ExperimentalTryOnController {
     )
     public ResponseEntity<ApiResponse<VirtualTryOnResponse>> virtualTryOn(
             @RequestPart("background") MultipartFile background,
-            @RequestPart("garment") MultipartFile garment,
-            @RequestParam("garment_desc") @NotBlank String garmentDesc,
-            @RequestParam(value = "crop", required = false) Boolean crop,
-            @RequestParam(value = "denoise_steps", required = false) Integer denoiseSteps,
-            @RequestParam(value = "seed", required = false) Integer seed
+            @RequestPart("garment") MultipartFile garment
     ) {
         VirtualTryOnResponse response = experimentalTryOnService.requestVirtualTryOn(
                 background,
-                garment,
-                garmentDesc,
-                crop,
-                denoiseSteps,
-                seed
+                garment
         );
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
     }
