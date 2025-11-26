@@ -58,7 +58,7 @@ public class ExperimentalBrandAnalysisService {
         } catch (GeneralException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Gemini 브랜드 분석 실패: {}", e.getMessage());
+            log.error("Gemini 브랜드 분석 실패", e);
             throw new GeneralException(ErrorStatus.GEMINI_API_ERROR);
         }
     }
@@ -96,29 +96,46 @@ public class ExperimentalBrandAnalysisService {
     private String buildBrandPrompt(BrandAnalysisRequest request) {
         return """
                 당신은 중고 명품 경매 플랫폼을 위한 컨설턴트입니다.
-                아래 정보를 기반으로 브랜드 심층 분석과 중고 경매 전략을 각각 3~4문장 이내로 정리하세요.
+                아래 정보를 기반으로 브랜드 분석을 수행하고, 긍정적이고 거래를 촉진하는 어조로 답변하세요.
                 - 브랜드: %s
 
                 출력 형식 지침:
-                1) 마크다운, 불릿, 별표, 번호표를 사용하지 말고 문단 사이에 빈 줄만 넣습니다.
-                2) 전문적인 어조를 유지하고 중복 표현은 제외합니다.
-                3) 섹션 헤더는 'A. 브랜드 분석', 'B. 경매 전략'으로 명확히 표기합니다.
-                4) 경매 전략에는 권장 시작가와 목표 낙찰가 범위를 숫자로 포함합니다.
+                1) 항상 JSON 형식으로만 응답합니다.
+                2) 필수 키:
+                   {
+                     "brand": {
+                       "description": "...",
+                       "value": "...",
+                       "marketTrend": "..."
+                     }
+                   }
+                3) 각 필드당 2~3문장, 숫자나 구체적 지표가 있다면 포함합니다.
+                4) 시장 동향(marketTrend)은 최근 거래 분위기나 관심도를 긍정적으로 설명합니다.
+                5) 부정적인 표현은 피하고, 신뢰와 기대감을 주는 문장을 사용합니다.
                 """.formatted(request.getBrandName());
     }
 
     private String buildProductPrompt(ProductAnalysisRequest request) {
         return """
                 당신은 중고 명품 경매 플랫폼을 위한 상품 컨설턴트입니다.
-                아래 정보를 기반으로 상품 특화 포인트와 중고 경매 전략을 각각 3~4문장 이내로 정리하세요.
+                아래 정보를 기반으로 상품 분석을 수행하고, 긍정적이고 거래를 촉진하는 어조로 답변하세요.
                 - 브랜드: %s
                 - 상품: %s
 
                 출력 형식 지침:
-                1) 마크다운, 불릿, 별표, 번호표를 사용하지 말고 문단 사이에 빈 줄만 넣습니다.
-                2) 전문적인 어조를 유지하고 중복 표현은 제외합니다.
-                3) 섹션 헤더는 'A. 상품 포인트', 'B. 경매 전략'으로 명확히 표기합니다.
-                4) 경매 전략에는 권장 시작가와 목표 낙찰가 범위를 숫자로 포함합니다.
+                1) 항상 JSON 형식으로만 응답합니다.
+                2) 필수 키:
+                   {
+                     "product": {
+                       "description": "...",
+                       "price": "...",
+                       "value": "...",
+                       "marketTrend": "..."
+                     }
+                   }
+                3) 각 필드당 2~3문장, 가격(price)에는 권장 시작가/목표 낙찰가 범위를 숫자로 포함합니다.
+                4) marketTrend는 최근 수요나 거래 열기를 긍정적으로 요약합니다.
+                5) 부정적인 표현은 피하고, 입찰을 유도할 수 있는 메시지를 사용합니다.
                 """.formatted(request.getBrandName(), request.getProductName());
     }
 
