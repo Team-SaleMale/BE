@@ -9,9 +9,4 @@ datasources:
     editable: true
     jsonData:
       maxLines: 1000
-      derivedFields:
-        - datasourceUid: prometheus
-          matcherRegex: "traceID=(\\w+)"
-          name: TraceID
-          url: '$${__value.raw}'
 

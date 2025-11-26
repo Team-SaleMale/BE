@@ -29,8 +29,8 @@ scrape_configs:
       
       # 서비스 이름을 라벨로 추가
       - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        regex: '(.*)'
         target_label: 'service'
-        replacement: '${1}'
       
       # 로그 파일 경로 설정
       - source_labels: ['__meta_docker_container_id']
