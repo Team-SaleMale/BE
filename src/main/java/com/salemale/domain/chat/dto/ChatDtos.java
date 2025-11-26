@@ -26,23 +26,6 @@ public class ChatDtos {
         private Long buyerId;  // 구매자 ID
     }
 
-    /*
-     (변경 전) 채팅방 목록 요약 정보 DTO
-     - 채팅방 리스트 화면에서 보여질 정보
-     - unreadCount: 읽지 않은 메시지 개수
-     */
-    /*
-    @Getter @NoArgsConstructor @AllArgsConstructor @Builder
-    public static class ChatSummary {
-        private Long chatId;           // 채팅방 ID
-        private Long itemId;           // 상품 ID
-        private Long sellerId;         // 판매자 ID
-        private Long buyerId;          // 구매자 ID
-        private LocalDateTime lastMessageAt; // 마지막 메시지 시각
-        private Long unreadCount;      // 안 읽은 메시지 개수
-    }
-
-     */
 
     /**채팅방 목록 : chatId + unreadCount
      */
@@ -65,11 +48,17 @@ public class ChatDtos {
         private LastMessage lastMessage; // null 가능(대화 시작 전)
         private Long unreadCount;
 
+        //아이템 정보 추가
+        private ItemSummary item;
+
         @Getter @NoArgsConstructor @AllArgsConstructor @Builder
         public static class Partner {
             private Long id;
             private String nickname;
             private String profileImage;
+            //대화 상대 지역정보 추가
+            private Long regionId;
+            private String regionName;
         }
 
         @Getter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -78,6 +67,16 @@ public class ChatDtos {
             private MessageType type;
             private LocalDateTime sentAt;
         }
+
+        // 아이템 요약 정보
+        @Getter @NoArgsConstructor @AllArgsConstructor @Builder
+        public static class ItemSummary {
+            private Long itemId;
+            private String title;
+            private String image;
+            private Integer winningPrice; // 낙찰가
+        }
+
     }
 
     /**

@@ -51,12 +51,16 @@ public class ChatService {
         List<ChatSummaryRow> rows = chatRepository.findChatSummaries(me, offset, size);
 
         return rows.stream().map(r -> {
+            // 대화 상대
             ChatSummaryResponse.Partner partner = ChatSummaryResponse.Partner.builder()
                     .id(r.getPartnerId())
                     .nickname(r.getPartnerNickname())
                     .profileImage(r.getPartnerProfileImage())
+                    .regionId(r.getPartnerRegionId())
+                    .regionName(r.getPartnerRegionName())
                     .build();
 
+            //마지막 메세지
             ChatSummaryResponse.LastMessage last = null;
             if (r.getLastSentAt() != null) {
                 MessageType type = null;
@@ -67,6 +71,8 @@ public class ChatService {
                         // 알 수 없는 타입 문자열이면 null로 둠
                     }
                 }
+
+
                 // 메시지 타입에 따라 보여주는 텍스트 가공
                 String content = r.getLastContent();
                 if (type == MessageType.IMAGE) {
@@ -81,11 +87,23 @@ public class ChatService {
                         .build();
             }
 
+            //  아이템 정보
+            ChatSummaryResponse.ItemSummary itemSummary = null;
+            if (r.getItemId() != null) { // 쿼리에서 AS itemId 로 넘어오는 값
+                itemSummary = ChatSummaryResponse.ItemSummary.builder()
+                        .itemId(r.getItemId())
+                        .title(r.getItemTitle())      // AS itemTitle
+                        .image(r.getItemImageUrl())      // AS itemImage  (대표 이미지 URL)
+                        .winningPrice(r.getWinningPrice()) // AS winningPrice (현재는 current_price 사용)
+                        .build();
+            }
+
             return ChatSummaryResponse.builder()
                     .chatId(r.getChatId())
                     .partner(partner)
                     .lastMessage(last)
                     .unreadCount(r.getUnreadCount() == null ? 0 : r.getUnreadCount())
+                    .item(itemSummary)
                     .build();
         }).toList();
     }
@@ -104,7 +122,6 @@ public class ChatService {
         if (chatIds.isEmpty()) return List.of();
 
         // 2) 해당 chatId들의 미읽음 개수를 한 번에 집계 (상대가 보낸 & isRead=false)
-        //    MessageRepository에 아래 JPQL이 있어야 합니다:
         //    List<Object[]> findUnreadCountsByChatIds(Long uid, List<Long> chatIds)
         var rows = messageRepository.findUnreadCountsByChatIds(me, chatIds);
 
