@@ -156,8 +156,8 @@ services:
       timeout: 10s
       retries: 3
 
-  Loki - 로그 수집 및 저장
-  주석 해제하여 사용하려면 loki/ 및 promtail/ 디렉토리와 설정 파일이 필요합니다
+#   Loki - 로그 수집 및 저장
+#   주석 해제하여 사용하려면 loki/ 및 promtail/ 디렉토리와 설정 파일이 필요합니다
   loki:
     image: grafana/loki:latest
     container_name: salemale-loki
@@ -176,7 +176,7 @@ services:
       timeout: 10s
       retries: 3
 
-  Promtail - 로그 수집 에이전트 (Docker 컨테이너 로그 수집) (선택적)
+#   Promtail - 로그 수집 에이전트 (Docker 컨테이너 로그 수집) (선택적)
   promtail:
     image: grafana/promtail:latest
     container_name: salemale-promtail
