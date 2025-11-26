@@ -174,7 +174,7 @@ experimental:
   tryon:
     base-url: ${RECOMMENDATION_API_URL}
     endpoint: /virtual-tryon
-    timeout-seconds: 120
+    timeout-seconds: 600
 
 # 네이버 쇼핑 API 설정
 naver:

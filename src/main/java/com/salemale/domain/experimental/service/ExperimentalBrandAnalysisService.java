@@ -129,17 +129,19 @@ public class ExperimentalBrandAnalysisService {
             if (candidates.isEmpty()) {
                 throw new GeneralException(ErrorStatus.GEMINI_API_ERROR);
             }
-            return candidates.get(0)
-                    .path("content")
-                    .path("parts")
-                    .get(0)
+            JsonNode candidate = candidates.get(0);
+            JsonNode parts = candidate.path("content").path("parts");
+            if (parts.isEmpty() || !parts.isArray()) {
+                throw new GeneralException(ErrorStatus.GEMINI_API_ERROR);
+            }
+            return parts.get(0)
                     .path("text")
                     .asText("")
                     .trim();
         } catch (GeneralException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Gemini 텍스트 응답 파싱 실패: {}", e.getMessage());
+            log.error("Gemini 텍스트 응답 파싱 실패", e);
             throw new GeneralException(ErrorStatus.GEMINI_API_ERROR);
         }
     }
