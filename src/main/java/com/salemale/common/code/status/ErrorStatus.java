@@ -73,6 +73,10 @@ public enum ErrorStatus implements BaseErrorCode {
     IMAGE_NOT_TEMP_URL(HttpStatus.BAD_REQUEST, "AI4002", "temp 폴더의 이미지 URL이 아닙니다."),
     GEMINI_API_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI4003", "Gemini API 호출에 실패했습니다."),
     IMAGE_DOWNLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI4004", "이미지 다운로드에 실패했습니다."),
+    TRYON_API_CALL_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "TRYON5001", "가상 피팅 서버 호출에 실패했습니다."),
+    TRYON_API_INVALID_RESPONSE(HttpStatus.INTERNAL_SERVER_ERROR, "TRYON5002", "가상 피팅 서버 응답이 유효하지 않습니다."),
+    RECOMMENDATION_API_CALL_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "RECO5001", "추천 서버 호출에 실패했습니다."),
+    RECOMMENDATION_API_INVALID_RESPONSE(HttpStatus.INTERNAL_SERVER_ERROR, "RECO5002", "추천 서버 응답이 유효하지 않습니다."),
 
     // 핫딜 관련 에러 (4001~)
     HOTDEAL_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "HOTDEAL4001", "핫딜 판매 권한이 없습니다."),
