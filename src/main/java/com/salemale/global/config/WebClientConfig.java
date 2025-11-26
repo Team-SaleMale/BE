@@ -3,6 +3,7 @@ package com.salemale.global.config;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
@@ -16,13 +17,13 @@ import java.util.concurrent.TimeUnit;
 public class WebClientConfig {
 
     @Bean
-    public WebClient webClient() {
+    public WebClient webClient(@Value("${experimental.tryon.timeout-seconds:600}") long timeoutSeconds) {
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)  // 연결 timeout 10초
-                .responseTimeout(Duration.ofSeconds(30))  // 응답 timeout 30초
+                .responseTimeout(Duration.ofSeconds(timeoutSeconds))  // 응답 timeout 설정 (기본 600초)
                 .doOnConnected(conn -> conn
-                        .addHandlerLast(new ReadTimeoutHandler(30, TimeUnit.SECONDS))
-                        .addHandlerLast(new WriteTimeoutHandler(30, TimeUnit.SECONDS))
+                        .addHandlerLast(new ReadTimeoutHandler(timeoutSeconds, TimeUnit.SECONDS))
+                        .addHandlerLast(new WriteTimeoutHandler(timeoutSeconds, TimeUnit.SECONDS))
                 );
 
         return WebClient.builder()
