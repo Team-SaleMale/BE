@@ -57,7 +57,8 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             SELECT i.*
             FROM item i
             JOIN region r ON i.region_id = r.region_id
-            WHERE i.item_status = CAST(:status AS varchar)
+            WHERE i.item_type = 'AUCTION'
+              AND i.item_status = CAST(:status AS varchar)
               AND (
                 6371 * acos(
                   LEAST(1, GREATEST(-1,
@@ -73,7 +74,8 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             SELECT count(1)
             FROM item i
             JOIN region r ON i.region_id = r.region_id
-            WHERE i.item_status = CAST(:status AS varchar)
+            WHERE i.item_type = 'AUCTION'
+              AND i.item_status = CAST(:status AS varchar)
               AND (
                 6371 * acos(
                   LEAST(1, GREATEST(-1,
@@ -98,7 +100,8 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
      */
     @Query("""
             SELECT i FROM Item i
-            WHERE i.itemStatus = :status
+            WHERE i.itemType = com.salemale.global.common.enums.ItemType.AUCTION
+              AND i.itemStatus = :status
               AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -119,7 +122,8 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
      */
     @Query("""
             SELECT i FROM Item i
-            WHERE i.itemStatus = :status
+            WHERE i.itemType = com.salemale.global.common.enums.ItemType.AUCTION
+              AND i.itemStatus = :status
               AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -153,7 +157,8 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
      */
     @Query("""
             SELECT i FROM Item i
-            WHERE i.itemStatus = :status
+            WHERE i.itemType = com.salemale.global.common.enums.ItemType.AUCTION
+              AND i.itemStatus = :status
               AND (:categories IS NULL OR i.category IN :categories)
               AND (:minPrice IS NULL OR i.currentPrice >= :minPrice)
               AND (:maxPrice IS NULL OR i.currentPrice <= :maxPrice)
@@ -181,7 +186,8 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             SELECT i.*
             FROM item i
             JOIN region r ON i.region_id = r.region_id
-            WHERE i.item_status = CAST(:status AS varchar)
+            WHERE i.item_type = 'AUCTION'
+              AND i.item_status = CAST(:status AS varchar)
               AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -201,7 +207,8 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             SELECT count(1)
             FROM item i
             JOIN region r ON i.region_id = r.region_id
-            WHERE i.item_status = CAST(:status AS varchar)
+            WHERE i.item_type = 'AUCTION'
+              AND i.item_status = CAST(:status AS varchar)
               AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
