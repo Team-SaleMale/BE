@@ -18,12 +18,12 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/experimental")
+@RequestMapping("/experimental/analysis")
 public class ExperimentalBrandAnalysisController {
 
     private final ExperimentalBrandAnalysisService experimentalBrandAnalysisService;
 
-    @PostMapping("/brand-analysis")
+    @PostMapping("/brand")
     public ResponseEntity<ApiResponse<BrandAnalysisResponse>> analyzeBrand(
             @Valid @RequestBody BrandAnalysisRequest request
     ) {
@@ -31,7 +31,7 @@ public class ExperimentalBrandAnalysisController {
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
     }
 
-    @PostMapping("/product-analysis")
+    @PostMapping("/product")
     public ResponseEntity<ApiResponse<ProductAnalysisResponse>> analyzeProduct(
             @Valid @RequestBody ProductAnalysisRequest request
     ) {

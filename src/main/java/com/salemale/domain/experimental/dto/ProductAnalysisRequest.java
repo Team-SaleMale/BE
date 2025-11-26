@@ -12,9 +12,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ProductAnalysisRequest {
     @NotBlank
-    private String brandName;
-
-    @NotBlank
     private String productName;
 }
 
