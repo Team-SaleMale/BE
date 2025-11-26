@@ -1,6 +1,6 @@
 package com.salemale.domain.experimental.dto;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -10,9 +10,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RecommendationRequest {
-    @NotNull
-    private Long userId;
-    private Integer limit;
+public class ProductAnalysisRequest {
+    @NotBlank
+    private String brandName;
+
+    @NotBlank
+    private String productName;
 }
 

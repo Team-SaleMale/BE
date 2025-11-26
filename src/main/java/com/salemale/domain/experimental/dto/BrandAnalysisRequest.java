@@ -1,6 +1,6 @@
 package com.salemale.domain.experimental.dto;
 
-import java.util.List;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -10,7 +10,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RecommendationResponse {
-    private List<Long> recommendedItemIds;
+public class BrandAnalysisRequest {
+    @NotBlank
+    private String brandName;
 }
 
