@@ -156,7 +156,6 @@ services:
       timeout: 10s
       retries: 3
 
-<<<<<<<<< Temporary merge branch 1
 #   Loki - 로그 수집 및 저장
 #   주석 해제하여 사용하려면 loki/ 및 promtail/ 디렉토리와 설정 파일이 필요합니다
   loki:
@@ -192,8 +191,6 @@ services:
     depends_on:
       - loki
 
-=========
->>>>>>>>> Temporary merge branch 2
 networks:
   salemale-network:
     name: salemale-network
