@@ -156,8 +156,8 @@ services:
       timeout: 10s
       retries: 3
 
-#   Loki - 로그 수집 및 저장
-#   주석 해제하여 사용하려면 loki/ 및 promtail/ 디렉토리와 설정 파일이 필요합니다
+  # Loki - 로그 수집 및 저장
+  # 주석 해제하여 사용하려면 loki/ 및 promtail/ 디렉토리와 설정 파일이 필요합니다
   loki:
     image: grafana/loki:latest
     container_name: salemale-loki
@@ -171,12 +171,13 @@ services:
     networks:
       - salemale-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/ready"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "wget --quiet --tries=3 --spider http://localhost:3100/ready || exit 1"]
+      interval: 60s     # 헬스체크 간격을 60초로 완화
+      timeout: 30s      # 응답 대기 시간 여유 확대
+      retries: 10       # 연속 10회 실패 시에만 unhealthy로 간주
+      start_period: 60s # 초기 부팅 후 60초 동안은 실패를 무시
 
-#   Promtail - 로그 수집 에이전트 (Docker 컨테이너 로그 수집) (선택적)
+  # Promtail - 로그 수집 에이전트 (Docker 컨테이너 로그 수집) (선택적)
   promtail:
     image: grafana/promtail:latest
     container_name: salemale-promtail
@@ -197,42 +198,6 @@ networks:
     driver: bridge
     # BE compose가 네트워크를 생성 (없으면 생성, 있으면 사용)
     # AI compose는 external: true로 이 네트워크 사용
-
-# Loki - 로그 수집 및 저장 (선택적, PR에 포함되지 않을 수 있음)
-# 주석 해제하여 사용하려면 loki/ 및 promtail/ 디렉토리와 설정 파일이 필요합니다
-loki:
-  image: grafana/loki:latest
-  container_name: salemale-loki
-  restart: unless-stopped
-  ports:
-    - "3100:3100"  # 외부 접속 가능
-  command: -config.file=/etc/loki/local-config.yaml
-  volumes:
-    - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
-    - loki-data:/loki
-  networks:
-    - salemale-network
-  healthcheck:
-    test: ["CMD-SHELL", "wget --quiet --tries=3 --spider http://localhost:3100/ready || exit 1"]
-    interval: 60s     # 헬스체크 간격을 60초로 완화
-    timeout: 30s      # 응답 대기 시간 여유 확대
-    retries: 10       # 연속 10회 실패 시에만 unhealthy로 간주
-    start_period: 60s # 초기 부팅 후 60초 동안은 실패를 무시
-
-# Promtail - 로그 수집 에이전트 (Docker 컨테이너 로그 수집) (선택적)
-promtail:
-  image: grafana/promtail:latest
-  container_name: salemale-promtail
-  restart: unless-stopped
-  volumes:
-    - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
-    - /var/lib/docker/containers:/var/lib/docker/containers:ro  # Docker 컨테이너 로그 디렉토리
-    - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker 소켓
-  command: -config.file=/etc/promtail/config.yml
-  networks:
-    - salemale-network
-  depends_on:
-    - loki
 
 volumes:
   redis-data:
