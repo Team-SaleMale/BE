@@ -44,3 +44,6 @@ out/
 
 ### QueryDSL generated sources ###
 src/main/generated/
+
+# etc
+.claude/

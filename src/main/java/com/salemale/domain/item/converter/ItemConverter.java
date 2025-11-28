@@ -56,6 +56,7 @@ public class ItemConverter {
                 .bidIncrement(item.getBidIncrement())
                 .endTime(item.getEndTime())
                 .bidCount(item.getBidCount())  // 엔티티에서 직접 조회
+                .viewCount(item.getViewCount())
                 .build();
     }
 

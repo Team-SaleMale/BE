@@ -17,4 +17,5 @@ public class AuctionInfoDTO {
     private Integer bidIncrement;
     private LocalDateTime endTime;
     private Long bidCount;
+    private Long viewCount;
 }
