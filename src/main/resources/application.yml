@@ -169,6 +169,13 @@ recommendation:
   api:
     url: ${RECOMMENDATION_API_URL}
 
+# 실험실 서비스
+experimental:
+  tryon:
+    base-url: ${RECOMMENDATION_API_URL}
+    endpoint: /virtual-tryon
+    timeout-seconds: 600
+
 # 네이버 쇼핑 API 설정
 naver:
   shopping:
