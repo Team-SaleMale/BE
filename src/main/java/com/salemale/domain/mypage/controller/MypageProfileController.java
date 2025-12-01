@@ -196,11 +196,11 @@ public class MypageProfileController {
                     사용자의 활동 반경 설정을 변경합니다. 이 설정은 상품 검색 시 기본 거리 범위로 사용됩니다.
                     
                     **RangeSetting 옵션:**
-                    - VERY_NEAR: 0.5km
-                    - NEAR: 1km
-                    - MEDIUM: 3km
-                    - FAR: 5km
-                    - ALL: 전국 (거리 무시)
+                    - VERY_NEAR: 2km (매우 가까운 동네만)
+                    - NEAR: 5km (기본값, 인근 동네)
+                    - MEDIUM: 20km (중간 거리, 여러 동네)
+                    - FAR: 50km (먼 거리, 시/군 단위)
+                    - ALL: 20000km (전국, 사실상 제한 없음)
                     
                     **영향 범위:**
                     - 키워드 검색 시 기본 반경으로 사용
