@@ -1,6 +1,6 @@
 # BE
 
-[VALUEVID] 중고거래 경매 플랫폼
+[VALUEBID] 중고거래 경매 플랫폼
 
 ## Tech Stack
 | **구분** | **기술** |
@@ -12,4 +12,5 @@
 
 
 ## System Architecture
-<img width="932" height="740" alt="image" src="https://github.com/user-attachments/assets/92773a66-c1e8-4b9e-82ae-9769e62f9993" />
+<img width="1215" height="657" alt="image" src="https://github.com/user-attachments/assets/a55a120a-f244-4993-a471-9407d8849214" />
+
