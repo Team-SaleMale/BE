@@ -3,10 +3,13 @@ package com.salemale.domain.item.controller;
 import com.salemale.common.code.status.SuccessStatus;
 import com.salemale.common.response.ApiResponse;
 import com.salemale.domain.item.service.ItemImageAiService;
+import com.salemale.domain.item.service.PriceSuggestionService;
 import com.salemale.domain.item.dto.request.BidRequest;
 import com.salemale.domain.item.dto.request.ImageAnalysisRequest;
 import com.salemale.domain.item.dto.request.ItemRegisterRequest;
+import com.salemale.domain.item.dto.request.PriceSuggestionRequest;
 import com.salemale.domain.item.dto.response.*;
+import com.salemale.domain.item.dto.response.PriceSuggestionResponse;
 import com.salemale.domain.item.dto.response.detail.ItemDetailResponse;
 import com.salemale.domain.item.service.ItemService;
 import com.salemale.domain.item.enums.AuctionSortType;
@@ -43,6 +46,7 @@ public class ItemController {
     private final ItemService itemService;
     private final CurrentUserProvider currentUserProvider; // JWT에서 UID 추출
     private final ItemImageAiService geminiService;
+    private final PriceSuggestionService priceSuggestionService;
 
     /**
      * 경매 상품 찜하기
@@ -251,5 +255,23 @@ public class ItemController {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.of(SuccessStatus._CREATED, response));
+    }
+
+    /**
+     * 초기 가격 추천 API
+     * POST /auctions/price-suggestion
+     * - 상품명을 기반으로 FastAPI 서버를 통해 시장 시세를 분석하여 적정 시작가를 추천받습니다.
+     * - JWT 인증 불필요 (누구나 사용 가능)
+     */
+    @Operation(
+            summary = "초기 가격 추천",
+            description = "상품명을 입력하면 시장 시세 분석을 통해 적정한 경매 시작가를 추천받습니다."
+    )
+    @PostMapping("/price-suggestion")
+    public ResponseEntity<ApiResponse<PriceSuggestionResponse>> suggestPrice(
+            @Valid @RequestBody PriceSuggestionRequest request
+    ) {
+        PriceSuggestionResponse response = priceSuggestionService.suggestPrice(request.getProductName());
+        return ResponseEntity.ok(ApiResponse.onSuccess(response));
     }
 }
