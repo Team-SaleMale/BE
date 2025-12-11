@@ -47,6 +47,15 @@ public class MessageService {
         Chat chat = chatRepository.findById(req.getChatId())
                 .orElseThrow(() -> new EntityNotFoundException("채팅방이 존재하지 않습니다."));
 
+        // 새 메시지 알림: 상대방에게만 전송
+        Long sellerId = chat.getSeller().getId();
+        Long buyerId  = chat.getBuyer().getId();
+        Long senderId = me;
+
+        // 내가 판매자면 수신자는 구매자, 내가 구매자면 수신자는 판매자
+        Long receiverId = senderId.equals(sellerId) ? buyerId : sellerId;
+
+
         // 참여자 검증
         if (!chat.getSeller().getId().equals(me) && !chat.getBuyer().getId().equals(me)) {
             throw new IllegalStateException("참여자가 아닙니다.");
@@ -77,14 +86,6 @@ public class MessageService {
         // 변경: 기존 엔티티 필드 업데이트
         chat.updateLastMessageAt(saved.getSentAt());
         chatRepository.save(chat);
-
-        // 새 메시지 알림: 상대방에게만 전송
-        Long sellerId = chat.getSeller().getId();
-        Long buyerId  = chat.getBuyer().getId();
-        Long senderId = me;
-
-        // 내가 판매자면 수신자는 구매자, 내가 구매자면 수신자는 판매자
-        Long receiverId = senderId.equals(sellerId) ? buyerId : sellerId;
 
         // 발신자 = 수신자 케이스는 방어
         if (!receiverId.equals(senderId)) {

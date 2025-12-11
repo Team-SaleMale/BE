@@ -1,5 +1,6 @@
 package com.salemale.domain.chat.service; // 채팅 비즈니스 로직 계층
 
+import com.salemale.domain.chat.dto.BlockResponse;
 import com.salemale.domain.chat.dto.ChatDtos.*; // DTO
 import com.salemale.domain.chat.dto.MessageDtos;
 import com.salemale.domain.chat.entity.Chat; // 채팅 엔티티
@@ -10,8 +11,11 @@ import com.salemale.domain.chat.repository.projection.ChatSummaryRow; // 요약 
 import com.salemale.domain.chat.entity.Message.MessageType; // enum 매핑용
 import com.salemale.domain.item.entity.Item; // 아이템 엔티티
 import com.salemale.domain.item.repository.ItemRepository;
+import com.salemale.domain.user.entity.BlockList;
 import com.salemale.domain.user.entity.User; // 유저 엔티티
 // import com.salemale.domain.user.repository.UserRepository; // 유저 리포지토리 -> 아이템 참조로 변경
+import com.salemale.domain.user.repository.BlockListRepository;
+import com.salemale.domain.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException; // 예외 처리용
 import lombok.RequiredArgsConstructor; // 생성자 주입
 import org.springframework.data.domain.Page;
@@ -39,8 +43,9 @@ public class ChatService {
 
     private final ChatRepository chatRepository; // 채팅 DB 접근
     private final MessageRepository messageRepository; // 메시지 조회용
-    // private final UserRepository userRepository; // 유저 정보 조회
+    private final UserRepository userRepository; // 유저 정보 조회
     private final ItemRepository itemRepository; // 상품 정보 조회
+    private final BlockListRepository blockListRepository;
 
     private final AlarmService alarmService;   // 알람용 추가
 
@@ -279,6 +284,66 @@ public class ChatService {
                 .readerId(me)
                 .updatedCount(updated)
                 .unreadCountAfter(unreadAfter)
+                .build();
+    }
+
+    //대화상대 차단
+    @Transactional
+    public BlockResponse blockPartner(Long me, Long chatId) {
+
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new EntityNotFoundException("채팅방이 존재하지 않습니다."));
+
+        Long partnerId = chat.getSeller().getId().equals(me)
+                ? chat.getBuyer().getId()
+                : chat.getSeller().getId();
+
+        // 이미 차단된 경우 → blocked=false 로 반환 (프론트가 "이미 차단됨" UI 처리 가능)
+        if (blockListRepository.existsByBlocker_IdAndBlocked_Id(me, partnerId)) {
+            return BlockResponse.builder()
+                    .blockedUserId(partnerId)
+                    .blocked(false)
+                    .build();
+        }
+
+        User meUser = userRepository.findById(me).orElseThrow();
+        User partner = userRepository.findById(partnerId).orElseThrow();
+
+        blockListRepository.save(BlockList.builder()
+                .blocker(meUser)
+                .blocked(partner)
+                .build());
+
+        return BlockResponse.builder()
+                .blockedUserId(partnerId)
+                .blocked(true)
+                .build();
+    }
+
+    //대화상대 차단 해제
+    @Transactional
+    public BlockResponse unblockPartner(Long me, Long chatId) {
+
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new EntityNotFoundException("채팅방이 존재하지 않습니다."));
+
+        Long partnerId = chat.getSeller().getId().equals(me)
+                ? chat.getBuyer().getId()
+                : chat.getSeller().getId();
+
+        // 이미 차단 안 된 상태 → blocked=false로 그대로 반환
+        if (!blockListRepository.existsByBlocker_IdAndBlocked_Id(me, partnerId)) {
+            return BlockResponse.builder()
+                    .blockedUserId(partnerId)
+                    .blocked(false)
+                    .build();
+        }
+
+        blockListRepository.deleteByBlocker_IdAndBlocked_Id(me, partnerId);
+
+        return BlockResponse.builder()
+                .blockedUserId(partnerId)
+                .blocked(false)
                 .build();
     }
 

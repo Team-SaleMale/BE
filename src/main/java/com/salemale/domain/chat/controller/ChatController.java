@@ -1,6 +1,7 @@
 package com.salemale.domain.chat.controller; // 채팅 관련 컨트롤러 패키지
 
 import com.salemale.common.response.ApiResponse;
+import com.salemale.domain.chat.dto.BlockResponse;
 import com.salemale.domain.chat.dto.ChatDtos.*; // 채팅 DTO 묶음 (요청/응답)
 import com.salemale.domain.chat.dto.MessageDtos;
 import com.salemale.domain.chat.service.ChatService; // 비즈니스 로직 담당 서비스 계층
@@ -58,22 +59,6 @@ public class ChatController {
     }
 
 
-
-    /*
-    [구버전]채팅방 생성 API
-     - 상품(itemId) 기준으로 구매자/판매자 간 1:1 채팅방 생성
-     - 동일한 조합이면 기존 방 재활용 (중복 생성 방지)
-
-    @PostMapping("/chats")
-    public ResponseEntity<ChatResponse> createChat(
-            @RequestHeader("USER_ID") Long me,
-            @RequestBody CreateChatRequest request
-    ) {
-        return ResponseEntity.ok(chatService.createChat(me, request));
-    }
-
-    */
-
     /**
      채팅방 나가기 API
      - 실제 삭제는 아니고, 각 사용자별 "삭제 시간"만 기록 (soft delete)
@@ -116,6 +101,34 @@ public class ChatController {
             @PathVariable Long chatId
     ) {
         MessageDtos.ReadAllResponse res = chatService.markAllReadInChat(me, chatId);
+        return ResponseEntity.ok(ApiResponse.onSuccess(res));
+    }
+
+    /**
+     대화 상대 차단 API
+     -채팅방에서 대화 상대 차단
+     */
+    @Operation(summary = "대화 상대 차단", description = "상대방을 차단하고 상대방이 경매 등록한 물품이 보이지 않게 됨.")
+    @PostMapping("/{chatId}/block")
+    public ResponseEntity<ApiResponse<BlockResponse>> blockPartner(
+            @RequestHeader("user-id") Long me,
+            @PathVariable Long chatId
+    ) {
+        BlockResponse res = chatService.blockPartner(me, chatId);
+        return ResponseEntity.ok(ApiResponse.onSuccess(res));
+    }
+
+    /**
+     대화 상대 차단 해제 API
+     -채팅방에서 대화 상대 차단 해제
+     */
+    @Operation(summary = "대화 상대 차단", description = "상대방을 차단 해제.")
+    @PostMapping("/{chatId}/unblock")
+    public ResponseEntity<ApiResponse<BlockResponse>> unblockPartner(
+            @RequestHeader("user-id") Long me,
+            @PathVariable Long chatId
+    ) {
+        BlockResponse res = chatService.unblockPartner(me, chatId);
         return ResponseEntity.ok(ApiResponse.onSuccess(res));
     }
 }
