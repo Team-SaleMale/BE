@@ -59,8 +59,12 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             JOIN region r ON i.region_id = r.region_id
             WHERE i.item_type = 'AUCTION'
               AND i.item_status = CAST(:status AS varchar)
-              AND i.seller_id NOT IN (
-                    SELECT blocked_user_id FROM block_list WHERE blocker_id = :me
+              AND (
+                   :me IS NULL OR i.seller NOT IN (
+                   SELECT bl.blocked
+                   FROM BlockList bl
+                   WHERE bl.blocker.id = :me
+                   )
               )
               AND (
                 6371 * acos(
@@ -79,8 +83,12 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             JOIN region r ON i.region_id = r.region_id
             WHERE i.item_type = 'AUCTION'
               AND i.item_status = CAST(:status AS varchar)
-              AND i.seller_id NOT IN (
-                    SELECT blocked_user_id FROM block_list WHERE blocker_id = :me
+              AND (
+                   :me IS NULL OR i.seller NOT IN (
+                   SELECT bl.blocked
+                   FROM BlockList bl
+                   WHERE bl.blocker.id = :me
+                    )
               )
               AND (
                 6371 * acos(
@@ -109,8 +117,12 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             SELECT i FROM Item i
             WHERE i.itemType = com.salemale.global.common.enums.ItemType.AUCTION
               AND i.itemStatus = :status
-              AND i.seller_id NOT IN (
-                                  SELECT blocked_user_id FROM block_list WHERE blocker_id = :me
+              AND (
+                    :me IS NULL OR i.seller NOT IN (
+                    SELECT bl.blocked
+                    FROM BlockList bl
+                    WHERE bl.blocker.id = :me
+                    )
               )
               AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -135,9 +147,13 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             SELECT i FROM Item i
             WHERE i.itemType = com.salemale.global.common.enums.ItemType.AUCTION
               AND i.itemStatus = :status
-              AND i.seller_id NOT IN (
-                                  SELECT blocked_user_id FROM block_list WHERE blocker_id = :me
-              )
+              AND (
+                       :me IS NULL OR i.seller NOT IN (
+                       SELECT bl.blocked
+                       FROM BlockList bl
+                       WHERE bl.blocker.id = :me
+                       )
+               )
               AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -174,8 +190,12 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             SELECT i FROM Item i
             WHERE i.itemType = com.salemale.global.common.enums.ItemType.AUCTION
               AND i.itemStatus = :status
-              AND i.seller_id NOT IN (
-                                  SELECT blocked_user_id FROM block_list WHERE blocker_id = :me
+              AND (
+                   :me IS NULL OR i.seller NOT IN (
+                   SELECT bl.blocked
+                   FROM BlockList bl
+                   WHERE bl.blocker.id = :me
+                   )
               )
               AND (:categories IS NULL OR i.category IN :categories)
               AND (:minPrice IS NULL OR i.currentPrice >= :minPrice)
@@ -207,9 +227,13 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             JOIN region r ON i.region_id = r.region_id
             WHERE i.item_type = 'AUCTION'
               AND i.item_status = CAST(:status AS varchar)
-              AND i.seller_id NOT IN (
-                                  SELECT blocked_user_id FROM block_list WHERE blocker_id = :me
-              )
+              AND (
+                       :me IS NULL OR i.seller NOT IN (
+                       SELECT bl.blocked
+                       FROM BlockList bl
+                       WHERE bl.blocker.id = :me
+                       )
+               )
               AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -231,8 +255,12 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             JOIN region r ON i.region_id = r.region_id
             WHERE i.item_type = 'AUCTION'
               AND i.item_status = CAST(:status AS varchar)
-              AND i.seller_id NOT IN (
-                    SELECT blocked_user_id FROM block_list WHERE blocker_id = :me
+              AND (
+                   :me IS NULL OR i.seller NOT IN (
+                   SELECT bl.blocked
+                   FROM BlockList bl
+                   WHERE bl.blocker.id = :me
+                   )
               )
               AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))

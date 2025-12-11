@@ -36,7 +36,7 @@ public class NearbyItemSearchServiceImpl implements NearbyItemSearchService {
         double lat = primary.getRegion().getLatitude().doubleValue();
         double lon = primary.getRegion().getLongitude().doubleValue();
 
-        Page<Item> page = itemRepository.findNearbyItems(ItemStatus.BIDDING.name(), lat, lon, km, pageable);
+        Page<Item> page = itemRepository.findNearbyItems(ItemStatus.BIDDING.name(), lat, lon, km, userId, pageable);
         return page.map(ItemConverter::toAuctionListItemDTO);
     }
 }
