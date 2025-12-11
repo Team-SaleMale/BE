@@ -122,7 +122,7 @@ public class ChatController {
      대화 상대 차단 해제 API
      -채팅방에서 대화 상대 차단 해제
      */
-    @Operation(summary = "대화 상대 차단", description = "상대방을 차단 해제.")
+    @Operation(summary = "대화 상대 차단 해제", description = "상대방을 차단 해제.")
     @PostMapping("/{chatId}/unblock")
     public ResponseEntity<ApiResponse<BlockResponse>> unblockPartner(
             @RequestHeader("user-id") Long me,
