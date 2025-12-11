@@ -7,6 +7,7 @@ import com.salemale.domain.chat.repository.ChatRepository; // 채팅 리포지�
 import com.salemale.domain.chat.repository.MessageRepository; // 메시지 리포지토리
 import com.salemale.domain.user.entity.User; // 유저 엔티티
 import com.salemale.domain.user.repository.UserRepository; // 유저 리포지토리
+import com.salemale.domain.user.repository.BlockListRepository; // 차단
 import jakarta.persistence.EntityNotFoundException; // 예외처리용
 import lombok.RequiredArgsConstructor; // 생성자 자동 주입
 import org.springframework.stereotype.Service; // 서비스 빈 등록
@@ -32,6 +33,7 @@ public class MessageService {
     private final MessageRepository messageRepository;
     private final ChatRepository chatRepository;
     private final UserRepository userRepository;
+    private final BlockListRepository blockListRepository;
 
     //브로드캐스트는 이벤트로 위임(템플릿 의존 제거)
     private final ApplicationEventPublisher eventPublisher;
@@ -47,15 +49,6 @@ public class MessageService {
         Chat chat = chatRepository.findById(req.getChatId())
                 .orElseThrow(() -> new EntityNotFoundException("채팅방이 존재하지 않습니다."));
 
-        // 새 메시지 알림: 상대방에게만 전송
-        Long sellerId = chat.getSeller().getId();
-        Long buyerId  = chat.getBuyer().getId();
-        Long senderId = me;
-
-        // 내가 판매자면 수신자는 구매자, 내가 구매자면 수신자는 판매자
-        Long receiverId = senderId.equals(sellerId) ? buyerId : sellerId;
-
-
         // 참여자 검증
         if (!chat.getSeller().getId().equals(me) && !chat.getBuyer().getId().equals(me)) {
             throw new IllegalStateException("참여자가 아닙니다.");
@@ -68,6 +61,28 @@ public class MessageService {
 
         User sender = userRepository.findById(me)
                 .orElseThrow(() -> new EntityNotFoundException("보내는 사용자가 없습니다."));
+
+        // 새 메시지 알림: 상대방에게만 전송
+        Long sellerId = chat.getSeller().getId();
+        Long buyerId  = chat.getBuyer().getId();
+        Long senderId = me;
+
+        // 내가 판매자면 수신자는 구매자, 내가 구매자면 수신자는 판매자
+        Long receiverId = senderId.equals(sellerId) ? buyerId : sellerId;
+
+        // 내가 상대를 차단한 경우 → 메시지 저장 X
+        if (blockListRepository.existsByBlocker_IdAndBlocked_Id(me, receiverId)) {
+            return MessageResponse.builder()
+                    .ignored(true)     // 무시하기
+                    .build();
+        }
+
+        // 상대가 나를 차단한 경우 → 메시지 저장 X
+        if (blockListRepository.existsByBlocker_IdAndBlocked_Id(receiverId, me)) {
+            return MessageResponse.builder()
+                    .ignored(true)     // 무시하기
+                    .build();
+        }
 
         // 메시지 생성
         Message msg = Message.builder()
@@ -86,6 +101,7 @@ public class MessageService {
         // 변경: 기존 엔티티 필드 업데이트
         chat.updateLastMessageAt(saved.getSentAt());
         chatRepository.save(chat);
+
 
         // 발신자 = 수신자 케이스는 방어
         if (!receiverId.equals(senderId)) {

@@ -39,6 +39,7 @@ public class MessageDtos {
         private MessageType type;       // 메시지 타입(TEXT/IMAGE/URL)
         private boolean read;           // 읽음 여부
         private LocalDateTime sentAt;   // 메시지 전송 시각
+        private boolean ignored;
     }
 
     // 채팅방 단위로 읽음 처리 결과 응답
