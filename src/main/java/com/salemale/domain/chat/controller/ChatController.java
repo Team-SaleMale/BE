@@ -2,7 +2,6 @@ package com.salemale.domain.chat.controller; // 채팅 관련 컨트롤러 패�
 
 import com.salemale.common.response.ApiResponse;
 import com.salemale.domain.chat.dto.BlockResponse;
-import com.salemale.domain.chat.dto.BlockStatusResponse;
 import com.salemale.domain.chat.dto.ChatDtos.*; // 채팅 DTO 묶음 (요청/응답)
 import com.salemale.domain.chat.dto.MessageDtos;
 import com.salemale.domain.chat.service.ChatService; // 비즈니스 로직 담당 서비스 계층
