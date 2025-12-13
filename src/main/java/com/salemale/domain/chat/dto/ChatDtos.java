@@ -26,6 +26,9 @@ public class ChatDtos {
         private Long buyerId;  // 구매자 ID
     }
 
+    //내가 이 대화 상대를 차단했는지 (프론트: true면 차단해제, false면 차단)
+    private boolean iBlockedPartner;
+
 
     /**채팅방 목록 : chatId + unreadCount
      */
@@ -50,6 +53,11 @@ public class ChatDtos {
 
         //아이템 정보 추가
         private ItemSummary item;
+
+        // 내가 이 대화 상대를 차단했는지 여부
+        // true  -> 이미 차단됨
+        // false -> 차단 안 됨
+        private boolean iBlockedPartner;
 
         @Getter @NoArgsConstructor @AllArgsConstructor @Builder
         public static class Partner {

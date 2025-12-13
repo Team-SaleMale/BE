@@ -2,6 +2,7 @@ package com.salemale.domain.chat.controller; // 채팅 관련 컨트롤러 패�
 
 import com.salemale.common.response.ApiResponse;
 import com.salemale.domain.chat.dto.BlockResponse;
+import com.salemale.domain.chat.dto.BlockStatusResponse;
 import com.salemale.domain.chat.dto.ChatDtos.*; // 채팅 DTO 묶음 (요청/응답)
 import com.salemale.domain.chat.dto.MessageDtos;
 import com.salemale.domain.chat.service.ChatService; // 비즈니스 로직 담당 서비스 계층
@@ -11,6 +12,7 @@ import org.springframework.http.ResponseEntity; // HTTP 응답 객체
 import org.springframework.web.bind.annotation.*; // REST API용 어노테이션 (@GetMapping 등)
 import java.util.List; // 리스트 응답용
 import java.net.URI; //응답 헤더 생성
+import com.salemale.domain.chat.dto.BlockStatusResponse; //차단 여부
 import com.salemale.domain.chat.dto.ChatDtos.ChatIdUnread;
 
 /**
@@ -109,7 +111,7 @@ public class ChatController {
      -채팅방에서 대화 상대 차단
      */
     @Operation(summary = "대화 상대 차단", description = "상대방을 차단하고 상대방이 경매 등록한 물품이 보이지 않게 됨.")
-    @PostMapping("/{chatId}/block")
+    @PostMapping("/chats/{chatId}/block")
     public ResponseEntity<ApiResponse<BlockResponse>> blockPartner(
             @RequestHeader("user-id") Long me,
             @PathVariable Long chatId
@@ -123,7 +125,7 @@ public class ChatController {
      -채팅방에서 대화 상대 차단 해제
      */
     @Operation(summary = "대화 상대 차단 해제", description = "상대방을 차단 해제.")
-    @PostMapping("/{chatId}/unblock")
+    @PostMapping("/chats/{chatId}/unblock")
     public ResponseEntity<ApiResponse<BlockResponse>> unblockPartner(
             @RequestHeader("user-id") Long me,
             @PathVariable Long chatId
@@ -131,4 +133,17 @@ public class ChatController {
         BlockResponse res = chatService.unblockPartner(me, chatId);
         return ResponseEntity.ok(ApiResponse.onSuccess(res));
     }
+
+    @Operation(summary = "대화 상대 차단 여부 조회", description = "상대방을 차단 여부 조회.")
+    @GetMapping("/chats/{chatId}/block")
+    public ResponseEntity<ApiResponse<BlockStatusResponse>> getBlockStatus(
+            @RequestHeader("user-id") Long me,
+            @PathVariable Long chatId
+    ) {
+        BlockStatusResponse res = chatService.getBlockStatus(me, chatId);
+        return ResponseEntity.ok(ApiResponse.onSuccess(res));
+    }
+
+
+
 }
