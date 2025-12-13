@@ -3,6 +3,7 @@ package com.salemale.domain.chat.service; // 채팅 비즈니스 로직 계층
 import com.salemale.domain.chat.dto.BlockResponse;
 import com.salemale.domain.chat.dto.ChatDtos.*; // DTO
 import com.salemale.domain.chat.dto.MessageDtos;
+import com.salemale.domain.chat.dto.BlockStatusResponse; //차단 여부
 import com.salemale.domain.chat.entity.Chat; // 채팅 엔티티
 import com.salemale.domain.chat.entity.Message; //메시지 엔티티
 import com.salemale.domain.chat.repository.ChatRepository; // 채팅 리포지토리
@@ -25,7 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.data.domain.Pageable;
 
@@ -54,6 +57,11 @@ public class ChatService {
         int offset = Math.max(page, 0) * Math.max(size, 1);
 
         List<ChatSummaryRow> rows = chatRepository.findChatSummaries(me, offset, size);
+
+        // 내가 차단한 사용자 id 목록을 한 번에 조회
+        List<Long> blockedUserIds = blockListRepository.findBlockedUserIds(me);
+        java.util.Set<Long> blockedSet = new java.util.HashSet<>(blockedUserIds);
+
 
         return rows.stream().map(r -> {
             // 대화 상대
@@ -103,12 +111,16 @@ public class ChatService {
                         .build();
             }
 
+            // 내가 이 대화 상대를 차단했는지 여부
+            boolean iBlockedPartner = blockedSet.contains(r.getPartnerId());
+
             return ChatSummaryResponse.builder()
                     .chatId(r.getChatId())
                     .partner(partner)
                     .lastMessage(last)
                     .unreadCount(r.getUnreadCount() == null ? 0 : r.getUnreadCount())
                     .item(itemSummary)
+                    .iBlockedPartner(iBlockedPartner) //차단 여부 추가
                     .build();
         }).toList();
     }
@@ -294,15 +306,19 @@ public class ChatService {
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new EntityNotFoundException("채팅방이 존재하지 않습니다."));
 
+        if (!chat.getSeller().getId().equals(me) && !chat.getBuyer().getId().equals(me)) {
+            throw new IllegalStateException("대화 참여자가 아닙니다.");
+        }
+
         Long partnerId = chat.getSeller().getId().equals(me)
                 ? chat.getBuyer().getId()
                 : chat.getSeller().getId();
 
-        // 이미 차단된 경우 → blocked=false 로 반환 (프론트가 "이미 차단됨" UI 처리 가능)
+        // 이미 차단된 경우
         if (blockListRepository.existsByBlocker_IdAndBlocked_Id(me, partnerId)) {
             return BlockResponse.builder()
                     .blockedUserId(partnerId)
-                    .blocked(false)
+                    .blocked(true)
                     .build();
         }
 
@@ -327,6 +343,12 @@ public class ChatService {
         Chat chat = chatRepository.findById(chatId)
                 .orElseThrow(() -> new EntityNotFoundException("채팅방이 존재하지 않습니다."));
 
+        // 참여자 검증(코드래빗 피드백)
+        if (!chat.getSeller().getId().equals(me) && !chat.getBuyer().getId().equals(me)) {
+            throw new IllegalStateException("대화 참여자가 아닙니다.");
+        }
+
+
         Long partnerId = chat.getSeller().getId().equals(me)
                 ? chat.getBuyer().getId()
                 : chat.getSeller().getId();
@@ -346,5 +368,29 @@ public class ChatService {
                 .blocked(false)
                 .build();
     }
+
+    @Transactional(readOnly = true)
+    public BlockStatusResponse getBlockStatus(Long me, Long chatId) {
+
+        Chat chat = chatRepository.findById(chatId)
+                .orElseThrow(() -> new EntityNotFoundException("채팅방이 존재하지 않습니다."));
+
+        if (!chat.getSeller().getId().equals(me) && !chat.getBuyer().getId().equals(me)) {
+            throw new IllegalStateException("대화 참여자가 아닙니다.");
+        }
+
+        Long partnerId = chat.getSeller().getId().equals(me)
+                ? chat.getBuyer().getId()
+                : chat.getSeller().getId();
+
+        boolean iBlockedPartner =
+                blockListRepository.existsByBlocker_IdAndBlocked_Id(me, partnerId);
+
+        boolean partnerBlockedMe =
+                blockListRepository.existsByBlocker_IdAndBlocked_Id(partnerId, me);
+
+        return new BlockStatusResponse(iBlockedPartner, partnerBlockedMe);
+    }
+
 
 }

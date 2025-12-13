@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity; // HTTP 응답 객체
 import org.springframework.web.bind.annotation.*; // REST API용 어노테이션 (@GetMapping 등)
 import java.util.List; // 리스트 응답용
 import java.net.URI; //응답 헤더 생성
+import com.salemale.domain.chat.dto.BlockStatusResponse; //차단 여부
 import com.salemale.domain.chat.dto.ChatDtos.ChatIdUnread;
 
 /**
@@ -109,7 +110,7 @@ public class ChatController {
      -채팅방에서 대화 상대 차단
      */
     @Operation(summary = "대화 상대 차단", description = "상대방을 차단하고 상대방이 경매 등록한 물품이 보이지 않게 됨.")
-    @PostMapping("/{chatId}/block")
+    @PostMapping("/chats/{chatId}/block")
     public ResponseEntity<ApiResponse<BlockResponse>> blockPartner(
             @RequestHeader("user-id") Long me,
             @PathVariable Long chatId
@@ -123,7 +124,7 @@ public class ChatController {
      -채팅방에서 대화 상대 차단 해제
      */
     @Operation(summary = "대화 상대 차단 해제", description = "상대방을 차단 해제.")
-    @PostMapping("/{chatId}/unblock")
+    @PostMapping("/chats/{chatId}/unblock")
     public ResponseEntity<ApiResponse<BlockResponse>> unblockPartner(
             @RequestHeader("user-id") Long me,
             @PathVariable Long chatId
@@ -131,4 +132,17 @@ public class ChatController {
         BlockResponse res = chatService.unblockPartner(me, chatId);
         return ResponseEntity.ok(ApiResponse.onSuccess(res));
     }
+
+    @Operation(summary = "대화 상대 차단 여부 조회", description = "상대방을 차단 여부 조회.")
+    @GetMapping("/chats/{chatId}/block")
+    public ResponseEntity<ApiResponse<BlockStatusResponse>> getBlockStatus(
+            @RequestHeader("user-id") Long me,
+            @PathVariable Long chatId
+    ) {
+        BlockStatusResponse res = chatService.getBlockStatus(me, chatId);
+        return ResponseEntity.ok(ApiResponse.onSuccess(res));
+    }
+
+
+
 }
