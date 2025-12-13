@@ -25,11 +25,7 @@ public class ChatDtos {
         private Long sellerId; // 판매자 ID
         private Long buyerId;  // 구매자 ID
     }
-
-    //내가 이 대화 상대를 차단했는지 (프론트: true면 차단해제, false면 차단)
-    private boolean iBlockedPartner;
-
-
+ 
     /**채팅방 목록 : chatId + unreadCount
      */
     @Getter @NoArgsConstructor @AllArgsConstructor @Builder
