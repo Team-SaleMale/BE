@@ -261,7 +261,7 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
                    FROM block_list bl
                    WHERE bl.blocker_id = :me
                    )
-              g)
+              )
               AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
