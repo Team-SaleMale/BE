@@ -60,12 +60,12 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             WHERE i.item_type = 'AUCTION'
               AND i.item_status = CAST(:status AS varchar)
               AND (
-                   :me IS NULL OR i.seller NOT IN (
-                   SELECT bl.blocked
-                   FROM BlockList bl
-                   WHERE bl.blocker.id = :me
+                   :me IS NULL OR i.seller_id NOT IN (
+                       SELECT bl.blocked_user_id
+                       FROM block_list bl
+                       WHERE bl.blocker_id = :me
                    )
-              )
+               )
               AND (
                 6371 * acos(
                   LEAST(1, GREATEST(-1,
@@ -84,11 +84,11 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             WHERE i.item_type = 'AUCTION'
               AND i.item_status = CAST(:status AS varchar)
               AND (
-                   :me IS NULL OR i.seller NOT IN (
-                   SELECT bl.blocked
-                   FROM BlockList bl
-                   WHERE bl.blocker.id = :me
-                    )
+                   :me IS NULL OR i.seller_id NOT IN (
+                   SELECT bl.blocked_user_id
+                   FROM block_list bl
+                   WHERE bl.blocker_id = :me
+                   )
               )
               AND (
                 6371 * acos(
@@ -118,12 +118,12 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             WHERE i.itemType = com.salemale.global.common.enums.ItemType.AUCTION
               AND i.itemStatus = :status
               AND (
-                    :me IS NULL OR i.seller NOT IN (
-                    SELECT bl.blocked
-                    FROM BlockList bl
-                    WHERE bl.blocker.id = :me
-                    )
-              )
+                   :me IS NULL OR i.seller_id NOT IN (
+                       SELECT bl.blocked_user_id
+                       FROM block_list bl
+                       WHERE bl.blocker_id = :me
+                   )
+               )
               AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -148,12 +148,12 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             WHERE i.itemType = com.salemale.global.common.enums.ItemType.AUCTION
               AND i.itemStatus = :status
               AND (
-                       :me IS NULL OR i.seller NOT IN (
-                       SELECT bl.blocked
-                       FROM BlockList bl
-                       WHERE bl.blocker.id = :me
-                       )
-               )
+                    :me IS NULL OR i.seller_id NOT IN (
+                        SELECT bl.blocked_user_id
+                        FROM block_list bl
+                        WHERE bl.blocker_id = :me
+                    )
+                )
               AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -191,12 +191,12 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             WHERE i.itemType = com.salemale.global.common.enums.ItemType.AUCTION
               AND i.itemStatus = :status
               AND (
-                   :me IS NULL OR i.seller NOT IN (
-                   SELECT bl.blocked
-                   FROM BlockList bl
-                   WHERE bl.blocker.id = :me
+                   :me IS NULL OR i.seller_id NOT IN (
+                       SELECT bl.blocked_user_id
+                       FROM block_list bl
+                       WHERE bl.blocker_id = :me
                    )
-              )
+               )
               AND (:categories IS NULL OR i.category IN :categories)
               AND (:minPrice IS NULL OR i.currentPrice >= :minPrice)
               AND (:maxPrice IS NULL OR i.currentPrice <= :maxPrice)
@@ -228,12 +228,12 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             WHERE i.item_type = 'AUCTION'
               AND i.item_status = CAST(:status AS varchar)
               AND (
-                       :me IS NULL OR i.seller NOT IN (
-                       SELECT bl.blocked
-                       FROM BlockList bl
-                       WHERE bl.blocker.id = :me
-                       )
-               )
+                    :me IS NULL OR i.seller_id NOT IN (
+                        SELECT bl.blocked_user_id
+                        FROM block_list bl
+                        WHERE bl.blocker_id = :me
+                    )
+                )
               AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -256,12 +256,12 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             WHERE i.item_type = 'AUCTION'
               AND i.item_status = CAST(:status AS varchar)
               AND (
-                   :me IS NULL OR i.seller NOT IN (
-                   SELECT bl.blocked
-                   FROM BlockList bl
-                   WHERE bl.blocker.id = :me
+                   :me IS NULL OR i.seller_id NOT IN (
+                   SELECT bl.blocked_user_id
+                   FROM block_list bl
+                   WHERE bl.blocker_id = :me
                    )
-              )
+              g)
               AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
