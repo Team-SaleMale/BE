@@ -10,6 +10,7 @@ import com.salemale.domain.item.enums.AuctionStatus;
 import com.salemale.domain.item.repository.ItemRepository;
 import com.salemale.domain.user.entity.User;
 import com.salemale.domain.user.entity.UserRegion;
+import com.salemale.domain.user.repository.BlockListRepository;
 import com.salemale.domain.user.repository.UserRegionRepository;
 import com.salemale.domain.user.repository.UserRepository;
 import com.salemale.global.common.enums.ItemStatus;
@@ -19,10 +20,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.salemale.domain.user.repository.BlockListRepository; //차단 필터용
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -47,8 +46,10 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
             Integer maxPrice,
             AuctionSortType sort,
             Pageable pageable) {
+
         // q가 null이거나 비어있으면 키워드 검색 없이 필터만 적용
         String keyword = (q != null && !q.trim().isBlank()) ? q.trim() : null;
+
 
         // 비로그인 사용자: 전체 지역 표시로 전국 검색
         if (userIdOpt.isEmpty()) {
@@ -95,6 +96,10 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
         UserRegion primary = userRegionRepository.findByPrimaryUser(user)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.REGION_NOT_SET));
 
+        // 내가 차단한 판매자 ID 목록
+        List<Long> blockedSellerIds =
+                blockListRepository.findBlockedUserIds(userId);
+
         Double effective = user.getRangeInKilometers();
         if (radius != null && radius != User.RangeSetting.ALL) {
             effective = Math.max(radius.toKilometers(), 0.1);
@@ -106,8 +111,6 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
         double lat = primary.getRegion().getLatitude().doubleValue();
         double lon = primary.getRegion().getLongitude().doubleValue();
 
-        // ADD 차단한 사용자 ID 목록
-        List<Long> blockedUserIds = blockListRepository.findBlockedUserIds(userId);
 
         // COMPLETED 상태는 SUCCESS와 FAIL 둘 다 포함
         if (isCompletedStatus(status)) {
@@ -121,19 +124,12 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
                     ? searchCompletedItems(keyword, cats, normalizeMin(minPrice), normalizeMax(maxPrice), sorted, userId)
                     : searchCompletedItemsNearby(keyword, lat, lon, km, cats, normalizeMin(minPrice), normalizeMax(maxPrice), sort, pageable, userId);
 
-            // ADD COMPLETED 결과 차단 필터
-            if (!blockedUserIds.isEmpty()) {
-                page = new org.springframework.data.domain.PageImpl<>(
-                        page.getContent().stream()
-                                .filter(it -> !blockedUserIds.contains(it.getSeller().getId()))
-                                .toList(),
-                        pageable,
-                        page.getTotalElements()
-                );
-            }
 
-
-            return page.map(ItemConverter::toAuctionListItemDTO);
+            return page.map(item -> {
+                boolean blockedSeller =
+                        blockedSellerIds.contains(item.getSeller().getId());
+                return ItemConverter.toAuctionListItemDTO(item, blockedSeller);
+            });
         }
 
         com.salemale.global.common.enums.ItemStatus effectiveStatus = mapAuctionStatusToItemStatus(status);
@@ -165,17 +161,6 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
                 );
             }
 
-                // ADD 전국 검색 결과 차단 필터
-                if (!blockedUserIds.isEmpty()) {
-                    page = new org.springframework.data.domain.PageImpl<>(
-                            page.getContent().stream()
-                                    .filter(it -> !blockedUserIds.contains(it.getSeller().getId()))
-                                    .toList(),
-                            pageable,
-                            page.getTotalElements()
-                    );
-                }
-
         } else {
             // 반경 검색
             if (keyword != null) {
@@ -188,7 +173,6 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
             
             // 반경 검색의 경우 카테고리/가격 필터 및 POPULAR 조건은 메모리에서 보정
             java.util.List<Item> filtered = page.getContent().stream()
-                    .filter(it -> !blockedUserIds.contains(it.getSeller().getId())) // ADD 차단 필터
                     .filter(it -> categories == null || categories.isEmpty() || categories.contains(it.getCategory()))
                     .filter(it -> minPrice == null || minPrice == 0 || it.getCurrentPrice() >= minPrice)
                     .filter(it -> maxPrice == null || maxPrice == 0 || it.getCurrentPrice() <= maxPrice)
@@ -206,12 +190,22 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
             }
             // 페이지네이션 유지: 이미 DB 페이징이 되어 있으므로, 정렬만 보정하여 DTO 매핑
             return new org.springframework.data.domain.PageImpl<>(
-                    filtered.stream().map(ItemConverter::toAuctionListItemDTO).toList(),
+                    filtered.stream()
+                            .map(item -> {
+                                boolean blockedSeller =
+                                        blockedSellerIds.contains(item.getSeller().getId());
+                                return ItemConverter.toAuctionListItemDTO(item, blockedSeller);
+                            })
+                            .toList(),
                     pageable,
                     page.getTotalElements()
             );
         }
-        return page.map(ItemConverter::toAuctionListItemDTO);
+        return page.map(item -> {
+            boolean blockedSeller =
+                    blockedSellerIds.contains(item.getSeller().getId());
+            return ItemConverter.toAuctionListItemDTO(item, blockedSeller);
+        });
     }
 
     /**

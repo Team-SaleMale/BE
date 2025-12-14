@@ -19,6 +19,7 @@ import com.salemale.domain.item.repository.UserLikedRepository;
 import com.salemale.domain.region.entity.Region;
 import com.salemale.domain.s3.service.S3Service;
 import com.salemale.domain.user.entity.User;
+import com.salemale.domain.user.repository.BlockListRepository;
 import com.salemale.domain.user.repository.UserRegionRepository;
 import com.salemale.domain.user.repository.UserRepository;
 import com.salemale.global.common.enums.*;
@@ -35,6 +36,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @Slf4j
@@ -52,6 +55,7 @@ public class ItemService {
     private final ImageService imageService;
     private final RecommendationService recommendationService;
     private final ReviewRepository reviewRepository;
+    private final BlockListRepository blockListRepository; //차단 조회용
 
     //찜하기
     @Transactional
@@ -365,16 +369,32 @@ public class ItemService {
             Integer minPrice,
             Integer maxPrice,
             AuctionSortType sortType,
-            Pageable pageable
+            Pageable pageable,
+            Long loginUserId // 로그인 사용자 ID
     ) {
         // 1. QueryDSL로 동적 쿼리 실행 (이미 DB에서 정렬됨)
         Page<Item> itemPage = itemRepository.findAuctionList(
                 status, categories, minPrice, maxPrice, sortType, pageable
         );
 
-        // 2. DTO 변환 (엔티티의 bidCount 사용)
+        // ⭐ 차단한 판매자 ID 목록 조회 (로그인 상태일 때만)
+        Set<Long> tempblockedSellerIds = Collections.emptySet();
+        if (loginUserId != null) {
+            tempblockedSellerIds = blockListRepository.findBlockedUserIds(loginUserId)
+                    .stream()
+                    .collect(Collectors.toSet());
+        }
+
+        final Set<Long> blockedSellerIds = tempblockedSellerIds;
+        // ⭐ DTO 변환 + 차단 여부 계산
         List<AuctionListItemDTO> items = itemPage.getContent().stream()
-                .map(item -> ItemConverter.toAuctionListItemDTO(item))
+                .map(item -> {
+                    boolean blockedSeller =
+                            loginUserId != null &&
+                                    blockedSellerIds.contains(item.getSeller().getId());
+
+                    return ItemConverter.toAuctionListItemDTO(item, blockedSeller);
+                })
                 .toList();
 
         // 3. 페이징 정보와 함께 응답 DTO 생성
@@ -407,7 +427,7 @@ public class ItemService {
         if (recommendedItemIds.isEmpty()) {
             log.info("[추천 대체] 사용자 ID: {}, 인기 상품으로 대체", userId);
             return getAuctionList(AuctionStatus.POPULAR, null, null, null,
-                    AuctionSortType.BID_COUNT_DESC, pageable);
+                    AuctionSortType.BID_COUNT_DESC, pageable, userId);
         }
 
         // 3. 페이징 처리

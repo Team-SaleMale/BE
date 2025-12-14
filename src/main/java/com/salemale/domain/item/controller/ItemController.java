@@ -185,6 +185,15 @@ public class ItemController {
         // Pageable 객체 생성
         Pageable pageable = PageRequest.of(page, size);
 
+        // 로그인 안 했으면 null
+        // 로그인 했으면 userId
+        Long loginUserId = null;
+        try {
+            loginUserId = currentUserProvider.getCurrentUserId(request);
+        } catch (Exception e) {
+            // 비로그인 요청이면 그대로 null 유지
+        }
+
         // 추가: RECOMMENDED 상태일 때는 별도 처리
         if (status == AuctionStatus.RECOMMENDED) {
             Long userId = currentUserProvider.getCurrentUserId(request);
@@ -193,7 +202,7 @@ public class ItemController {
         }
 
         // 서비스 호출
-        AuctionListResponse response = itemService.getAuctionList(status, categories, minPrice, maxPrice, sort, pageable);
+        AuctionListResponse response = itemService.getAuctionList(status, categories, minPrice, maxPrice, sort, pageable, loginUserId);
 
         return ResponseEntity.ok(ApiResponse.onSuccess(response));
     }
