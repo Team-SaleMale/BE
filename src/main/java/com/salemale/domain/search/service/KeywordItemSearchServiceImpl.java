@@ -10,6 +10,7 @@ import com.salemale.domain.item.enums.AuctionStatus;
 import com.salemale.domain.item.repository.ItemRepository;
 import com.salemale.domain.user.entity.User;
 import com.salemale.domain.user.entity.UserRegion;
+import com.salemale.domain.user.repository.BlockListRepository;
 import com.salemale.domain.user.repository.UserRegionRepository;
 import com.salemale.domain.user.repository.UserRepository;
 import com.salemale.global.common.enums.ItemStatus;
@@ -21,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -31,6 +31,8 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
     private final UserRepository userRepository;
     private final UserRegionRepository userRegionRepository;
     private final ItemRepository itemRepository;
+    private final BlockListRepository blockListRepository;
+
 
     @Override
     @Transactional(readOnly = true)
@@ -44,8 +46,10 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
             Integer maxPrice,
             AuctionSortType sort,
             Pageable pageable) {
+
         // q가 null이거나 비어있으면 키워드 검색 없이 필터만 적용
         String keyword = (q != null && !q.trim().isBlank()) ? q.trim() : null;
+
 
         // 비로그인 사용자: 전체 지역 표시로 전국 검색
         if (userIdOpt.isEmpty()) {
@@ -71,14 +75,14 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
                 // 키워드가 있으면 키워드 검색 + 필터
                 Page<Item> page = itemRepository.searchItemsByKeywordWithFilters(
                         effectiveStatus, keyword, cats, normalizeMin(minPrice), normalizeMax(maxPrice),
-                        isPopular, threeDaysAgo, now, null, sorted
+                        isPopular, threeDaysAgo, now, sorted
                 );
                 return page.map(ItemConverter::toAuctionListItemDTO);
             } else {
                 // 키워드가 없으면 필터만 적용 (키워드 조건 제외)
                 Page<Item> page = itemRepository.searchItemsByFiltersOnly(
                         effectiveStatus, cats, normalizeMin(minPrice), normalizeMax(maxPrice),
-                        isPopular, threeDaysAgo, now, null, sorted
+                        isPopular, threeDaysAgo, now,  sorted
                 );
                 return page.map(ItemConverter::toAuctionListItemDTO);
             }
@@ -92,6 +96,10 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
         UserRegion primary = userRegionRepository.findByPrimaryUser(user)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.REGION_NOT_SET));
 
+        // 내가 차단한 판매자 ID 목록
+        List<Long> blockedSellerIds =
+                blockListRepository.findBlockedUserIds(userId);
+
         Double effective = user.getRangeInKilometers();
         if (radius != null && radius != User.RangeSetting.ALL) {
             effective = Math.max(radius.toKilometers(), 0.1);
@@ -102,6 +110,7 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
         double km = effective;
         double lat = primary.getRegion().getLatitude().doubleValue();
         double lon = primary.getRegion().getLongitude().doubleValue();
+
 
         // COMPLETED 상태는 SUCCESS와 FAIL 둘 다 포함
         if (isCompletedStatus(status)) {
@@ -114,7 +123,13 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
             Page<Item> page = nationwide 
                     ? searchCompletedItems(keyword, cats, normalizeMin(minPrice), normalizeMax(maxPrice), sorted, userId)
                     : searchCompletedItemsNearby(keyword, lat, lon, km, cats, normalizeMin(minPrice), normalizeMax(maxPrice), sort, pageable, userId);
-            return page.map(ItemConverter::toAuctionListItemDTO);
+
+
+            return page.map(item -> {
+                boolean blockedSeller =
+                        blockedSellerIds.contains(item.getSeller().getId());
+                return ItemConverter.toAuctionListItemDTO(item, blockedSeller);
+            });
         }
 
         com.salemale.global.common.enums.ItemStatus effectiveStatus = mapAuctionStatusToItemStatus(status);
@@ -136,23 +151,24 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
                 // 키워드가 있으면 키워드 검색 + 필터
                 page = itemRepository.searchItemsByKeywordWithFilters(
                         effectiveStatus, keyword, cats, normalizeMin(minPrice), normalizeMax(maxPrice),
-                        isPopular, threeDaysAgo, now, userId, sorted
+                        isPopular, threeDaysAgo, now, sorted
                 );
             } else {
                 // 키워드가 없으면 필터만 적용 (키워드 조건 제외)
                 page = itemRepository.searchItemsByFiltersOnly(
                         effectiveStatus, cats, normalizeMin(minPrice), normalizeMax(maxPrice),
-                        isPopular, threeDaysAgo, now, userId, sorted
+                        isPopular, threeDaysAgo, now, sorted
                 );
             }
+
         } else {
             // 반경 검색
             if (keyword != null) {
                 // 키워드가 있으면 키워드 + 반경 검색
-                page = itemRepository.findNearbyItemsByKeyword(effectiveStatus.name(), keyword, lat, lon, km, userId, pageable);
+                page = itemRepository.findNearbyItemsByKeyword(effectiveStatus.name(), keyword, lat, lon, km, pageable);
             } else {
                 // 키워드가 없으면 반경 검색만 (키워드 조건 제외)
-                page = itemRepository.findNearbyItems(effectiveStatus.name(), lat, lon, km, userId, pageable);
+                page = itemRepository.findNearbyItems(effectiveStatus.name(), lat, lon, km, pageable);
             }
             
             // 반경 검색의 경우 카테고리/가격 필터 및 POPULAR 조건은 메모리에서 보정
@@ -174,12 +190,22 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
             }
             // 페이지네이션 유지: 이미 DB 페이징이 되어 있으므로, 정렬만 보정하여 DTO 매핑
             return new org.springframework.data.domain.PageImpl<>(
-                    filtered.stream().map(ItemConverter::toAuctionListItemDTO).toList(),
+                    filtered.stream()
+                            .map(item -> {
+                                boolean blockedSeller =
+                                        blockedSellerIds.contains(item.getSeller().getId());
+                                return ItemConverter.toAuctionListItemDTO(item, blockedSeller);
+                            })
+                            .toList(),
                     pageable,
                     page.getTotalElements()
             );
         }
-        return page.map(ItemConverter::toAuctionListItemDTO);
+        return page.map(item -> {
+            boolean blockedSeller =
+                    blockedSellerIds.contains(item.getSeller().getId());
+            return ItemConverter.toAuctionListItemDTO(item, blockedSeller);
+        });
     }
 
     /**
@@ -212,12 +238,12 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime threeDaysAgo = now.minusDays(3);
         Page<Item> successPage = keyword != null
-                ? itemRepository.searchItemsByKeywordWithFilters(ItemStatus.SUCCESS, keyword, categories, minPrice, maxPrice, false, threeDaysAgo, now, userId, pageable)
-                : itemRepository.searchItemsByFiltersOnly(ItemStatus.SUCCESS, categories, minPrice, maxPrice, false, threeDaysAgo, now, userId, pageable);
+                ? itemRepository.searchItemsByKeywordWithFilters(ItemStatus.SUCCESS, keyword, categories, minPrice, maxPrice, false, threeDaysAgo, now, pageable)
+                : itemRepository.searchItemsByFiltersOnly(ItemStatus.SUCCESS, categories, minPrice, maxPrice, false, threeDaysAgo, now, pageable);
         
         Page<Item> failPage = keyword != null
-                ? itemRepository.searchItemsByKeywordWithFilters(ItemStatus.FAIL, keyword, categories, minPrice, maxPrice, false, threeDaysAgo, now, userId, pageable)
-                : itemRepository.searchItemsByFiltersOnly(ItemStatus.FAIL, categories, minPrice, maxPrice, false, threeDaysAgo, now, userId, pageable);
+                ? itemRepository.searchItemsByKeywordWithFilters(ItemStatus.FAIL, keyword, categories, minPrice, maxPrice, false, threeDaysAgo, now,  pageable)
+                : itemRepository.searchItemsByFiltersOnly(ItemStatus.FAIL, categories, minPrice, maxPrice, false, threeDaysAgo, now, pageable);
         
         // 두 결과를 합치기
         java.util.List<Item> combined = new java.util.ArrayList<>();
@@ -245,12 +271,12 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
     private Page<Item> searchCompletedItemsNearby(String keyword, double lat, double lon, double km, java.util.List<Category> categories, Integer minPrice, Integer maxPrice, AuctionSortType sort, Pageable pageable, Long userId) {
         // SUCCESS와 FAIL 둘 다 조회
         Page<Item> successPage = keyword != null
-                ? itemRepository.findNearbyItemsByKeyword(ItemStatus.SUCCESS.name(), keyword, lat, lon, km, userId, pageable)
-                : itemRepository.findNearbyItems(ItemStatus.SUCCESS.name(), lat, lon, km, userId, pageable);
+                ? itemRepository.findNearbyItemsByKeyword(ItemStatus.SUCCESS.name(), keyword, lat, lon, km, pageable)
+                : itemRepository.findNearbyItems(ItemStatus.SUCCESS.name(), lat, lon, km, pageable);
         
         Page<Item> failPage = keyword != null
-                ? itemRepository.findNearbyItemsByKeyword(ItemStatus.FAIL.name(), keyword, lat, lon, km, userId, pageable)
-                : itemRepository.findNearbyItems(ItemStatus.FAIL.name(), lat, lon, km, userId, pageable);
+                ? itemRepository.findNearbyItemsByKeyword(ItemStatus.FAIL.name(), keyword, lat, lon, km, pageable)
+                : itemRepository.findNearbyItems(ItemStatus.FAIL.name(), lat, lon, km, pageable);
         
         // 두 결과를 합치기
         java.util.List<Item> combined = new java.util.ArrayList<>();
@@ -319,7 +345,7 @@ public class KeywordItemSearchServiceImpl implements KeywordItemSearchService {
 
         // 낙찰된 상품만 조회 (ItemStatus.SUCCESS), 날짜순 정렬 (최신순)
         ItemStatus status = ItemStatus.SUCCESS;
-        Page<Item> page = itemRepository.searchItemsByKeyword(status, keyword, null, pageable);
+        Page<Item> page = itemRepository.searchItemsByKeyword(status, keyword, pageable);
 
         return page.map(ItemConverter::toAuctionListItemDTO);
     }

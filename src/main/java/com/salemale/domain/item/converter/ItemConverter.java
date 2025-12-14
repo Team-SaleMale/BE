@@ -188,6 +188,30 @@ public class ItemConverter {
                 .build();
     }
 
+    //⭐추가 메서드: 차단 여부 포함 버전
+    public static AuctionListItemDTO toAuctionListItemDTO(
+            Item item,
+            boolean blockedSeller   // Service에서 계산된 값
+    ) {
+        List<String> imageUrls = item.getImages().stream()
+                .map(ItemImage::getImageUrl)
+                .collect(Collectors.toList());
+
+        return AuctionListItemDTO.builder()
+                .itemId(item.getItemId())
+                .title(item.getTitle())
+                .imageUrls(imageUrls)
+                .currentPrice(item.getCurrentPrice())
+                .bidderCount(item.getBidCount())
+                .endTime(item.getEndTime())
+                .viewCount(item.getViewCount())
+                .itemStatus(item.getItemStatus().name())
+                .startPrice(item.getStartPrice())
+                .createdAt(item.getCreatedAt())
+                .blockedSeller(blockedSeller) // 차단 여부
+                .build();
+    }
+
     /**
      * Item → MyAuctionItemDTO 변환
      * @param item 상품 엔티티

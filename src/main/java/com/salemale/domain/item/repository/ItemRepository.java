@@ -60,13 +60,6 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             WHERE i.item_type = 'AUCTION'
               AND i.item_status = CAST(:status AS varchar)
               AND (
-                   :me IS NULL OR i.seller NOT IN (
-                   SELECT bl.blocked
-                   FROM BlockList bl
-                   WHERE bl.blocker.id = :me
-                   )
-              )
-              AND (
                 6371 * acos(
                   LEAST(1, GREATEST(-1,
                     cos(radians(:lat)) * cos(radians(CAST(r.latitude AS double precision))) *
@@ -84,13 +77,6 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             WHERE i.item_type = 'AUCTION'
               AND i.item_status = CAST(:status AS varchar)
               AND (
-                   :me IS NULL OR i.seller NOT IN (
-                   SELECT bl.blocked
-                   FROM BlockList bl
-                   WHERE bl.blocker.id = :me
-                    )
-              )
-              AND (
                 6371 * acos(
                   LEAST(1, GREATEST(-1,
                     cos(radians(:lat)) * cos(radians(CAST(r.latitude AS double precision))) *
@@ -106,7 +92,6 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             @Param("lat") double centerLat,
             @Param("lon") double centerLon,
             @Param("distanceKm") double distanceKm,
-            @Param("me") Long me,
             Pageable pageable
     );
 
@@ -118,13 +103,6 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             WHERE i.itemType = com.salemale.global.common.enums.ItemType.AUCTION
               AND i.itemStatus = :status
               AND (
-                    :me IS NULL OR i.seller NOT IN (
-                    SELECT bl.blocked
-                    FROM BlockList bl
-                    WHERE bl.blocker.id = :me
-                    )
-              )
-              AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
               )
@@ -133,7 +111,6 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
     Page<Item> searchItemsByKeyword(
             @Param("status") com.salemale.global.common.enums.ItemStatus status,
             @Param("keyword") String keyword,
-            @Param("me") Long me,
             Pageable pageable
     );
 
@@ -147,13 +124,6 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             SELECT i FROM Item i
             WHERE i.itemType = com.salemale.global.common.enums.ItemType.AUCTION
               AND i.itemStatus = :status
-              AND (
-                       :me IS NULL OR i.seller NOT IN (
-                       SELECT bl.blocked
-                       FROM BlockList bl
-                       WHERE bl.blocker.id = :me
-                       )
-               )
               AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -176,7 +146,6 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             @Param("isPopular") boolean isPopular,
             @Param("threeDaysAgo") LocalDateTime threeDaysAgo,
             @Param("now") LocalDateTime now,
-            @Param("me") Long me,
             Pageable pageable
     );
 
@@ -190,13 +159,6 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             SELECT i FROM Item i
             WHERE i.itemType = com.salemale.global.common.enums.ItemType.AUCTION
               AND i.itemStatus = :status
-              AND (
-                   :me IS NULL OR i.seller NOT IN (
-                   SELECT bl.blocked
-                   FROM BlockList bl
-                   WHERE bl.blocker.id = :me
-                   )
-              )
               AND (:categories IS NULL OR i.category IN :categories)
               AND (:minPrice IS NULL OR i.currentPrice >= :minPrice)
               AND (:maxPrice IS NULL OR i.currentPrice <= :maxPrice)
@@ -214,7 +176,6 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             @Param("isPopular") boolean isPopular,
             @Param("threeDaysAgo") LocalDateTime threeDaysAgo,
             @Param("now") LocalDateTime now,
-            @Param("me") Long me,
             Pageable pageable
     );
 
@@ -227,13 +188,6 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             JOIN region r ON i.region_id = r.region_id
             WHERE i.item_type = 'AUCTION'
               AND i.item_status = CAST(:status AS varchar)
-              AND (
-                       :me IS NULL OR i.seller NOT IN (
-                       SELECT bl.blocked
-                       FROM BlockList bl
-                       WHERE bl.blocker.id = :me
-                       )
-               )
               AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -256,13 +210,6 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             WHERE i.item_type = 'AUCTION'
               AND i.item_status = CAST(:status AS varchar)
               AND (
-                   :me IS NULL OR i.seller NOT IN (
-                   SELECT bl.blocked
-                   FROM BlockList bl
-                   WHERE bl.blocker.id = :me
-                   )
-              )
-              AND (
                 LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
               )
@@ -283,7 +230,6 @@ public interface ItemRepository extends JpaRepository<Item, Long>, ItemRepositor
             @Param("lat") double centerLat,
             @Param("lon") double centerLon,
             @Param("distanceKm") double distanceKm,
-            @Param("me") Long me,
             Pageable pageable
     );
     Long countBySeller(User seller);

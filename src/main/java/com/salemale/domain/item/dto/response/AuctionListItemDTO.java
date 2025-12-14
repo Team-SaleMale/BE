@@ -48,4 +48,8 @@ public class AuctionListItemDTO {
 
     @Schema(description = "경매 시작 날짜")
     private LocalDateTime createdAt;     // 생성일(경매 시작날짜) 추가
+
+    // 로그인 사용자가 이 판매자를 차단했는지 여부
+    @Schema(description = "차단한 판매자의 상품인지 여부", example = "false")
+    private boolean blockedSeller;
 }
