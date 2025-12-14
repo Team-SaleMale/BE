@@ -11,11 +11,14 @@ import com.salemale.domain.user.entity.UserRegion;
 import com.salemale.domain.user.repository.UserRegionRepository;
 import com.salemale.domain.user.repository.UserRepository;
 import com.salemale.global.common.enums.ItemStatus;
+import com.salemale.domain.user.repository.BlockListRepository; // ADD 차단 필터용
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +27,7 @@ public class NearbyItemSearchServiceImpl implements NearbyItemSearchService {
     private final UserRepository userRepository;
     private final UserRegionRepository userRegionRepository;
     private final ItemRepository itemRepository;
+    private final BlockListRepository blockListRepository; // ADD 차단 필터용
 
     @Override
     @Transactional(readOnly = true)
@@ -36,7 +40,22 @@ public class NearbyItemSearchServiceImpl implements NearbyItemSearchService {
         double lat = primary.getRegion().getLatitude().doubleValue();
         double lon = primary.getRegion().getLongitude().doubleValue();
 
-        Page<Item> page = itemRepository.findNearbyItems(ItemStatus.BIDDING.name(), lat, lon, km, userId, pageable);
+        // ADD 내가 차단한 사용자 ID 목록
+        List<Long> blockedUserIds = blockListRepository.findBlockedUserIds(userId);
+
+        Page<Item> page = itemRepository.findNearbyItems(ItemStatus.BIDDING.name(), lat, lon, km, pageable);
+
+        // ADD 차단 유저 필터 적용
+        if (!blockedUserIds.isEmpty()) {
+            page = new org.springframework.data.domain.PageImpl<>(
+                    page.getContent().stream()
+                            .filter(it -> !blockedUserIds.contains(it.getSeller().getId()))
+                            .toList(),
+                    pageable,
+                    page.getTotalElements()
+            );
+        }
+
         return page.map(ItemConverter::toAuctionListItemDTO);
     }
 }
