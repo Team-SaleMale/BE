@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.util.retry.Retry;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -130,7 +131,7 @@ public class ItemImageAiService {
     }
 
     /**
-     * Gemini API 호출
+     * Gemini API 호출 (재시도 로직 포함)
      */
     private String callGeminiApi(ImageData imageData) {
         try {
@@ -142,6 +143,10 @@ public class ItemImageAiService {
                     .retrieve()
                     .bodyToMono(String.class)
                     .timeout(Duration.ofSeconds(30))
+                    .retryWhen(Retry.backoff(3, Duration.ofSeconds(1))
+                        .maxBackoff(Duration.ofSeconds(5))
+                        .filter(throwable -> !(throwable instanceof GeneralException))
+                    )
                     .block();
 
             return response;
